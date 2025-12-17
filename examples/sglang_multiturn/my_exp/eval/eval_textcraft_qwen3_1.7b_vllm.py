@@ -305,6 +305,8 @@ async def main():
                        help='Whether to use sampling (ADaPT: False)')
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed for reproducibility')
+    parser.add_argument('--num_samples_per_task', type=int, default=1,
+                       help='Number of times to sample each task (default: 1, for multiple runs use 8)')
     # vLLM GPU配置
     parser.add_argument('--gpu_memory_utilization', type=float, default=0.9,
                        help='GPU memory utilization for vLLM (default: 0.9)')
@@ -325,13 +327,14 @@ async def main():
     summary_file = os.path.join(args.output_dir, f"eval_summary_{timestamp}.txt")
     
     logger.info("=" * 80)
-    logger.info("TextCraft Evaluation - Qwen3-1.7B")
+    logger.info("TextCraft Evaluation - Qwen3-1.7B (vLLM)")
     logger.info("=" * 80)
     logger.info(f"Model: {args.model_path}")
     logger.info(f"Data: {args.data_path}")
     logger.info(f"Output: {output_file}")
     logger.info(f"TextCraft Server: {args.textcraft_server}")
     logger.info(f"Random Seed: {args.seed}")
+    logger.info(f"Samples per Task: {args.num_samples_per_task}")
     logger.info("=" * 80)
     
     try:
@@ -404,6 +407,7 @@ async def main():
     results = []
     total_reward = 0.0
     total_success = 0
+    task_stats = []  # 记录每个任务的统计信息
     
     for idx, row in tqdm(df.iterrows(), total=len(df), desc="Evaluating"):
         extra_info = row.get('extra_info', {})
@@ -414,47 +418,105 @@ async def main():
             session_id = idx
         
         logger.info(f"\n{'=' * 80}")
-        logger.info(f"Starting Task {idx + 1}/{len(df)} - Session {session_id}")
+        logger.info(f"Task {idx + 1}/{len(df)} - Session {session_id}")
+        if args.num_samples_per_task > 1:
+            logger.info(f"Will sample {args.num_samples_per_task} times for this task")
         logger.info(f"{'=' * 80}")
         
-        try:
-            result = await evaluate_one_episode(
-                agent=agent,
-                interaction=interaction,
-                session_id=session_id,
-                max_rounds=args.max_rounds
-            )
+        # 对同一个任务采样多次
+        task_results = []
+        for sample_idx in range(args.num_samples_per_task):
+            if args.num_samples_per_task > 1:
+                logger.info(f"\n--- Sample {sample_idx + 1}/{args.num_samples_per_task} ---")
             
-            results.append(result)
-            total_reward += result['reward']
-            total_success += 1 if result['success'] else 0
+            try:
+                result = await evaluate_one_episode(
+                    agent=agent,
+                    interaction=interaction,
+                    session_id=session_id,
+                    max_rounds=args.max_rounds
+                )
+                
+                task_results.append(result)
+                results.append(result)
+                total_reward += result['reward']
+                total_success += 1 if result['success'] else 0
+                
+                # 保存每次采样的结果
+                with open(output_file, 'a') as f:
+                    f.write(json.dumps({
+                        "item_id": f"textcraft_{session_id}",
+                        "session_id": session_id,
+                        "sample_idx": sample_idx,
+                        "reward": result['reward'],
+                        "success": result['success'],
+                        "num_turns": result['num_turns'],
+                        "conversations": result['conversations']
+                    }) + '\n')
+                
+                if args.num_samples_per_task > 1:
+                    logger.info(f"Sample {sample_idx + 1} result: Success={result['success']}, Reward={result['reward']}, Turns={result['num_turns']}")
             
-            with open(output_file, 'a') as f:
-                f.write(json.dumps({
-                    "item_id": f"textcraft_{session_id}",
-                    "session_id": session_id,
-                    "reward": result['reward'],
-                    "success": result['success'],
-                    "num_turns": result['num_turns'],
-                    "conversations": result['conversations']
-                }) + '\n')
+            except Exception as e:
+                logger.error(f"Error evaluating session {session_id} sample {sample_idx}: {e}")
+                logger.exception(e)
         
-        except Exception as e:
-            logger.error(f"Error evaluating session {session_id}: {e}")
-            logger.exception(e)
+        # 计算该任务的统计信息
+        if task_results:
+            task_success_rate = sum(1 for r in task_results if r['success']) / len(task_results)
+            task_avg_reward = sum(r['reward'] for r in task_results) / len(task_results)
+            task_avg_turns = sum(r['num_turns'] for r in task_results) / len(task_results)
+            
+            task_stats.append({
+                'task_id': session_id,
+                'num_samples': len(task_results),
+                'success_rate': task_success_rate,
+                'avg_reward': task_avg_reward,
+                'avg_turns': task_avg_turns
+            })
+            
+            if args.num_samples_per_task > 1:
+                logger.info(f"\nTask {idx + 1} Summary:")
+                logger.info(f"  Success Rate: {task_success_rate:.2%} ({sum(1 for r in task_results if r['success'])}/{len(task_results)})")
+                logger.info(f"  Avg Reward: {task_avg_reward:.4f}")
+                logger.info(f"  Avg Turns: {task_avg_turns:.1f}")
     
     avg_reward = total_reward / len(results) if results else 0.0
     success_rate = total_success / len(results) if results else 0.0
     
+    # 多次采样的统计信息
+    if args.num_samples_per_task > 1 and task_stats:
+        task_level_success_rate = sum(t['success_rate'] for t in task_stats) / len(task_stats)
+        task_level_avg_reward = sum(t['avg_reward'] for t in task_stats) / len(task_stats)
+        
+        multi_sample_info = f"""
+Multi-Sampling Statistics (Task-Level Average):
+------------------------------------------------
+Samples per Task: {args.num_samples_per_task}
+Number of Tasks: {len(task_stats)}
+Total Evaluations: {len(results)}
+
+Task-Level Metrics (averaged across tasks):
+  Success Rate: {task_level_success_rate:.4f} ({task_level_success_rate:.2%})
+  Average Reward: {task_level_avg_reward:.4f}
+
+Sample-Level Metrics (all evaluations):
+  Success Rate: {success_rate:.4f} ({total_success}/{len(results)})
+  Average Reward: {avg_reward:.4f}
+"""
+    else:
+        multi_sample_info = ""
+    
     summary = f"""
 {'=' * 80}
-TextCraft Evaluation Summary
+TextCraft Evaluation Summary (vLLM)
 {'=' * 80}
 Model: {args.model_path}
 Data: {args.data_path}
 Total samples: {len(results)}
 Max rounds: {args.max_rounds}
-
+Random seed: {args.seed}
+{multi_sample_info}
 Results:
 --------
 Average Reward: {avg_reward:.4f}
@@ -472,6 +534,13 @@ Summary: {summary_file}
     
     with open(summary_file, 'w') as f:
         f.write(summary)
+    
+    # 如果有多次采样，保存 task-level 统计信息
+    if args.num_samples_per_task > 1 and task_stats:
+        task_stats_file = os.path.join(args.output_dir, f"eval_task_stats_{timestamp}.json")
+        with open(task_stats_file, 'w') as f:
+            json.dump(task_stats, f, indent=2)
+        logger.info(f"✓ Task-level statistics saved to {task_stats_file}")
     
     logger.info(f"✓ Evaluation complete!")
     logger.info(f"✓ Results saved to {output_file}")
