@@ -347,6 +347,14 @@ class AgentLoopWorkerBase:
         if batch.meta_info.get("validate", False):
             sampling_params["top_p"] = config.val_kwargs.top_p
             sampling_params["temperature"] = config.val_kwargs.temperature
+            # 支持validation时使用不同的生成长度
+            # vLLM使用max_tokens, SGLang使用max_new_tokens
+            if hasattr(config.val_kwargs, 'max_tokens') and config.val_kwargs.max_tokens is not None:
+                sampling_params["max_tokens"] = config.val_kwargs.max_tokens  # vLLM参数
+                sampling_params["max_new_tokens"] = config.val_kwargs.max_tokens  # SGLang参数（向后兼容）
+            elif hasattr(config.val_kwargs, 'max_new_tokens') and config.val_kwargs.max_new_tokens is not None:
+                sampling_params["max_tokens"] = config.val_kwargs.max_new_tokens  # vLLM参数
+                sampling_params["max_new_tokens"] = config.val_kwargs.max_new_tokens  # SGLang参数
 
         # by default, we assume it's a single turn agent
         if "agent_name" not in batch.non_tensor_batch:

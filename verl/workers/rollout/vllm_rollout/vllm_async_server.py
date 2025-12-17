@@ -400,7 +400,17 @@ class vLLMHttpServerBase:
     ) -> TokenOutput:
         """Generate sequence with token-in-token-out."""
         # TODO(@wuxibin): switch to `/generate` http endpoint once multi-modal support ready.
-        max_tokens = self.config.max_model_len - len(prompt_ids)
+        # 支持validation时使用自定义max_tokens（参考AgentGym-RL）
+        if "max_tokens" in sampling_params:
+            max_tokens = min(sampling_params.pop("max_tokens"), self.config.max_model_len - len(prompt_ids))
+            print(f"[DEBUG vLLM] Using max_tokens from sampling_params: {max_tokens}")
+        else:
+            max_tokens = self.config.max_model_len - len(prompt_ids)
+            print(f"[DEBUG vLLM] Using default max_tokens: {max_tokens}")
+        
+        # 清理vLLM不支持的参数（max_new_tokens是SGLang的参数）
+        sampling_params.pop("max_new_tokens", None)
+        
         sampling_params["logprobs"] = 0 if sampling_params.pop("logprobs", False) else None
         sampling_params.setdefault("repetition_penalty", self.config.get("repetition_penalty", 1.0))
         sampling_params = SamplingParams(max_tokens=max_tokens, **sampling_params)

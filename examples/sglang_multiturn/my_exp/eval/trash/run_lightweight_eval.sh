@@ -8,7 +8,7 @@ set -x
 MODEL_PATH=${MODEL_PATH:-"/Data/public/Qwen3-8B"}
 DATA_PATH=${DATA_PATH:-"/Data/wyh/datasets/Verl-Data/webshop/train.parquet"}
 OUTPUT_DIR=${OUTPUT_DIR:-"/Data/wyh/datasets/Verl-Data/outputs/webshop_eval_lightweight"}
-WEBSHOP_SERVER=${WEBSHOP_SERVER:-"http://127.0.0.1:36003"}
+WEBSHOP_SERVER=${WEBSHOP_SERVER:-"http://127.0.0.1:36001"}
 GPU_ID=${GPU_ID:-2}
 MAX_ROUNDS=${MAX_ROUNDS:-25}
 MAX_SAMPLES=${MAX_SAMPLES:-""}  # Empty means all samples

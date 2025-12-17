@@ -41,7 +41,31 @@ Instructions:
 - Click "Buy Now" when you find the perfect match
 - If a product doesn't match, go back and continue searching
 
-Your response should contain only the action in the format: search[keywords] or click[item]"""
+**CRITICAL RULES**: 
+1. ALWAYS start by using search[keywords] - NEVER click a product without searching first
+2. Only click products that appear in the current search results or page
+3. Keep interacting until you successfully click "Buy Now"
+4. Do NOT stop after just searching - you must click products and select options
+5. Continue the interaction step by step until purchase is complete
+
+Example interaction flow:
+1. First, ALWAYS search for products using relevant keywords
+2. Then click on a product from the search results to view details
+3. Select the required options (color, size, etc.) by clicking them
+4. Finally click "Buy Now" when all requirements are met
+
+Example:
+User: Find me men's shorts with color: navy, size: large, price < $50
+Assistant: search[men's shorts navy]
+Environment: [Shows search results with several products]
+Assistant: click[<product_name_or_id_from_results>]
+Environment: [Shows product details with options]
+Assistant: click[navy]
+Assistant: click[large]
+Assistant: click[Buy Now]
+
+Your response should contain only the action in the format: search[keywords] or click[item]
+Do NOT include explanations, reasoning, or any other text - just the action."""
 
 
 if __name__ == "__main__":
@@ -103,6 +127,7 @@ if __name__ == "__main__":
             "ability": "shopping",
             "reward_model": {
                 "style": "interaction",  # Reward comes from environment interaction
+                "ground_truth": "",  # Dummy field for naive reward manager compatibility
             },
             "extra_info": {
                 "index": idx,

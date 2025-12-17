@@ -61,7 +61,7 @@ trainer:
   default_hdfs_dir: null
   project_name: gsm8k-sft
   experiment_name: test
-  total_epochs: 4
+  total_epochs: 30
   total_training_steps: null
   logger: [ 'console', 'wandb' ]
   seed: 1

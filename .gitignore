@@ -128,4 +128,4 @@ ENV/
 logs
 log
 outputs
-.history
+.history*.whl

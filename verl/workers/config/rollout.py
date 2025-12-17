@@ -39,6 +39,8 @@ class SamplingConfig(BaseConfig):
     top_p: float = 1.0
     do_sample: bool = True
     n: int = 1
+    max_tokens: Optional[int] = None  # vLLM: 单次生成的最大token数
+    max_new_tokens: Optional[int] = None  # SGLang: 单次生成的最大token数（向后兼容）
 
 
 @dataclass

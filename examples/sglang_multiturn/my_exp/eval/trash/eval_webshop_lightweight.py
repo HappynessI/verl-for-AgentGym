@@ -198,7 +198,7 @@ async def main():
     parser.add_argument('--output_dir', type=str,
                        default='/Data/wyh/datasets/Verl-Data/outputs/webshop_eval_lightweight')
     parser.add_argument('--webshop_server', type=str,
-                       default='http://127.0.0.1:36003')
+                       default='http://127.0.0.1:36001')
     parser.add_argument('--max_rounds', type=int, default=25)
     parser.add_argument('--max_samples', type=int, default=None)
     parser.add_argument('--max_length', type=int, default=4096)

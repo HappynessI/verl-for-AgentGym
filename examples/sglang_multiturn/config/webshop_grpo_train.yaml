@@ -8,10 +8,10 @@ defaults:
 
 # Data configuration
 data:
-  train_files: /Data/wyh/datasets/Verl-Data/webshop/train.parquet
-  val_files: /Data/wyh/datasets/Verl-Data/webshop/train.parquet  # 暂时用train作为val
+  train_files: /Data/wyh/datasets/Verl-Data/train/webshop/train.parquet
+  val_files: /Data/wyh/datasets/Verl-Data/train/webshop/train.parquet  # 暂时用train作为val
   max_prompt_length: 1024
-  max_response_length: 1024  # Webshop只需简短action，降低以提高效率
+  max_response_length: 2048  # 累积response长度，需要足够大支持多轮交互
   train_batch_size: 128  # 4xL20比8xH100小，减小batch size
   val_batch_size: 8
   filter_overlong_prompts: True
@@ -34,7 +34,7 @@ actor_rollout_ref:
       lr: 5e-7  # 用户指定学习率
     ppo_mini_batch_size: 128  # 和train_batch_size一致
     ppo_micro_batch_size_per_gpu: 2  # L20显存较小，每卡micro batch小一些
-    ppo_max_token_len_per_gpu: 2048  # 对应response_length，节省显存
+    ppo_max_token_len_per_gpu: 2560  # prompt(512) + response(2048)
     use_kl_loss: True
     kl_loss_coef: 0.001
     kl_loss_type: low_var_kl
@@ -47,10 +47,10 @@ actor_rollout_ref:
   # Rollout configuration (inference with SGLang)
   rollout:
     name: sglang
-    temperature: 0.3  # 降低温度避免冗长输出（参考eval成功经验：0.1有效）
+    temperature: 0.3  # 降低温度避免冗长输出
     top_p: 0.95
     prompt_length: 2048  # 足够包含instruction + observation
-    response_length: 1024  # Webshop只需简短的思考+action，无需8192
+    response_length: 2048  # 累积长度上限，需要足够大支持多轮交互
     gpu_memory_utilization: 0.85  # 既然禁用了CPU offload，充分利用GPU显存
     tensor_model_parallel_size: 1  # 单GPU推理，让verl框架处理并行
     data_parallel_size: 1  # 禁用SGLang的data parallel，避免端口冲突
@@ -58,14 +58,21 @@ actor_rollout_ref:
     skip_tokenizer_init: False
     n: 4  # 每个prompt采样4次 (比8xH100的n=8小)
     log_prob_micro_batch_size_per_gpu: 2
-    log_prob_max_token_len_per_gpu: 2048  # 减小以节省显存，对应response_length
+    log_prob_max_token_len_per_gpu: 2560  # prompt(512) + response(2048)
+    
+    # Validation sampling parameters
+    val_kwargs:
+      temperature: 0.3
+      top_p: 0.95
+      do_sample: true
+      n: 1
     
     # Multi-turn with interaction
     multi_turn:
       enable: True
       max_user_turns: 25  # Webshop max interaction rounds
       max_assistant_turns: 25
-      interaction_config_path: examples/sglang_multiturn/config/webshop_interaction.yaml
+      interaction_config_path: /Data/wyh/verl/examples/sglang_multiturn/config/webshop_interaction.yaml
     
     # Agent configuration
     agent:
@@ -75,7 +82,7 @@ actor_rollout_ref:
   # Reference model configuration (for KL divergence)
   ref:
     log_prob_micro_batch_size_per_gpu: 2
-    log_prob_max_token_len_per_gpu: 2048  # 对应response_length
+    log_prob_max_token_len_per_gpu: 2560  # prompt(512) + response(2048)
     fsdp_config:
       param_offload: False  # 禁用offload避免RAM OOM
       model_dtype: bfloat16

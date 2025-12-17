@@ -8,10 +8,10 @@ set -x
 ulimit -n 65535
 
 # Configuration
-MODEL_PATH=${MODEL_PATH:-"/Data/public/Qwen3-8B"}
-DATA_PATH=${DATA_PATH:-"/Data/wyh/datasets/Verl-Data/webshop/train.parquet"}
+MODEL_PATH=${MODEL_PATH:-"/Data/public/Qwen3-1.7B"}
+DATA_PATH=${DATA_PATH:-"/Data/wyh/datasets/Verl-Data/train/webshop_small/train.parquet"}
 OUTPUT_DIR=${OUTPUT_DIR:-"/Data/wyh/datasets/Verl-Data/outputs/webshop_grpo_test"}
-WEBSHOP_SERVER=${WEBSHOP_SERVER:-"http://127.0.0.1:36003"}
+WEBSHOP_SERVER=${WEBSHOP_SERVER:-"http://127.0.0.1:36001"}
 
 # Test parameters - 小规模
 TRAIN_BATCH_SIZE=8  # 小batch size for quick test
@@ -90,6 +90,10 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.multi_turn.max_user_turns=25 \
     actor_rollout_ref.rollout.multi_turn.max_assistant_turns=25 \
     actor_rollout_ref.rollout.agent.num_workers=4 \
+    actor_rollout_ref.rollout.val_kwargs.temperature=0.3 \
+    actor_rollout_ref.rollout.val_kwargs.top_p=0.95 \
+    actor_rollout_ref.rollout.val_kwargs.do_sample=true \
+    actor_rollout_ref.rollout.val_kwargs.n=1 \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
     trainer.n_gpus_per_node=$NUM_GPUS \
     trainer.nnodes=1 \
@@ -97,7 +101,7 @@ python3 -m verl.trainer.main_ppo \
     trainer.default_local_dir=$OUTPUT_DIR \
     trainer.project_name=webshop_grpo_test \
     trainer.experiment_name=qwen3-8b_webshop_grpo_test_${TIMESTAMP} \
-    trainer.save_freq=1 \
+    trainer.save_freq=10 \
     trainer.test_freq=1 \
     2>&1 | tee "$LOG_FILE"
 

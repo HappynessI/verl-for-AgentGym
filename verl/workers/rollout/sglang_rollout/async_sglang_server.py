@@ -246,7 +246,13 @@ class SGLangHttpServer:
     ) -> TokenOutput:
         """Generate sequence with token-in-token-out."""
         # TODO(@wuxibin): switch to `/generate` http endpoint once multi-modal support ready.
-        max_new_tokens = min(self.config.response_length, self.config.max_model_len - len(prompt_ids) - 1)
+        # 支持validation时使用自定义max_new_tokens
+        if "max_new_tokens" in sampling_params:
+            max_new_tokens = min(sampling_params["max_new_tokens"], self.config.max_model_len - len(prompt_ids) - 1)
+            print(f"[DEBUG SGLang] Using max_new_tokens from sampling_params: {sampling_params['max_new_tokens']} -> final: {max_new_tokens}")
+        else:
+            max_new_tokens = min(self.config.response_length, self.config.max_model_len - len(prompt_ids) - 1)
+            print(f"[DEBUG SGLang] Using response_length: {self.config.response_length} -> final: {max_new_tokens}")
         sampling_params["max_new_tokens"] = max_new_tokens
         return_logprob = sampling_params.pop("logprobs", False)
 
@@ -257,7 +263,10 @@ class SGLangHttpServer:
             return_logprob=return_logprob,
             image_data=image_data,
         )
+        print(f"[DEBUG SGLang] Request sampling_params: {request.sampling_params}")
         output = await self.tokenizer_manager.generate_request(request, None).__anext__()
+        actual_output_len = len(output["output_ids"]) if "output_ids" in output else len(output["meta_info"]["output_token_logprobs"]) if "meta_info" in output and "output_token_logprobs" in output["meta_info"] else 0
+        print(f"[DEBUG SGLang] Actual output length: {actual_output_len} tokens")
         if return_logprob:
             output_token_logprobs = output["meta_info"]["output_token_logprobs"]
             log_probs, token_ids = zip(

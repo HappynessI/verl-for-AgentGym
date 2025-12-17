@@ -25,7 +25,7 @@ import requests
 from .base import BaseInteraction
 
 logger = logging.getLogger(__name__)
-logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
+logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "INFO"))  # 改为INFO以便调试
 
 
 class WebshopInteraction(BaseInteraction):
@@ -162,7 +162,7 @@ class WebshopInteraction(BaseInteraction):
         # On first call, return initial observation without expecting action
         if step_count == 0:
             initial_obs = env_state["initial_observation"]
-            logger.info(f"Instance {instance_id} returning initial observation: {initial_obs[:100]}...")
+            logger.info(f"[WEBSHOP] Instance {instance_id} Turn 1: returning initial observation (reward=0.0): {initial_obs[:200]}...")
             env_state["step_count"] += 1
             return False, initial_obs, 0.0, {"step_count": 1, "is_initial": True}
         
@@ -170,10 +170,11 @@ class WebshopInteraction(BaseInteraction):
         action = self._extract_action(messages)
         
         if action is None:
-            logger.warning(f"No action found in messages for instance {instance_id}")
+            logger.warning(f"[WEBSHOP] Instance {instance_id} Turn {step_count+1}: NO ACTION FOUND in messages!")
+            logger.warning(f"[WEBSHOP] Last 3 messages: {messages[-3:] if len(messages) >= 3 else messages}")
             return False, "Please provide a valid action (search[...] or click[...]).", 0.0, {}
         
-        logger.debug(f"Instance {instance_id} executing action: {action}")
+        logger.info(f"[WEBSHOP] Instance {instance_id} Turn {step_count+1}: executing action: {action}")
         
         try:
             # Execute action in environment
@@ -194,8 +195,9 @@ class WebshopInteraction(BaseInteraction):
             env_state["total_reward"] += reward
             env_state["step_count"] += 1
             
-            logger.info(f"Instance {instance_id} step {env_state['step_count']}: "
-                       f"action={action[:50]}..., reward={reward:.3f}, done={done}")
+            logger.info(f"[WEBSHOP] Instance {instance_id} Turn {env_state['step_count']}: "
+                       f"action={action}, reward={reward:.3f}, done={done}, cumulative={env_state['total_reward']:.3f}")
+            logger.info(f"[WEBSHOP] Observation: {observation[:300]}...")
             
             additional_data = {
                 "step_count": env_state["step_count"],

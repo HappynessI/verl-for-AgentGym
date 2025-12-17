@@ -1,0 +1,18 @@
+# TextCraft Interaction Configuration
+# TextCraft环境交互配置
+
+interaction:
+  - name: textcraft
+    class_name: verl.interactions.textcraft_interaction.TextCraftInteraction
+    config:
+      # TextCraft环境服务器地址
+      # 确保在训练前启动服务器：
+      # cd AgentGym/agentenv-textcraft && python -m agentenv_textcraft.launch --port 36002
+      env_server_base: "http://127.0.0.1:36002"
+      
+      # 请求超时（秒）
+      timeout: 600
+      
+      # 最大重试次数
+      max_retries: 3
+

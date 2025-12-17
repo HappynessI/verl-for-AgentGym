@@ -103,6 +103,24 @@ def default_compute_score(
 
         res = search_r1_like_qa_em.compute_score(solution_str, ground_truth)
 
+    elif data_source == "webshop":
+        # For webshop, reward comes from environment interaction
+        # Data has been normalized in naive.py to extra_info["turn_scores"]: list[float]
+        if extra_info and "turn_scores" in extra_info:
+            scores = extra_info["turn_scores"]
+            res = float(sum(scores)) if scores else 0.0
+        else:
+            res = 0.0
+
+    elif data_source == "textcraft":
+        # For textcraft, reward comes from environment interaction
+        # Data has been normalized in naive.py to extra_info["turn_scores"]: list[float]
+        if extra_info and "turn_scores" in extra_info:
+            scores = extra_info["turn_scores"]
+            res = float(sum(scores)) if scores else 0.0
+        else:
+            res = 0.0
+
     else:
         raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
 

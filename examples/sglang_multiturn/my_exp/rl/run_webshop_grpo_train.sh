@@ -9,7 +9,7 @@ ulimit -n 65535
 
 # Configuration
 MODEL_PATH=${MODEL_PATH:-"/Data/public/Qwen3-8B"}
-DATA_PATH=${DATA_PATH:-"/Data/wyh/datasets/Verl-Data/webshop/train.parquet"}
+DATA_PATH=${DATA_PATH:-"/Data/wyh/datasets/Verl-Data/train/webshop_small/train.parquet"}
 OUTPUT_DIR=${OUTPUT_DIR:-"/Data/wyh/datasets/Verl-Data/outputs/webshop_grpo"}
 WEBSHOP_SERVER=${WEBSHOP_SERVER:-"http://127.0.0.1:36003"}
 
@@ -91,6 +91,10 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.multi_turn.max_user_turns=25 \
     actor_rollout_ref.rollout.multi_turn.max_assistant_turns=25 \
     actor_rollout_ref.rollout.agent.num_workers=4 \
+    actor_rollout_ref.rollout.val_kwargs.temperature=0.3 \
+    actor_rollout_ref.rollout.val_kwargs.top_p=0.95 \
+    actor_rollout_ref.rollout.val_kwargs.do_sample=true \
+    actor_rollout_ref.rollout.val_kwargs.n=1 \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
     trainer.n_gpus_per_node=$NUM_GPUS \
     trainer.nnodes=1 \

@@ -186,6 +186,34 @@ class ToolAgentLoop(AgentLoopBase):
 
     async def _handle_pending_state(self, agent_data: AgentData, sampling_params: dict[str, Any]) -> AgentState:
         """Handle the pending state: prepare the prompt and start generation."""
+        # Check if we need to get initial observation from interaction
+        # (when messages only contain system prompt)
+        if (
+            agent_data.interaction is not None
+            and len(agent_data.messages) == 1
+            and agent_data.messages[0].get("role") == "system"
+        ):
+            # Get initial observation before first generation
+            (
+                should_terminate,
+                initial_obs,
+                reward,
+                metrics,
+            ) = await agent_data.interaction.generate_response(
+                agent_data.request_id, agent_data.messages, **agent_data.interaction_kwargs
+            )
+            agent_data.user_turns += 1
+            
+            # Add initial observation as user message
+            agent_data.messages.append({"role": "user", "content": initial_obs})
+            
+            if reward is not None:
+                agent_data.turn_scores.append(reward)
+            
+            # If environment already terminated (shouldn't happen), stop here
+            if should_terminate:
+                return AgentState.TERMINATED
+        
         if self.processor is not None:
             raw_prompt = await self.loop.run_in_executor(
                 None,
