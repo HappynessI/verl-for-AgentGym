@@ -1,0 +1,19 @@
+
+================================================================================
+TextCraft Evaluation Summary
+================================================================================
+Model: /Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/new_ckp/global_step_80/huggingface
+Data: /Data/wyh/datasets/Verl-Data/eval/textcraft/test.parquet
+Total samples: 100
+Max rounds: 50
+
+Results:
+--------
+Average Reward: 0.9100
+Success Rate: 0.9100 (91/100)
+
+Output files:
+-------------
+Results: /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval_new/SFT-global_step_80/eval1/eval_results_20251217_110926.jsonl
+Summary: /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval_new/SFT-global_step_80/eval1/eval_summary_20251217_110926.txt
+================================================================================

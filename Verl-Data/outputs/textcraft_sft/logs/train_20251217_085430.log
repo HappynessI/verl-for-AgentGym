@@ -1,0 +1,823 @@
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+W1217 08:54:32.458000 993903 /Data/wyh/conda_envs/verl/lib/python3.12/site-packages/torch/distributed/run.py:774] 
+W1217 08:54:32.458000 993903 /Data/wyh/conda_envs/verl/lib/python3.12/site-packages/torch/distributed/run.py:774] *****************************************
+W1217 08:54:32.458000 993903 /Data/wyh/conda_envs/verl/lib/python3.12/site-packages/torch/distributed/run.py:774] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W1217 08:54:32.458000 993903 /Data/wyh/conda_envs/verl/lib/python3.12/site-packages/torch/distributed/run.py:774] *****************************************
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/models/backends.py:21: UserWarning: Apex is not installed. Falling back to Torch Norm
+  warnings.warn("Apex is not installed. Falling back to Torch Norm")
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/optimizer/__init__.py:18: UserWarning: Transformer Engine and Apex are not installed. Falling back to Torch optimizers.
+  warnings.warn(
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/optimizer/optimizer.py:28: UserWarning: Transformer Engine and Apex are not installed. Falling back to local implementations of multi_tensor_applier and multi_tensor_scale
+  warnings.warn(
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/optimizer/clip_grads.py:29: UserWarning: Transformer Engine and Apex are not installed. Falling back to local implementations of multi_tensor_applier, multi_tensor_l2norm, and multi_tensor_scale
+  warnings.warn(
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/models/gpt/gpt_layer_specs.py:67: UserWarning: Apex is not installed. Falling back to Torch Norm
+  warnings.warn("Apex is not installed. Falling back to Torch Norm")
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/models/backends.py:21: UserWarning: Apex is not installed. Falling back to Torch Norm
+  warnings.warn("Apex is not installed. Falling back to Torch Norm")
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/optimizer/__init__.py:18: UserWarning: Transformer Engine and Apex are not installed. Falling back to Torch optimizers.
+  warnings.warn(
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/optimizer/optimizer.py:28: UserWarning: Transformer Engine and Apex are not installed. Falling back to local implementations of multi_tensor_applier and multi_tensor_scale
+  warnings.warn(
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/optimizer/clip_grads.py:29: UserWarning: Transformer Engine and Apex are not installed. Falling back to local implementations of multi_tensor_applier, multi_tensor_l2norm, and multi_tensor_scale
+  warnings.warn(
+/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/megatron/core/models/gpt/gpt_layer_specs.py:67: UserWarning: Apex is not installed. Falling back to Torch Norm
+  warnings.warn("Apex is not installed. Falling back to Torch Norm")
+dataset len: 350
+dataset len: 350
+Normalize batch size by dp 1
+Using sequence parallel size: 2
+Using remove padding: True
+Using SP rank 0 and size 1 for data distribution
+Each SP rank gets different data, but the same data WITHIN the same rank
+Using FSDP rank 0 and size 1 for data distribution
+`torch_dtype` is deprecated! Use `dtype` instead!
+Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3ForCausalLM is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3Model is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+dataset len: 350
+dataset len: 350
+`torch_dtype` is deprecated! Use `dtype` instead!
+Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3ForCausalLM is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+Flash Attention 2 only supports torch.float16 and torch.bfloat16 dtypes, but the current dype in Qwen3Model is torch.float32. You should run training or inference using Automatic Mixed-Precision via the `with torch.autocast(device_type='torch_device'):` decorator, or load the model with the `dtype` argument. Example: `model = AutoModel.from_pretrained("openai/whisper-tiny", attn_implementation="flash_attention_2", dtype=torch.float16)`
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.41s/it]Loading checkpoint shards:  50%|█████     | 1/2 [00:02<00:02,  2.50s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.44s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.58s/it]
+Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.48s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:03<00:00,  1.63s/it]
+Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is None
+Monkey patch _flash_attention_forward in transformers.integrations.flash_attention
+Skipping monkey patch for Qwen3ForCausalLM as use_fused_kernels is False or fused_kernels_backend is None
+functools.partial(<function _or_policy at 0x7ff9055b9f80>, policies=[functools.partial(<function transformer_auto_wrap_policy at 0x7ff9055b9e40>, transformer_layer_cls={<class 'transformers.models.qwen3.modeling_qwen3.Qwen3DecoderLayer'>})])
+NCCL version 2.27.3+cuda12.9
+[2025-12-17 08:54:46,675][root][WARNING] - Token mismatch detected! Full tokenization length: 1310, Concatenated tokens length: 1323. Using concatenated version.
+[2025-12-17 08:54:46,680][root][WARNING] - Token mismatch detected! Full tokenization length: 1410, Concatenated tokens length: 1421. Using concatenated version.
+[2025-12-17 08:54:46,687][root][WARNING] - Token mismatch detected! Full tokenization length: 1014, Concatenated tokens length: 1022. Using concatenated version.
+[2025-12-17 08:54:46,689][root][WARNING] - Token mismatch detected! Full tokenization length: 1645, Concatenated tokens length: 1657. Using concatenated version.
+[2025-12-17 08:54:46,690][root][WARNING] - Token mismatch detected! Full tokenization length: 1130, Concatenated tokens length: 1138. Using concatenated version.
+[2025-12-17 08:54:46,694][root][WARNING] - Token mismatch detected! Full tokenization length: 1005, Concatenated tokens length: 1013. Using concatenated version.
+[2025-12-17 08:54:46,697][root][WARNING] - Token mismatch detected! Full tokenization length: 938, Concatenated tokens length: 948. Using concatenated version.
+[2025-12-17 08:54:46,703][root][WARNING] - Token mismatch detected! Full tokenization length: 1067, Concatenated tokens length: 1075. Using concatenated version.
+[2025-12-17 08:54:46,708][root][WARNING] - Token mismatch detected! Full tokenization length: 1446, Concatenated tokens length: 1456. Using concatenated version.
+[2025-12-17 08:54:46,708][root][WARNING] - Token mismatch detected! Full tokenization length: 1728, Concatenated tokens length: 1748. Using concatenated version.
+[2025-12-17 08:54:46,709][root][WARNING] - Token mismatch detected! Full tokenization length: 1195, Concatenated tokens length: 1204. Using concatenated version.
+[2025-12-17 08:54:46,714][root][WARNING] - Token mismatch detected! Full tokenization length: 1658, Concatenated tokens length: 1672. Using concatenated version.
+[2025-12-17 08:54:46,715][root][WARNING] - Token mismatch detected! Full tokenization length: 1207, Concatenated tokens length: 1217. Using concatenated version.
+[2025-12-17 08:54:46,720][root][WARNING] - Token mismatch detected! Full tokenization length: 1093, Concatenated tokens length: 1103. Using concatenated version.
+[2025-12-17 08:54:46,721][root][WARNING] - Token mismatch detected! Full tokenization length: 1194, Concatenated tokens length: 1202. Using concatenated version.
+[2025-12-17 08:54:46,722][root][WARNING] - Token mismatch detected! Full tokenization length: 2788, Concatenated tokens length: 2808. Using concatenated version.
+[2025-12-17 08:54:46,724][root][WARNING] - Token mismatch detected! Full tokenization length: 1755, Concatenated tokens length: 1779. Using concatenated version.
+[2025-12-17 08:54:46,730][root][WARNING] - Token mismatch detected! Full tokenization length: 1580, Concatenated tokens length: 1594. Using concatenated version.
+[2025-12-17 08:54:46,732][root][WARNING] - Token mismatch detected! Full tokenization length: 1716, Concatenated tokens length: 1729. Using concatenated version.
+[2025-12-17 08:54:46,736][root][WARNING] - Token mismatch detected! Full tokenization length: 1093, Concatenated tokens length: 1101. Using concatenated version.
+[2025-12-17 08:54:46,737][root][WARNING] - Token mismatch detected! Full tokenization length: 1235, Concatenated tokens length: 1247. Using concatenated version.
+[2025-12-17 08:54:46,737][root][WARNING] - Token mismatch detected! Full tokenization length: 1723, Concatenated tokens length: 1737. Using concatenated version.
+[2025-12-17 08:54:46,741][root][WARNING] - Token mismatch detected! Full tokenization length: 1449, Concatenated tokens length: 1463. Using concatenated version.
+[2025-12-17 08:54:46,746][root][WARNING] - Token mismatch detected! Full tokenization length: 1197, Concatenated tokens length: 1206. Using concatenated version.
+[2025-12-17 08:54:46,747][root][WARNING] - Token mismatch detected! Full tokenization length: 1502, Concatenated tokens length: 1513. Using concatenated version.
+[2025-12-17 08:54:46,748][root][WARNING] - Token mismatch detected! Full tokenization length: 935, Concatenated tokens length: 944. Using concatenated version.
+[2025-12-17 08:54:46,751][root][WARNING] - Token mismatch detected! Full tokenization length: 2065, Concatenated tokens length: 2080. Using concatenated version.
+[2025-12-17 08:54:46,760][root][WARNING] - Token mismatch detected! Full tokenization length: 1192, Concatenated tokens length: 1201. Using concatenated version.
+[2025-12-17 08:54:46,761][root][WARNING] - Token mismatch detected! Full tokenization length: 988, Concatenated tokens length: 997. Using concatenated version.
+[2025-12-17 08:54:46,763][root][WARNING] - Token mismatch detected! Full tokenization length: 3683, Concatenated tokens length: 3702. Using concatenated version.
+[2025-12-17 08:54:46,769][root][WARNING] - Token mismatch detected! Full tokenization length: 1465, Concatenated tokens length: 1477. Using concatenated version.
+[2025-12-17 08:54:46,774][root][WARNING] - Token mismatch detected! Full tokenization length: 1701, Concatenated tokens length: 1716. Using concatenated version.
+[2025-12-17 08:54:46,775][root][WARNING] - Token mismatch detected! Full tokenization length: 1129, Concatenated tokens length: 1140. Using concatenated version.
+[2025-12-17 08:54:46,778][root][WARNING] - Token mismatch detected! Full tokenization length: 1416, Concatenated tokens length: 1430. Using concatenated version.
+[2025-12-17 08:54:46,787][root][WARNING] - Token mismatch detected! Full tokenization length: 1298, Concatenated tokens length: 1311. Using concatenated version.
+[2025-12-17 08:54:46,788][root][WARNING] - Token mismatch detected! Full tokenization length: 1153, Concatenated tokens length: 1162. Using concatenated version.
+[2025-12-17 08:54:46,789][root][WARNING] - Token mismatch detected! Full tokenization length: 1889, Concatenated tokens length: 1902. Using concatenated version.
+[2025-12-17 08:54:46,792][root][WARNING] - Token mismatch detected! Full tokenization length: 2987, Concatenated tokens length: 3008. Using concatenated version.
+[2025-12-17 08:54:46,794][root][WARNING] - Token mismatch detected! Full tokenization length: 1145, Concatenated tokens length: 1156. Using concatenated version.
+[2025-12-17 08:54:46,794][root][WARNING] - Token mismatch detected! Full tokenization length: 1593, Concatenated tokens length: 1606. Using concatenated version.
+[2025-12-17 08:54:46,795][root][WARNING] - Token mismatch detected! Full tokenization length: 2924, Concatenated tokens length: 2947. Using concatenated version.
+[2025-12-17 08:54:46,799][root][WARNING] - Token mismatch detected! Full tokenization length: 1324, Concatenated tokens length: 1332. Using concatenated version.
+[2025-12-17 08:54:46,800][root][WARNING] - Token mismatch detected! Full tokenization length: 944, Concatenated tokens length: 953. Using concatenated version.
+[2025-12-17 08:54:46,802][root][WARNING] - Token mismatch detected! Full tokenization length: 1183, Concatenated tokens length: 1191. Using concatenated version.
+[2025-12-17 08:54:46,805][root][WARNING] - Token mismatch detected! Full tokenization length: 1097, Concatenated tokens length: 1105. Using concatenated version.
+[2025-12-17 08:54:46,806][root][WARNING] - Token mismatch detected! Full tokenization length: 1031, Concatenated tokens length: 1039. Using concatenated version.
+[2025-12-17 08:54:46,813][root][WARNING] - Token mismatch detected! Full tokenization length: 1660, Concatenated tokens length: 1672. Using concatenated version.
+[2025-12-17 08:54:46,821][root][WARNING] - Token mismatch detected! Full tokenization length: 1060, Concatenated tokens length: 1072. Using concatenated version.
+[2025-12-17 08:54:46,821][root][WARNING] - Token mismatch detected! Full tokenization length: 1288, Concatenated tokens length: 1298. Using concatenated version.
+[2025-12-17 08:54:46,822][root][WARNING] - Token mismatch detected! Full tokenization length: 1572, Concatenated tokens length: 1592. Using concatenated version.
+[2025-12-17 08:54:46,822][root][WARNING] - Token mismatch detected! Full tokenization length: 3424, Concatenated tokens length: 3455. Using concatenated version.
+[2025-12-17 08:54:46,825][root][WARNING] - Token mismatch detected! Full tokenization length: 1253, Concatenated tokens length: 1260. Using concatenated version.
+[2025-12-17 08:54:46,829][root][WARNING] - Token mismatch detected! Full tokenization length: 1761, Concatenated tokens length: 1777. Using concatenated version.
+[2025-12-17 08:54:46,831][root][WARNING] - Token mismatch detected! Full tokenization length: 2051, Concatenated tokens length: 2069. Using concatenated version.
+[2025-12-17 08:54:46,832][root][WARNING] - Token mismatch detected! Full tokenization length: 2416, Concatenated tokens length: 2436. Using concatenated version.
+[2025-12-17 08:54:46,832][root][WARNING] - Token mismatch detected! Full tokenization length: 1045, Concatenated tokens length: 1052. Using concatenated version.
+[2025-12-17 08:54:46,842][root][WARNING] - Token mismatch detected! Full tokenization length: 1590, Concatenated tokens length: 1601. Using concatenated version.
+[2025-12-17 08:54:46,845][root][WARNING] - Token mismatch detected! Full tokenization length: 1256, Concatenated tokens length: 1266. Using concatenated version.
+[2025-12-17 08:54:46,847][root][WARNING] - Token mismatch detected! Full tokenization length: 1310, Concatenated tokens length: 1319. Using concatenated version.
+[2025-12-17 08:54:46,849][root][WARNING] - Token mismatch detected! Full tokenization length: 1774, Concatenated tokens length: 1789. Using concatenated version.
+[2025-12-17 08:54:46,849][root][WARNING] - Token mismatch detected! Full tokenization length: 1455, Concatenated tokens length: 1471. Using concatenated version.
+[2025-12-17 08:54:46,852][root][WARNING] - Token mismatch detected! Full tokenization length: 1418, Concatenated tokens length: 1440. Using concatenated version.
+[2025-12-17 08:54:46,852][root][WARNING] - Token mismatch detected! Full tokenization length: 1643, Concatenated tokens length: 1656. Using concatenated version.
+[2025-12-17 08:54:46,855][root][WARNING] - Token mismatch detected! Full tokenization length: 1452, Concatenated tokens length: 1461. Using concatenated version.
+[2025-12-17 08:54:46,864][root][WARNING] - Token mismatch detected! Full tokenization length: 1102, Concatenated tokens length: 1110. Using concatenated version.
+[2025-12-17 08:54:46,865][root][WARNING] - Token mismatch detected! Full tokenization length: 1583, Concatenated tokens length: 1594. Using concatenated version.
+[2025-12-17 08:54:46,866][root][WARNING] - Token mismatch detected! Full tokenization length: 1574, Concatenated tokens length: 1587. Using concatenated version.
+[2025-12-17 08:54:46,867][root][WARNING] - Token mismatch detected! Full tokenization length: 1117, Concatenated tokens length: 1125. Using concatenated version.
+[2025-12-17 08:54:46,878][root][WARNING] - Token mismatch detected! Full tokenization length: 2032, Concatenated tokens length: 2058. Using concatenated version.
+[2025-12-17 08:54:46,881][root][WARNING] - Token mismatch detected! Full tokenization length: 1732, Concatenated tokens length: 1752. Using concatenated version.
+[2025-12-17 08:54:46,884][root][WARNING] - Token mismatch detected! Full tokenization length: 1674, Concatenated tokens length: 1700. Using concatenated version.
+[2025-12-17 08:54:46,884][root][WARNING] - Token mismatch detected! Full tokenization length: 2714, Concatenated tokens length: 2731. Using concatenated version.
+[2025-12-17 08:54:46,886][root][WARNING] - Token mismatch detected! Full tokenization length: 1584, Concatenated tokens length: 1599. Using concatenated version.
+[2025-12-17 08:54:46,886][root][WARNING] - Token mismatch detected! Full tokenization length: 1429, Concatenated tokens length: 1444. Using concatenated version.
+[2025-12-17 08:54:46,892][root][WARNING] - Token mismatch detected! Full tokenization length: 1809, Concatenated tokens length: 1825. Using concatenated version.
+[2025-12-17 08:54:46,895][root][WARNING] - Token mismatch detected! Full tokenization length: 1011, Concatenated tokens length: 1019. Using concatenated version.
+[2025-12-17 08:54:46,895][root][WARNING] - Token mismatch detected! Full tokenization length: 1308, Concatenated tokens length: 1317. Using concatenated version.
+[2025-12-17 08:54:46,896][root][WARNING] - Token mismatch detected! Full tokenization length: 1078, Concatenated tokens length: 1085. Using concatenated version.
+[2025-12-17 08:54:46,897][root][WARNING] - Token mismatch detected! Full tokenization length: 1672, Concatenated tokens length: 1693. Using concatenated version.
+[2025-12-17 08:54:46,898][root][WARNING] - Token mismatch detected! Full tokenization length: 1677, Concatenated tokens length: 1688. Using concatenated version.
+[2025-12-17 08:54:46,906][root][WARNING] - Token mismatch detected! Full tokenization length: 1618, Concatenated tokens length: 1631. Using concatenated version.
+[2025-12-17 08:54:46,910][root][WARNING] - Token mismatch detected! Full tokenization length: 1183, Concatenated tokens length: 1195. Using concatenated version.
+[2025-12-17 08:54:46,913][root][WARNING] - Token mismatch detected! Full tokenization length: 1457, Concatenated tokens length: 1470. Using concatenated version.
+[2025-12-17 08:54:46,918][root][WARNING] - Token mismatch detected! Full tokenization length: 1039, Concatenated tokens length: 1048. Using concatenated version.
+[2025-12-17 08:54:46,918][root][WARNING] - Token mismatch detected! Full tokenization length: 1585, Concatenated tokens length: 1608. Using concatenated version.
+[2025-12-17 08:54:46,919][root][WARNING] - Token mismatch detected! Full tokenization length: 1512, Concatenated tokens length: 1527. Using concatenated version.
+[2025-12-17 08:54:46,919][root][WARNING] - Token mismatch detected! Full tokenization length: 1898, Concatenated tokens length: 1911. Using concatenated version.
+[2025-12-17 08:54:46,925][root][WARNING] - Token mismatch detected! Full tokenization length: 1641, Concatenated tokens length: 1663. Using concatenated version.
+[2025-12-17 08:54:46,928][root][WARNING] - Token mismatch detected! Full tokenization length: 1194, Concatenated tokens length: 1207. Using concatenated version.
+[2025-12-17 08:54:46,929][root][WARNING] - Token mismatch detected! Full tokenization length: 1209, Concatenated tokens length: 1216. Using concatenated version.
+[2025-12-17 08:54:46,931][root][WARNING] - Token mismatch detected! Full tokenization length: 1132, Concatenated tokens length: 1140. Using concatenated version.
+[2025-12-17 08:54:46,935][root][WARNING] - Token mismatch detected! Full tokenization length: 2041, Concatenated tokens length: 2064. Using concatenated version.
+[2025-12-17 08:54:46,938][root][WARNING] - Token mismatch detected! Full tokenization length: 1165, Concatenated tokens length: 1173. Using concatenated version.
+[2025-12-17 08:54:46,938][root][WARNING] - Token mismatch detected! Full tokenization length: 1279, Concatenated tokens length: 1294. Using concatenated version.
+[2025-12-17 08:54:46,941][root][WARNING] - Token mismatch detected! Full tokenization length: 1054, Concatenated tokens length: 1062. Using concatenated version.
+[2025-12-17 08:54:46,946][root][WARNING] - Token mismatch detected! Full tokenization length: 1051, Concatenated tokens length: 1058. Using concatenated version.
+[2025-12-17 08:54:46,947][root][WARNING] - Token mismatch detected! Full tokenization length: 1636, Concatenated tokens length: 1646. Using concatenated version.
+[2025-12-17 08:54:46,950][root][WARNING] - Token mismatch detected! Full tokenization length: 1956, Concatenated tokens length: 1973. Using concatenated version.
+[2025-12-17 08:54:46,950][root][WARNING] - Token mismatch detected! Full tokenization length: 1815, Concatenated tokens length: 1829. Using concatenated version.
+[2025-12-17 08:54:46,951][root][WARNING] - Token mismatch detected! Full tokenization length: 1139, Concatenated tokens length: 1147. Using concatenated version.
+[2025-12-17 08:54:46,951][root][WARNING] - Token mismatch detected! Full tokenization length: 1302, Concatenated tokens length: 1310. Using concatenated version.
+[2025-12-17 08:54:46,954][root][WARNING] - Token mismatch detected! Full tokenization length: 2094, Concatenated tokens length: 2117. Using concatenated version.
+[2025-12-17 08:54:46,960][root][WARNING] - Token mismatch detected! Full tokenization length: 1106, Concatenated tokens length: 1114. Using concatenated version.
+[2025-12-17 08:54:46,965][root][WARNING] - Token mismatch detected! Full tokenization length: 1484, Concatenated tokens length: 1495. Using concatenated version.
+[2025-12-17 08:54:46,965][root][WARNING] - Token mismatch detected! Full tokenization length: 1672, Concatenated tokens length: 1685. Using concatenated version.
+[2025-12-17 08:54:46,966][root][WARNING] - Token mismatch detected! Full tokenization length: 1160, Concatenated tokens length: 1168. Using concatenated version.
+[2025-12-17 08:54:46,967][root][WARNING] - Token mismatch detected! Full tokenization length: 1108, Concatenated tokens length: 1121. Using concatenated version.
+[2025-12-17 08:54:46,968][root][WARNING] - Token mismatch detected! Full tokenization length: 1773, Concatenated tokens length: 1786. Using concatenated version.
+[2025-12-17 08:54:46,971][root][WARNING] - Token mismatch detected! Full tokenization length: 985, Concatenated tokens length: 994. Using concatenated version.
+[2025-12-17 08:54:46,979][root][WARNING] - Token mismatch detected! Full tokenization length: 1090, Concatenated tokens length: 1099. Using concatenated version.
+[2025-12-17 08:54:46,980][root][WARNING] - Token mismatch detected! Full tokenization length: 1216, Concatenated tokens length: 1224. Using concatenated version.
+[2025-12-17 08:54:46,984][root][WARNING] - Token mismatch detected! Full tokenization length: 1352, Concatenated tokens length: 1361. Using concatenated version.
+[2025-12-17 08:54:46,987][root][WARNING] - Token mismatch detected! Full tokenization length: 1564, Concatenated tokens length: 1576. Using concatenated version.
+[2025-12-17 08:54:46,991][root][WARNING] - Token mismatch detected! Full tokenization length: 1194, Concatenated tokens length: 1202. Using concatenated version.
+[2025-12-17 08:54:46,992][root][WARNING] - Token mismatch detected! Full tokenization length: 2389, Concatenated tokens length: 2413. Using concatenated version.
+[2025-12-17 08:54:46,995][root][WARNING] - Token mismatch detected! Full tokenization length: 1227, Concatenated tokens length: 1238. Using concatenated version.
+[2025-12-17 08:54:46,999][root][WARNING] - Token mismatch detected! Full tokenization length: 1318, Concatenated tokens length: 1327. Using concatenated version.
+[2025-12-17 08:54:47,001][root][WARNING] - Token mismatch detected! Full tokenization length: 1054, Concatenated tokens length: 1061. Using concatenated version.
+[2025-12-17 08:54:47,005][root][WARNING] - Token mismatch detected! Full tokenization length: 1743, Concatenated tokens length: 1768. Using concatenated version.
+[2025-12-17 08:54:47,007][root][WARNING] - Token mismatch detected! Full tokenization length: 2306, Concatenated tokens length: 2327. Using concatenated version.
+[2025-12-17 08:54:47,008][root][WARNING] - Token mismatch detected! Full tokenization length: 1988, Concatenated tokens length: 2000. Using concatenated version.
+[2025-12-17 08:54:47,009][root][WARNING] - Token mismatch detected! Full tokenization length: 1301, Concatenated tokens length: 1310. Using concatenated version.
+[2025-12-17 08:54:47,018][root][WARNING] - Token mismatch detected! Full tokenization length: 905, Concatenated tokens length: 914. Using concatenated version.
+[2025-12-17 08:54:47,018][root][WARNING] - Token mismatch detected! Full tokenization length: 883, Concatenated tokens length: 890. Using concatenated version.
+[2025-12-17 08:54:47,023][root][WARNING] - Token mismatch detected! Full tokenization length: 1551, Concatenated tokens length: 1565. Using concatenated version.
+[2025-12-17 08:54:47,025][root][WARNING] - Token mismatch detected! Full tokenization length: 3156, Concatenated tokens length: 3186. Using concatenated version.
+[2025-12-17 08:54:47,027][root][WARNING] - Token mismatch detected! Full tokenization length: 1465, Concatenated tokens length: 1479. Using concatenated version.
+[2025-12-17 08:54:47,030][root][WARNING] - Token mismatch detected! Full tokenization length: 2073, Concatenated tokens length: 2089. Using concatenated version.
+[2025-12-17 08:54:47,037][root][WARNING] - Token mismatch detected! Full tokenization length: 1885, Concatenated tokens length: 1899. Using concatenated version.
+[2025-12-17 08:54:47,037][root][WARNING] - Token mismatch detected! Full tokenization length: 1091, Concatenated tokens length: 1099. Using concatenated version.
+[2025-12-17 08:54:47,042][root][WARNING] - Token mismatch detected! Full tokenization length: 1469, Concatenated tokens length: 1483. Using concatenated version.
+[2025-12-17 08:54:47,044][root][WARNING] - Token mismatch detected! Full tokenization length: 1355, Concatenated tokens length: 1364. Using concatenated version.
+[2025-12-17 08:54:47,046][root][WARNING] - Token mismatch detected! Full tokenization length: 1459, Concatenated tokens length: 1469. Using concatenated version.
+[2025-12-17 08:54:47,048][root][WARNING] - Token mismatch detected! Full tokenization length: 1080, Concatenated tokens length: 1087. Using concatenated version.
+[2025-12-17 08:54:47,049][root][WARNING] - Token mismatch detected! Full tokenization length: 1906, Concatenated tokens length: 1923. Using concatenated version.
+[2025-12-17 08:54:47,051][root][WARNING] - Token mismatch detected! Full tokenization length: 1385, Concatenated tokens length: 1394. Using concatenated version.
+[2025-12-17 08:54:47,058][root][WARNING] - Token mismatch detected! Full tokenization length: 1065, Concatenated tokens length: 1073. Using concatenated version.
+[2025-12-17 08:54:47,059][root][WARNING] - Token mismatch detected! Full tokenization length: 1015, Concatenated tokens length: 1022. Using concatenated version.
+[2025-12-17 08:54:47,061][root][WARNING] - Token mismatch detected! Full tokenization length: 1545, Concatenated tokens length: 1558. Using concatenated version.
+[2025-12-17 08:54:47,063][root][WARNING] - Token mismatch detected! Full tokenization length: 1082, Concatenated tokens length: 1090. Using concatenated version.
+[2025-12-17 08:54:47,063][root][WARNING] - Token mismatch detected! Full tokenization length: 2407, Concatenated tokens length: 2431. Using concatenated version.
+[2025-12-17 08:54:47,071][root][WARNING] - Token mismatch detected! Full tokenization length: 1050, Concatenated tokens length: 1058. Using concatenated version.
+[2025-12-17 08:54:47,071][root][WARNING] - Token mismatch detected! Full tokenization length: 994, Concatenated tokens length: 1001. Using concatenated version.
+[2025-12-17 08:54:47,075][root][WARNING] - Token mismatch detected! Full tokenization length: 1405, Concatenated tokens length: 1412. Using concatenated version.
+[2025-12-17 08:54:47,075][root][WARNING] - Token mismatch detected! Full tokenization length: 1168, Concatenated tokens length: 1176. Using concatenated version.
+[2025-12-17 08:54:47,078][root][WARNING] - Token mismatch detected! Full tokenization length: 3146, Concatenated tokens length: 3181. Using concatenated version.
+[2025-12-17 08:54:47,085][root][WARNING] - Token mismatch detected! Full tokenization length: 1529, Concatenated tokens length: 1539. Using concatenated version.
+[2025-12-17 08:54:47,086][root][WARNING] - Token mismatch detected! Full tokenization length: 1810, Concatenated tokens length: 1835. Using concatenated version.
+[2025-12-17 08:54:47,090][root][WARNING] - Token mismatch detected! Full tokenization length: 1403, Concatenated tokens length: 1413. Using concatenated version.
+[2025-12-17 08:54:47,091][root][WARNING] - Token mismatch detected! Full tokenization length: 1144, Concatenated tokens length: 1153. Using concatenated version.
+[2025-12-17 08:54:47,092][root][WARNING] - Token mismatch detected! Full tokenization length: 1588, Concatenated tokens length: 1600. Using concatenated version.
+[2025-12-17 08:54:47,092][root][WARNING] - Token mismatch detected! Full tokenization length: 2037, Concatenated tokens length: 2049. Using concatenated version.
+[2025-12-17 08:54:47,099][root][WARNING] - Token mismatch detected! Full tokenization length: 3263, Concatenated tokens length: 3287. Using concatenated version.
+[2025-12-17 08:54:47,101][root][WARNING] - Token mismatch detected! Full tokenization length: 985, Concatenated tokens length: 993. Using concatenated version.
+[2025-12-17 08:54:47,102][root][WARNING] - Token mismatch detected! Full tokenization length: 1101, Concatenated tokens length: 1109. Using concatenated version.
+[2025-12-17 08:54:47,103][root][WARNING] - Token mismatch detected! Full tokenization length: 1554, Concatenated tokens length: 1566. Using concatenated version.
+[2025-12-17 08:54:47,103][root][WARNING] - Token mismatch detected! Full tokenization length: 3336, Concatenated tokens length: 3355. Using concatenated version.
+[2025-12-17 08:54:47,104][root][WARNING] - Token mismatch detected! Full tokenization length: 1080, Concatenated tokens length: 1088. Using concatenated version.
+[2025-12-17 08:54:47,104][root][WARNING] - Token mismatch detected! Full tokenization length: 1123, Concatenated tokens length: 1131. Using concatenated version.
+[2025-12-17 08:54:47,110][root][WARNING] - Token mismatch detected! Full tokenization length: 741, Concatenated tokens length: 749. Using concatenated version.
+[2025-12-17 08:54:47,116][root][WARNING] - Token mismatch detected! Full tokenization length: 1474, Concatenated tokens length: 1481. Using concatenated version.
+[2025-12-17 08:54:47,122][root][WARNING] - Token mismatch detected! Full tokenization length: 1618, Concatenated tokens length: 1631. Using concatenated version.
+[2025-12-17 08:54:47,123][root][WARNING] - Token mismatch detected! Full tokenization length: 1735, Concatenated tokens length: 1759. Using concatenated version.
+[2025-12-17 08:54:47,125][root][WARNING] - Token mismatch detected! Full tokenization length: 939, Concatenated tokens length: 947. Using concatenated version.
+[2025-12-17 08:54:47,130][root][WARNING] - Token mismatch detected! Full tokenization length: 1649, Concatenated tokens length: 1669. Using concatenated version.
+[2025-12-17 08:54:47,134][root][WARNING] - Token mismatch detected! Full tokenization length: 964, Concatenated tokens length: 972. Using concatenated version.
+[2025-12-17 08:54:47,135][root][WARNING] - Token mismatch detected! Full tokenization length: 1657, Concatenated tokens length: 1677. Using concatenated version.
+[2025-12-17 08:54:47,136][root][WARNING] - Token mismatch detected! Full tokenization length: 1671, Concatenated tokens length: 1694. Using concatenated version.
+[2025-12-17 08:54:47,146][root][WARNING] - Token mismatch detected! Full tokenization length: 1840, Concatenated tokens length: 1862. Using concatenated version.
+[2025-12-17 08:54:47,146][root][WARNING] - Token mismatch detected! Full tokenization length: 1259, Concatenated tokens length: 1268. Using concatenated version.
+[2025-12-17 08:54:47,148][root][WARNING] - Token mismatch detected! Full tokenization length: 1113, Concatenated tokens length: 1121. Using concatenated version.
+[2025-12-17 08:54:47,160][root][WARNING] - Token mismatch detected! Full tokenization length: 1912, Concatenated tokens length: 1927. Using concatenated version.
+[2025-12-17 08:54:47,160][root][WARNING] - Token mismatch detected! Full tokenization length: 1098, Concatenated tokens length: 1106. Using concatenated version.
+[2025-12-17 08:54:47,161][root][WARNING] - Token mismatch detected! Full tokenization length: 2855, Concatenated tokens length: 2873. Using concatenated version.
+[2025-12-17 08:54:47,168][root][WARNING] - Token mismatch detected! Full tokenization length: 1865, Concatenated tokens length: 1877. Using concatenated version.
+[2025-12-17 08:54:47,171][root][WARNING] - Token mismatch detected! Full tokenization length: 3383, Concatenated tokens length: 3407. Using concatenated version.
+[2025-12-17 08:54:47,172][root][WARNING] - Token mismatch detected! Full tokenization length: 1159, Concatenated tokens length: 1167. Using concatenated version.
+[2025-12-17 08:54:47,173][root][WARNING] - Token mismatch detected! Full tokenization length: 1041, Concatenated tokens length: 1049. Using concatenated version.
+[2025-12-17 08:54:47,173][root][WARNING] - Token mismatch detected! Full tokenization length: 1362, Concatenated tokens length: 1380. Using concatenated version.
+[2025-12-17 08:54:47,179][root][WARNING] - Token mismatch detected! Full tokenization length: 1622, Concatenated tokens length: 1635. Using concatenated version.
+[2025-12-17 08:54:47,179][root][WARNING] - Token mismatch detected! Full tokenization length: 2244, Concatenated tokens length: 2266. Using concatenated version.
+[2025-12-17 08:54:47,181][root][WARNING] - Token mismatch detected! Full tokenization length: 2949, Concatenated tokens length: 2974. Using concatenated version.
+[2025-12-17 08:54:47,187][root][WARNING] - Token mismatch detected! Full tokenization length: 1082, Concatenated tokens length: 1092. Using concatenated version.
+[2025-12-17 08:54:47,187][root][WARNING] - Token mismatch detected! Full tokenization length: 1169, Concatenated tokens length: 1179. Using concatenated version.
+[2025-12-17 08:54:47,189][root][WARNING] - Token mismatch detected! Full tokenization length: 1058, Concatenated tokens length: 1066. Using concatenated version.
+[2025-12-17 08:54:47,190][root][WARNING] - Token mismatch detected! Full tokenization length: 1068, Concatenated tokens length: 1076. Using concatenated version.
+[2025-12-17 08:54:47,191][root][WARNING] - Token mismatch detected! Full tokenization length: 1886, Concatenated tokens length: 1900. Using concatenated version.
+[2025-12-17 08:54:47,198][root][WARNING] - Token mismatch detected! Full tokenization length: 1110, Concatenated tokens length: 1118. Using concatenated version.
+[2025-12-17 08:54:47,199][root][WARNING] - Token mismatch detected! Full tokenization length: 1164, Concatenated tokens length: 1172. Using concatenated version.
+[2025-12-17 08:54:47,201][root][WARNING] - Token mismatch detected! Full tokenization length: 1227, Concatenated tokens length: 1236. Using concatenated version.
+[2025-12-17 08:54:47,203][root][WARNING] - Token mismatch detected! Full tokenization length: 1007, Concatenated tokens length: 1016. Using concatenated version.
+[2025-12-17 08:54:47,204][root][WARNING] - Token mismatch detected! Full tokenization length: 1730, Concatenated tokens length: 1753. Using concatenated version.
+[2025-12-17 08:54:47,209][root][WARNING] - Token mismatch detected! Full tokenization length: 1028, Concatenated tokens length: 1036. Using concatenated version.
+[2025-12-17 08:54:47,212][root][WARNING] - Token mismatch detected! Full tokenization length: 1538, Concatenated tokens length: 1560. Using concatenated version.
+[2025-12-17 08:54:47,214][root][WARNING] - Token mismatch detected! Full tokenization length: 1824, Concatenated tokens length: 1852. Using concatenated version.
+[2025-12-17 08:54:47,219][root][WARNING] - Token mismatch detected! Full tokenization length: 1335, Concatenated tokens length: 1352. Using concatenated version.
+Number of steps/epoch 10, number of epochs 20, total number of steps 200
+[2025-12-17 08:54:47,221][root][WARNING] - Token mismatch detected! Full tokenization length: 1665, Concatenated tokens length: 1677. Using concatenated version.
+Checkpoint tracker file does not exist: /Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/new_ckp/latest_checkpointed_iteration.txt
+{'optim': {'_target_': 'verl.workers.config.FSDPOptimizerConfig', 'optimizer': 'AdamW', 'optimizer_impl': 'torch.optim', 'lr': 1e-05, 'lr_warmup_steps_ratio': 0.1, 'total_training_steps': -1, 'weight_decay': 0.01, 'lr_warmup_steps': -1, 'betas': [0.9, 0.95], 'clip_grad': 1.0, 'min_lr_ratio': 0.0, 'num_cycles': 0.5, 'lr_scheduler_type': 'constant', 'warmup_style': None, 'override_optimizer_config': None, 'lr_scheduler': 'cosine'}, 'data': {'train_batch_size': 32, 'micro_batch_size': 2, 'micro_batch_size_per_gpu': 4, 'train_files': '/Data/wyh/datasets/Verl-Data/train/textcraft/train_gemini_adapt.parquet', 'val_files': '/Data/wyh/datasets/Verl-Data/train/textcraft/train_gemini_adapt.parquet', 'train_max_samples': -1, 'val_max_samples': -1, 'prompt_key': 'question', 'response_key': 'answer', 'prompt_dict_keys': None, 'response_dict_keys': None, 'multiturn': {'enable': True, 'messages_key': 'messages', 'tools_key': 'tools', 'enable_thinking_key': 'enable_thinking'}, 'max_length': 4096, 'truncation': 'error', 'balance_dp_token': False, 'chat_template': None, 'custom_cls': {'path': None, 'name': None}, 'use_shm': False, 'apply_chat_template_kwargs': {}}, 'model': {'partial_pretrain': '/Data/public/Qwen3-1.7B', 'use_shm': False, 'fsdp_config': {'model_dtype': 'fp32', 'wrap_policy': {'min_num_params': 0}, 'cpu_offload': False, 'offload_params': False}, 'external_lib': None, 'enable_gradient_checkpointing': True, 'trust_remote_code': False, 'lora_rank': 0, 'lora_alpha': 16, 'target_modules': 'all-linear', 'use_liger': False, 'strategy': 'fsdp2'}, 'ulysses_sequence_parallel_size': 2, 'use_remove_padding': True, 'trainer': {'default_local_dir': '/Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/new_ckp', 'default_hdfs_dir': None, 'project_name': 'textcraft-sft', 'experiment_name': 'textcraft-sft-qwen3-1.7b-gemini-adapt', 'total_epochs': 20, 'total_training_steps': None, 'logger': ['console', 'wandb'], 'seed': 42, 'save_freq': 80, 'test_freq': 80, 'nnodes': 1, 'n_gpus_per_node': 8, 'max_ckpt_to_keep': None, 'resume_mode': 'auto', 'resume_from_path': None, 'checkpoint': {'save_contents': ['model', 'optimizer', 'extra'], 'load_contents': '${trainer.checkpoint.save_contents}'}, 'device': 'cuda'}}
+[2025-12-17 08:54:47,226][root][WARNING] - Token mismatch detected! Full tokenization length: 1063, Concatenated tokens length: 1071. Using concatenated version.
+[2025-12-17 08:54:47,226][root][WARNING] - Token mismatch detected! Full tokenization length: 1840, Concatenated tokens length: 1849. Using concatenated version.
+[2025-12-17 08:54:47,229][root][WARNING] - Token mismatch detected! Full tokenization length: 1149, Concatenated tokens length: 1160. Using concatenated version.
+[2025-12-17 08:54:47,232][root][WARNING] - Token mismatch detected! Full tokenization length: 1675, Concatenated tokens length: 1696. Using concatenated version.
+[2025-12-17 08:54:47,233][root][WARNING] - Token mismatch detected! Full tokenization length: 1141, Concatenated tokens length: 1149. Using concatenated version.
+[2025-12-17 08:54:47,234][root][WARNING] - Token mismatch detected! Full tokenization length: 1536, Concatenated tokens length: 1546. Using concatenated version.
+[2025-12-17 08:54:47,238][root][WARNING] - Token mismatch detected! Full tokenization length: 1648, Concatenated tokens length: 1674. Using concatenated version.
+[2025-12-17 08:54:47,240][root][WARNING] - Token mismatch detected! Full tokenization length: 1695, Concatenated tokens length: 1720. Using concatenated version.
+[2025-12-17 08:54:47,247][root][WARNING] - Token mismatch detected! Full tokenization length: 1631, Concatenated tokens length: 1647. Using concatenated version.
+[2025-12-17 08:54:47,247][root][WARNING] - Token mismatch detected! Full tokenization length: 1680, Concatenated tokens length: 1694. Using concatenated version.
+[2025-12-17 08:54:47,248][root][WARNING] - Token mismatch detected! Full tokenization length: 1527, Concatenated tokens length: 1539. Using concatenated version.
+[2025-12-17 08:54:47,249][root][WARNING] - Token mismatch detected! Full tokenization length: 1339, Concatenated tokens length: 1351. Using concatenated version.
+[2025-12-17 08:54:47,250][root][WARNING] - Token mismatch detected! Full tokenization length: 1112, Concatenated tokens length: 1120. Using concatenated version.
+[2025-12-17 08:54:47,252][root][WARNING] - Token mismatch detected! Full tokenization length: 1221, Concatenated tokens length: 1229. Using concatenated version.
+[2025-12-17 08:54:47,258][root][WARNING] - Token mismatch detected! Full tokenization length: 1356, Concatenated tokens length: 1371. Using concatenated version.
+[2025-12-17 08:54:47,259][root][WARNING] - Token mismatch detected! Full tokenization length: 1131, Concatenated tokens length: 1139. Using concatenated version.
+[2025-12-17 08:54:47,259][root][WARNING] - Token mismatch detected! Full tokenization length: 956, Concatenated tokens length: 964. Using concatenated version.
+[2025-12-17 08:54:47,268][root][WARNING] - Token mismatch detected! Full tokenization length: 1273, Concatenated tokens length: 1284. Using concatenated version.
+[2025-12-17 08:54:47,269][root][WARNING] - Token mismatch detected! Full tokenization length: 1140, Concatenated tokens length: 1156. Using concatenated version.
+[2025-12-17 08:54:47,271][root][WARNING] - Token mismatch detected! Full tokenization length: 2119, Concatenated tokens length: 2137. Using concatenated version.
+[2025-12-17 08:54:47,275][root][WARNING] - Token mismatch detected! Full tokenization length: 1648, Concatenated tokens length: 1659. Using concatenated version.
+[2025-12-17 08:54:47,277][root][WARNING] - Token mismatch detected! Full tokenization length: 1835, Concatenated tokens length: 1846. Using concatenated version.
+[2025-12-17 08:54:47,282][root][WARNING] - Token mismatch detected! Full tokenization length: 1079, Concatenated tokens length: 1087. Using concatenated version.
+[2025-12-17 08:54:47,283][root][WARNING] - Token mismatch detected! Full tokenization length: 2585, Concatenated tokens length: 2602. Using concatenated version.
+[2025-12-17 08:54:47,286][root][WARNING] - Token mismatch detected! Full tokenization length: 1225, Concatenated tokens length: 1236. Using concatenated version.
+[2025-12-17 08:54:47,288][root][WARNING] - Token mismatch detected! Full tokenization length: 1129, Concatenated tokens length: 1137. Using concatenated version.
+[2025-12-17 08:54:47,289][root][WARNING] - Token mismatch detected! Full tokenization length: 1106, Concatenated tokens length: 1114. Using concatenated version.
+[2025-12-17 08:54:47,292][root][WARNING] - Token mismatch detected! Full tokenization length: 1750, Concatenated tokens length: 1767. Using concatenated version.
+[2025-12-17 08:54:47,295][root][WARNING] - Token mismatch detected! Full tokenization length: 1145, Concatenated tokens length: 1153. Using concatenated version.
+[2025-12-17 08:54:47,299][root][WARNING] - Token mismatch detected! Full tokenization length: 1820, Concatenated tokens length: 1836. Using concatenated version.
+[2025-12-17 08:54:47,300][root][WARNING] - Token mismatch detected! Full tokenization length: 1335, Concatenated tokens length: 1344. Using concatenated version.
+[2025-12-17 08:54:47,302][root][WARNING] - Token mismatch detected! Full tokenization length: 1430, Concatenated tokens length: 1441. Using concatenated version.
+[2025-12-17 08:54:47,305][root][WARNING] - Token mismatch detected! Full tokenization length: 1051, Concatenated tokens length: 1059. Using concatenated version.
+[2025-12-17 08:54:47,309][root][WARNING] - Token mismatch detected! Full tokenization length: 1417, Concatenated tokens length: 1428. Using concatenated version.
+[2025-12-17 08:54:47,310][root][WARNING] - Token mismatch detected! Full tokenization length: 1039, Concatenated tokens length: 1047. Using concatenated version.
+[2025-12-17 08:54:47,316][root][WARNING] - Token mismatch detected! Full tokenization length: 1068, Concatenated tokens length: 1076. Using concatenated version.
+[2025-12-17 08:54:47,317][root][WARNING] - Token mismatch detected! Full tokenization length: 1441, Concatenated tokens length: 1451. Using concatenated version.
+[2025-12-17 08:54:47,318][root][WARNING] - Token mismatch detected! Full tokenization length: 1406, Concatenated tokens length: 1418. Using concatenated version.
+[2025-12-17 08:54:47,320][root][WARNING] - Token mismatch detected! Full tokenization length: 1030, Concatenated tokens length: 1038. Using concatenated version.
+[2025-12-17 08:54:47,325][root][WARNING] - Token mismatch detected! Full tokenization length: 2475, Concatenated tokens length: 2492. Using concatenated version.
+[2025-12-17 08:54:47,326][root][WARNING] - Token mismatch detected! Full tokenization length: 1117, Concatenated tokens length: 1124. Using concatenated version.
+[2025-12-17 08:54:47,331][root][WARNING] - Token mismatch detected! Full tokenization length: 3459, Concatenated tokens length: 3488. Using concatenated version.
+[2025-12-17 08:54:47,332][root][WARNING] - Token mismatch detected! Full tokenization length: 1098, Concatenated tokens length: 1106. Using concatenated version.
+[2025-12-17 08:54:47,336][root][WARNING] - Token mismatch detected! Full tokenization length: 1544, Concatenated tokens length: 1563. Using concatenated version.
+[2025-12-17 08:54:47,337][root][WARNING] - Token mismatch detected! Full tokenization length: 895, Concatenated tokens length: 903. Using concatenated version.
+[2025-12-17 08:54:47,343][root][WARNING] - Token mismatch detected! Full tokenization length: 1042, Concatenated tokens length: 1050. Using concatenated version.
+[2025-12-17 08:54:47,348][root][WARNING] - Token mismatch detected! Full tokenization length: 1662, Concatenated tokens length: 1674. Using concatenated version.
+[2025-12-17 08:54:47,349][root][WARNING] - Token mismatch detected! Full tokenization length: 1470, Concatenated tokens length: 1486. Using concatenated version.
+[2025-12-17 08:54:47,356][root][WARNING] - Token mismatch detected! Full tokenization length: 1379, Concatenated tokens length: 1388. Using concatenated version.
+[2025-12-17 08:54:47,357][root][WARNING] - Token mismatch detected! Full tokenization length: 1253, Concatenated tokens length: 1263. Using concatenated version.
+[2025-12-17 08:54:47,360][root][WARNING] - Token mismatch detected! Full tokenization length: 1774, Concatenated tokens length: 1788. Using concatenated version.
+[2025-12-17 08:54:47,361][root][WARNING] - Token mismatch detected! Full tokenization length: 1216, Concatenated tokens length: 1224. Using concatenated version.
+[2025-12-17 08:54:47,368][root][WARNING] - Token mismatch detected! Full tokenization length: 1085, Concatenated tokens length: 1093. Using concatenated version.
+[2025-12-17 08:54:47,368][root][WARNING] - Token mismatch detected! Full tokenization length: 1880, Concatenated tokens length: 1894. Using concatenated version.
+[2025-12-17 08:54:47,386][root][WARNING] - Token mismatch detected! Full tokenization length: 1919, Concatenated tokens length: 1934. Using concatenated version.
+[2025-12-17 08:54:47,386][root][WARNING] - Token mismatch detected! Full tokenization length: 1515, Concatenated tokens length: 1528. Using concatenated version.
+[2025-12-17 08:54:47,388][root][WARNING] - Token mismatch detected! Full tokenization length: 1998, Concatenated tokens length: 2015. Using concatenated version.
+[2025-12-17 08:54:47,391][root][WARNING] - Token mismatch detected! Full tokenization length: 1561, Concatenated tokens length: 1575. Using concatenated version.
+[2025-12-17 08:54:47,394][root][WARNING] - Token mismatch detected! Full tokenization length: 1948, Concatenated tokens length: 1970. Using concatenated version.
+[2025-12-17 08:54:47,403][root][WARNING] - Token mismatch detected! Full tokenization length: 1222, Concatenated tokens length: 1230. Using concatenated version.
+[2025-12-17 08:54:47,403][root][WARNING] - Token mismatch detected! Full tokenization length: 1103, Concatenated tokens length: 1111. Using concatenated version.
+[2025-12-17 08:54:47,404][root][WARNING] - Token mismatch detected! Full tokenization length: 5255, Concatenated tokens length: 5284. Using concatenated version.
+[2025-12-17 08:54:47,414][root][WARNING] - Token mismatch detected! Full tokenization length: 1755, Concatenated tokens length: 1767. Using concatenated version.
+[2025-12-17 08:54:47,415][root][WARNING] - Token mismatch detected! Full tokenization length: 1136, Concatenated tokens length: 1144. Using concatenated version.
+[2025-12-17 08:54:47,417][root][WARNING] - Token mismatch detected! Full tokenization length: 1490, Concatenated tokens length: 1508. Using concatenated version.
+[2025-12-17 08:54:47,425][root][WARNING] - Token mismatch detected! Full tokenization length: 1091, Concatenated tokens length: 1098. Using concatenated version.
+[2025-12-17 08:54:47,433][root][WARNING] - Token mismatch detected! Full tokenization length: 1274, Concatenated tokens length: 1287. Using concatenated version.
+[2025-12-17 08:54:47,435][root][WARNING] - Token mismatch detected! Full tokenization length: 1567, Concatenated tokens length: 1580. Using concatenated version.
+[2025-12-17 08:54:47,445][root][WARNING] - Token mismatch detected! Full tokenization length: 1197, Concatenated tokens length: 1205. Using concatenated version.
+[2025-12-17 08:54:47,449][root][WARNING] - Token mismatch detected! Full tokenization length: 1375, Concatenated tokens length: 1384. Using concatenated version.
+[2025-12-17 08:54:47,458][root][WARNING] - Token mismatch detected! Full tokenization length: 1414, Concatenated tokens length: 1423. Using concatenated version.
+[2025-12-17 08:54:47,491][root][WARNING] - Token mismatch detected! Full tokenization length: 2005, Concatenated tokens length: 2023. Using concatenated version.
+[2025-12-17 08:54:47,503][root][WARNING] - Token mismatch detected! Full tokenization length: 1139, Concatenated tokens length: 1147. Using concatenated version.
+[2025-12-17 08:54:47,519][root][WARNING] - Token mismatch detected! Full tokenization length: 2281, Concatenated tokens length: 2312. Using concatenated version.
+[2025-12-17 08:54:47,519][root][WARNING] - Token mismatch detected! Full tokenization length: 1501, Concatenated tokens length: 1511. Using concatenated version.
+[2025-12-17 08:54:47,530][root][WARNING] - Token mismatch detected! Full tokenization length: 1136, Concatenated tokens length: 1143. Using concatenated version.
+[2025-12-17 08:54:47,538][root][WARNING] - Token mismatch detected! Full tokenization length: 1608, Concatenated tokens length: 1621. Using concatenated version.
+[2025-12-17 08:54:47,550][root][WARNING] - Token mismatch detected! Full tokenization length: 1124, Concatenated tokens length: 1132. Using concatenated version.
+[2025-12-17 08:54:47,552][root][WARNING] - Token mismatch detected! Full tokenization length: 1971, Concatenated tokens length: 1985. Using concatenated version.
+[2025-12-17 08:54:47,566][root][WARNING] - Token mismatch detected! Full tokenization length: 1363, Concatenated tokens length: 1374. Using concatenated version.
+[2025-12-17 08:54:47,571][root][WARNING] - Token mismatch detected! Full tokenization length: 1560, Concatenated tokens length: 1572. Using concatenated version.
+[2025-12-17 08:54:47,586][root][WARNING] - Token mismatch detected! Full tokenization length: 1512, Concatenated tokens length: 1522. Using concatenated version.
+[2025-12-17 08:54:47,590][root][WARNING] - Token mismatch detected! Full tokenization length: 1639, Concatenated tokens length: 1655. Using concatenated version.
+[2025-12-17 08:54:47,598][root][WARNING] - Token mismatch detected! Full tokenization length: 1303, Concatenated tokens length: 1312. Using concatenated version.
+[2025-12-17 08:54:47,606][root][WARNING] - Token mismatch detected! Full tokenization length: 1355, Concatenated tokens length: 1366. Using concatenated version.
+[2025-12-17 08:54:47,631][root][WARNING] - Token mismatch detected! Full tokenization length: 1676, Concatenated tokens length: 1688. Using concatenated version.
+[2025-12-17 08:54:47,646][root][WARNING] - Token mismatch detected! Full tokenization length: 1724, Concatenated tokens length: 1748. Using concatenated version.
+[2025-12-17 08:54:47,654][root][WARNING] - Token mismatch detected! Full tokenization length: 1204, Concatenated tokens length: 1214. Using concatenated version.
+[2025-12-17 08:54:47,657][root][WARNING] - Token mismatch detected! Full tokenization length: 1090, Concatenated tokens length: 1097. Using concatenated version.
+[2025-12-17 08:54:47,672][root][WARNING] - Token mismatch detected! Full tokenization length: 1725, Concatenated tokens length: 1736. Using concatenated version.
+[2025-12-17 08:54:47,679][root][WARNING] - Token mismatch detected! Full tokenization length: 1851, Concatenated tokens length: 1864. Using concatenated version.
+[2025-12-17 08:54:47,691][root][WARNING] - Token mismatch detected! Full tokenization length: 1548, Concatenated tokens length: 1559. Using concatenated version.
+[2025-12-17 08:54:47,708][root][WARNING] - Token mismatch detected! Full tokenization length: 1484, Concatenated tokens length: 1496. Using concatenated version.
+[2025-12-17 08:54:47,716][root][WARNING] - Token mismatch detected! Full tokenization length: 2017, Concatenated tokens length: 2040. Using concatenated version.
+[2025-12-17 08:54:47,720][root][WARNING] - Token mismatch detected! Full tokenization length: 1152, Concatenated tokens length: 1160. Using concatenated version.
+[2025-12-17 08:54:47,729][root][WARNING] - Token mismatch detected! Full tokenization length: 1328, Concatenated tokens length: 1337. Using concatenated version.
+[2025-12-17 08:54:47,738][root][WARNING] - Token mismatch detected! Full tokenization length: 1665, Concatenated tokens length: 1677. Using concatenated version.
+[2025-12-17 08:54:47,748][root][WARNING] - Token mismatch detected! Full tokenization length: 2019, Concatenated tokens length: 2031. Using concatenated version.
+[2025-12-17 08:54:47,750][root][WARNING] - Token mismatch detected! Full tokenization length: 1112, Concatenated tokens length: 1120. Using concatenated version.
+[2025-12-17 08:54:47,757][root][WARNING] - Token mismatch detected! Full tokenization length: 853, Concatenated tokens length: 861. Using concatenated version.
+[2025-12-17 08:54:47,761][root][WARNING] - Token mismatch detected! Full tokenization length: 929, Concatenated tokens length: 937. Using concatenated version.
+[2025-12-17 08:54:47,774][root][WARNING] - Token mismatch detected! Full tokenization length: 1628, Concatenated tokens length: 1640. Using concatenated version.
+[2025-12-17 08:54:47,776][root][WARNING] - Token mismatch detected! Full tokenization length: 963, Concatenated tokens length: 975. Using concatenated version.
+[2025-12-17 08:54:47,801][root][WARNING] - Token mismatch detected! Full tokenization length: 1718, Concatenated tokens length: 1732. Using concatenated version.
+[2025-12-17 08:54:47,809][root][WARNING] - Token mismatch detected! Full tokenization length: 1786, Concatenated tokens length: 1811. Using concatenated version.
+[2025-12-17 08:54:47,819][root][WARNING] - Token mismatch detected! Full tokenization length: 1511, Concatenated tokens length: 1523. Using concatenated version.
+[2025-12-17 08:54:47,827][root][WARNING] - Token mismatch detected! Full tokenization length: 1818, Concatenated tokens length: 1830. Using concatenated version.
+[2025-12-17 08:54:47,829][root][WARNING] - Token mismatch detected! Full tokenization length: 1081, Concatenated tokens length: 1088. Using concatenated version.
+[2025-12-17 08:54:47,841][root][WARNING] - Token mismatch detected! Full tokenization length: 1092, Concatenated tokens length: 1102. Using concatenated version.
+[2025-12-17 08:54:47,847][root][WARNING] - Token mismatch detected! Full tokenization length: 1713, Concatenated tokens length: 1725. Using concatenated version.
+[2025-12-17 08:54:47,854][root][WARNING] - Token mismatch detected! Full tokenization length: 1143, Concatenated tokens length: 1153. Using concatenated version.
+[2025-12-17 08:54:47,860][root][WARNING] - Token mismatch detected! Full tokenization length: 1331, Concatenated tokens length: 1340. Using concatenated version.
+[2025-12-17 08:54:47,883][root][WARNING] - Token mismatch detected! Full tokenization length: 1310, Concatenated tokens length: 1325. Using concatenated version.
+[2025-12-17 08:54:47,888][root][WARNING] - Token mismatch detected! Full tokenization length: 2670, Concatenated tokens length: 2684. Using concatenated version.
+[2025-12-17 08:54:47,973][root][WARNING] - Token mismatch detected! Full tokenization length: 3782, Concatenated tokens length: 3812. Using concatenated version.
+[2025-12-17 08:54:48,012][root][WARNING] - Token mismatch detected! Full tokenization length: 1518, Concatenated tokens length: 1539. Using concatenated version.
+[2025-12-17 08:54:48,026][root][WARNING] - Token mismatch detected! Full tokenization length: 1042, Concatenated tokens length: 1050. Using concatenated version.
+[2025-12-17 08:54:48,045][root][WARNING] - Token mismatch detected! Full tokenization length: 1607, Concatenated tokens length: 1619. Using concatenated version.
+wandb: Currently logged in as: 2625073641 (2625073641-tianjin-university) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run czuhs31y
+wandb: Tracking run with wandb version 0.23.1
+wandb: Run data is saved locally in /Data/wyh/verl/examples/sft/multiturn/wandb/run-20251217_085449-czuhs31y
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run textcraft-sft-qwen3-1.7b-gemini-adapt
+wandb: ⭐️ View project at https://wandb.ai/2625073641-tianjin-university/textcraft-sft
+wandb: 🚀 View run at https://wandb.ai/2625073641-tianjin-university/textcraft-sft/runs/czuhs31y
+Epoch 1/20:   0%|          | 0/10 [00:00<?, ?it/s][2025-12-17 08:54:51,304][root][WARNING] - Token mismatch detected! Full tokenization length: 938, Concatenated tokens length: 948. Using concatenated version.
+[2025-12-17 08:54:51,306][root][WARNING] - Token mismatch detected! Full tokenization length: 1410, Concatenated tokens length: 1421. Using concatenated version.
+[2025-12-17 08:54:51,309][root][WARNING] - Token mismatch detected! Full tokenization length: 1310, Concatenated tokens length: 1323. Using concatenated version.
+[2025-12-17 08:54:51,310][root][WARNING] - Token mismatch detected! Full tokenization length: 1645, Concatenated tokens length: 1657. Using concatenated version.
+[2025-12-17 08:54:51,320][root][WARNING] - Token mismatch detected! Full tokenization length: 1005, Concatenated tokens length: 1013. Using concatenated version.
+[2025-12-17 08:54:51,324][root][WARNING] - Token mismatch detected! Full tokenization length: 1130, Concatenated tokens length: 1138. Using concatenated version.
+[2025-12-17 08:54:51,324][root][WARNING] - Token mismatch detected! Full tokenization length: 1207, Concatenated tokens length: 1217. Using concatenated version.
+[2025-12-17 08:54:51,324][root][WARNING] - Token mismatch detected! Full tokenization length: 1067, Concatenated tokens length: 1075. Using concatenated version.
+[2025-12-17 08:54:51,332][root][WARNING] - Token mismatch detected! Full tokenization length: 1014, Concatenated tokens length: 1022. Using concatenated version.
+[2025-12-17 08:54:51,333][root][WARNING] - Token mismatch detected! Full tokenization length: 2788, Concatenated tokens length: 2808. Using concatenated version.
+[2025-12-17 08:54:51,337][root][WARNING] - Token mismatch detected! Full tokenization length: 1195, Concatenated tokens length: 1204. Using concatenated version.
+[2025-12-17 08:54:51,342][root][WARNING] - Token mismatch detected! Full tokenization length: 1728, Concatenated tokens length: 1748. Using concatenated version.
+[2025-12-17 08:54:51,343][root][WARNING] - Token mismatch detected! Full tokenization length: 1093, Concatenated tokens length: 1103. Using concatenated version.
+[2025-12-17 08:54:51,344][root][WARNING] - Token mismatch detected! Full tokenization length: 1446, Concatenated tokens length: 1456. Using concatenated version.
+[2025-12-17 08:54:51,349][root][WARNING] - Token mismatch detected! Full tokenization length: 1093, Concatenated tokens length: 1101. Using concatenated version.
+[2025-12-17 08:54:51,354][root][WARNING] - Token mismatch detected! Full tokenization length: 1755, Concatenated tokens length: 1779. Using concatenated version.
+[2025-12-17 08:54:51,357][root][WARNING] - Token mismatch detected! Full tokenization length: 1194, Concatenated tokens length: 1202. Using concatenated version.
+[2025-12-17 08:54:51,361][root][WARNING] - Token mismatch detected! Full tokenization length: 935, Concatenated tokens length: 944. Using concatenated version.
+[2025-12-17 08:54:51,362][root][WARNING] - Token mismatch detected! Full tokenization length: 1658, Concatenated tokens length: 1672. Using concatenated version.
+[2025-12-17 08:54:51,362][root][WARNING] - Token mismatch detected! Full tokenization length: 1716, Concatenated tokens length: 1729. Using concatenated version.
+[2025-12-17 08:54:51,364][root][WARNING] - Token mismatch detected! Full tokenization length: 1580, Concatenated tokens length: 1594. Using concatenated version.
+[2025-12-17 08:54:51,365][root][WARNING] - Token mismatch detected! Full tokenization length: 1449, Concatenated tokens length: 1463. Using concatenated version.
+[2025-12-17 08:54:51,374][root][WARNING] - Token mismatch detected! Full tokenization length: 1235, Concatenated tokens length: 1247. Using concatenated version.
+[2025-12-17 08:54:51,374][root][WARNING] - Token mismatch detected! Full tokenization length: 988, Concatenated tokens length: 997. Using concatenated version.
+[2025-12-17 08:54:51,377][root][WARNING] - Token mismatch detected! Full tokenization length: 3683, Concatenated tokens length: 3702. Using concatenated version.
+[2025-12-17 08:54:51,378][root][WARNING] - Token mismatch detected! Full tokenization length: 1502, Concatenated tokens length: 1513. Using concatenated version.
+[2025-12-17 08:54:51,381][root][WARNING] - Token mismatch detected! Full tokenization length: 1197, Concatenated tokens length: 1206. Using concatenated version.
+[2025-12-17 08:54:51,382][root][WARNING] - Token mismatch detected! Full tokenization length: 2065, Concatenated tokens length: 2080. Using concatenated version.
+[2025-12-17 08:54:51,388][root][WARNING] - Token mismatch detected! Full tokenization length: 1129, Concatenated tokens length: 1140. Using concatenated version.
+[2025-12-17 08:54:51,388][root][WARNING] - Token mismatch detected! Full tokenization length: 1723, Concatenated tokens length: 1737. Using concatenated version.
+[2025-12-17 08:54:51,395][root][WARNING] - Token mismatch detected! Full tokenization length: 1192, Concatenated tokens length: 1201. Using concatenated version.
+[2025-12-17 08:54:51,402][root][WARNING] - Token mismatch detected! Full tokenization length: 1465, Concatenated tokens length: 1477. Using concatenated version.
+[2025-12-17 08:54:51,403][root][WARNING] - Token mismatch detected! Full tokenization length: 1298, Concatenated tokens length: 1311. Using concatenated version.
+[2025-12-17 08:54:51,406][root][WARNING] - Token mismatch detected! Full tokenization length: 1701, Concatenated tokens length: 1716. Using concatenated version.
+[2025-12-17 08:54:51,408][root][WARNING] - Token mismatch detected! Full tokenization length: 1593, Concatenated tokens length: 1606. Using concatenated version.
+[2025-12-17 08:54:51,414][root][WARNING] - Token mismatch detected! Full tokenization length: 1416, Concatenated tokens length: 1430. Using concatenated version.
+[2025-12-17 08:54:51,417][root][WARNING] - Token mismatch detected! Full tokenization length: 2987, Concatenated tokens length: 3008. Using concatenated version.
+[2025-12-17 08:54:51,418][root][WARNING] - Token mismatch detected! Full tokenization length: 1324, Concatenated tokens length: 1332. Using concatenated version.
+[2025-12-17 08:54:51,419][root][WARNING] - Token mismatch detected! Full tokenization length: 1031, Concatenated tokens length: 1039. Using concatenated version.
+[2025-12-17 08:54:51,423][root][WARNING] - Token mismatch detected! Full tokenization length: 1153, Concatenated tokens length: 1162. Using concatenated version.
+[2025-12-17 08:54:51,424][root][WARNING] - Token mismatch detected! Full tokenization length: 1889, Concatenated tokens length: 1902. Using concatenated version.
+[2025-12-17 08:54:51,429][root][WARNING] - Token mismatch detected! Full tokenization length: 1145, Concatenated tokens length: 1156. Using concatenated version.
+[2025-12-17 08:54:51,430][root][WARNING] - Token mismatch detected! Full tokenization length: 1097, Concatenated tokens length: 1105. Using concatenated version.
+[2025-12-17 08:54:51,433][root][WARNING] - Token mismatch detected! Full tokenization length: 2924, Concatenated tokens length: 2947. Using concatenated version.
+[2025-12-17 08:54:51,434][root][WARNING] - Token mismatch detected! Full tokenization length: 1060, Concatenated tokens length: 1072. Using concatenated version.
+[2025-12-17 08:54:51,436][root][WARNING] - Token mismatch detected! Full tokenization length: 944, Concatenated tokens length: 953. Using concatenated version.
+[2025-12-17 08:54:51,438][root][WARNING] - Token mismatch detected! Full tokenization length: 1183, Concatenated tokens length: 1191. Using concatenated version.
+[2025-12-17 08:54:51,446][root][WARNING] - Token mismatch detected! Full tokenization length: 1288, Concatenated tokens length: 1298. Using concatenated version.
+[2025-12-17 08:54:51,449][root][WARNING] - Token mismatch detected! Full tokenization length: 1660, Concatenated tokens length: 1672. Using concatenated version.
+[2025-12-17 08:54:51,455][root][WARNING] - Token mismatch detected! Full tokenization length: 2416, Concatenated tokens length: 2436. Using concatenated version.
+[2025-12-17 08:54:51,460][root][WARNING] - Token mismatch detected! Full tokenization length: 1572, Concatenated tokens length: 1592. Using concatenated version.
+[2025-12-17 08:54:51,461][root][WARNING] - Token mismatch detected! Full tokenization length: 1253, Concatenated tokens length: 1260. Using concatenated version.
+[2025-12-17 08:54:51,466][root][WARNING] - Token mismatch detected! Full tokenization length: 1761, Concatenated tokens length: 1777. Using concatenated version.
+[2025-12-17 08:54:51,469][root][WARNING] - Token mismatch detected! Full tokenization length: 2051, Concatenated tokens length: 2069. Using concatenated version.
+[2025-12-17 08:54:51,471][root][WARNING] - Token mismatch detected! Full tokenization length: 1045, Concatenated tokens length: 1052. Using concatenated version.
+[2025-12-17 08:54:51,477][root][WARNING] - Token mismatch detected! Full tokenization length: 3424, Concatenated tokens length: 3455. Using concatenated version.
+[2025-12-17 08:54:51,477][root][WARNING] - Token mismatch detected! Full tokenization length: 1643, Concatenated tokens length: 1656. Using concatenated version.
+[2025-12-17 08:54:51,478][root][WARNING] - Token mismatch detected! Full tokenization length: 1418, Concatenated tokens length: 1440. Using concatenated version.
+[2025-12-17 08:54:51,484][root][WARNING] - Token mismatch detected! Full tokenization length: 1256, Concatenated tokens length: 1266. Using concatenated version.
+[2025-12-17 08:54:51,485][root][WARNING] - Token mismatch detected! Full tokenization length: 1774, Concatenated tokens length: 1789. Using concatenated version.
+[2025-12-17 08:54:51,485][root][WARNING] - Token mismatch detected! Full tokenization length: 1310, Concatenated tokens length: 1319. Using concatenated version.
+[2025-12-17 08:54:51,488][root][WARNING] - Token mismatch detected! Full tokenization length: 1455, Concatenated tokens length: 1471. Using concatenated version.
+[2025-12-17 08:54:51,491][root][WARNING] - Token mismatch detected! Full tokenization length: 1102, Concatenated tokens length: 1110. Using concatenated version.
+[2025-12-17 08:54:51,491][root][WARNING] - Token mismatch detected! Full tokenization length: 2032, Concatenated tokens length: 2058. Using concatenated version.
+[2025-12-17 08:54:51,498][root][WARNING] - Token mismatch detected! Full tokenization length: 1590, Concatenated tokens length: 1601. Using concatenated version.
+[2025-12-17 08:54:51,505][root][WARNING] - Token mismatch detected! Full tokenization length: 1583, Concatenated tokens length: 1594. Using concatenated version.
+[2025-12-17 08:54:51,505][root][WARNING] - Token mismatch detected! Full tokenization length: 1574, Concatenated tokens length: 1587. Using concatenated version.
+[2025-12-17 08:54:51,510][root][WARNING] - Token mismatch detected! Full tokenization length: 2714, Concatenated tokens length: 2731. Using concatenated version.
+[2025-12-17 08:54:51,511][root][WARNING] - Token mismatch detected! Full tokenization length: 1677, Concatenated tokens length: 1688. Using concatenated version.
+[2025-12-17 08:54:51,514][root][WARNING] - Token mismatch detected! Full tokenization length: 1584, Concatenated tokens length: 1599. Using concatenated version.
+[2025-12-17 08:54:51,514][root][WARNING] - Token mismatch detected! Full tokenization length: 1452, Concatenated tokens length: 1461. Using concatenated version.
+[2025-12-17 08:54:51,520][root][WARNING] - Token mismatch detected! Full tokenization length: 1674, Concatenated tokens length: 1700. Using concatenated version.
+[2025-12-17 08:54:51,521][root][WARNING] - Token mismatch detected! Full tokenization length: 1011, Concatenated tokens length: 1019. Using concatenated version.
+[2025-12-17 08:54:51,521][root][WARNING] - Token mismatch detected! Full tokenization length: 1732, Concatenated tokens length: 1752. Using concatenated version.
+[2025-12-17 08:54:51,525][root][WARNING] - Token mismatch detected! Full tokenization length: 1078, Concatenated tokens length: 1085. Using concatenated version.
+[2025-12-17 08:54:51,527][root][WARNING] - Token mismatch detected! Full tokenization length: 1429, Concatenated tokens length: 1444. Using concatenated version.
+[2025-12-17 08:54:51,530][root][WARNING] - Token mismatch detected! Full tokenization length: 1117, Concatenated tokens length: 1125. Using concatenated version.
+[2025-12-17 08:54:51,537][root][WARNING] - Token mismatch detected! Full tokenization length: 1308, Concatenated tokens length: 1317. Using concatenated version.
+[2025-12-17 08:54:51,537][root][WARNING] - Token mismatch detected! Full tokenization length: 1809, Concatenated tokens length: 1825. Using concatenated version.
+[2025-12-17 08:54:51,537][root][WARNING] - Token mismatch detected! Full tokenization length: 1183, Concatenated tokens length: 1195. Using concatenated version.
+[2025-12-17 08:54:51,547][root][WARNING] - Token mismatch detected! Full tokenization length: 1618, Concatenated tokens length: 1631. Using concatenated version.
+[2025-12-17 08:54:51,548][root][WARNING] - Token mismatch detected! Full tokenization length: 2041, Concatenated tokens length: 2064. Using concatenated version.
+[2025-12-17 08:54:51,550][root][WARNING] - Token mismatch detected! Full tokenization length: 1898, Concatenated tokens length: 1911. Using concatenated version.
+[2025-12-17 08:54:51,554][root][WARNING] - Token mismatch detected! Full tokenization length: 1585, Concatenated tokens length: 1608. Using concatenated version.
+[2025-12-17 08:54:51,555][root][WARNING] - Token mismatch detected! Full tokenization length: 1194, Concatenated tokens length: 1207. Using concatenated version.
+[2025-12-17 08:54:51,556][root][WARNING] - Token mismatch detected! Full tokenization length: 1457, Concatenated tokens length: 1470. Using concatenated version.
+[2025-12-17 08:54:51,558][root][WARNING] - Token mismatch detected! Full tokenization length: 1051, Concatenated tokens length: 1058. Using concatenated version.
+[2025-12-17 08:54:51,559][root][WARNING] - Token mismatch detected! Full tokenization length: 1039, Concatenated tokens length: 1048. Using concatenated version.
+[2025-12-17 08:54:51,561][root][WARNING] - Token mismatch detected! Full tokenization length: 1672, Concatenated tokens length: 1693. Using concatenated version.
+[2025-12-17 08:54:51,562][root][WARNING] - Token mismatch detected! Full tokenization length: 1132, Concatenated tokens length: 1140. Using concatenated version.
+[2025-12-17 08:54:51,570][root][WARNING] - Token mismatch detected! Full tokenization length: 1209, Concatenated tokens length: 1216. Using concatenated version.
+[2025-12-17 08:54:51,571][root][WARNING] - Token mismatch detected! Full tokenization length: 1641, Concatenated tokens length: 1663. Using concatenated version.
+[2025-12-17 08:54:51,574][root][WARNING] - Token mismatch detected! Full tokenization length: 1279, Concatenated tokens length: 1294. Using concatenated version.
+[2025-12-17 08:54:51,578][root][WARNING] - Token mismatch detected! Full tokenization length: 1815, Concatenated tokens length: 1829. Using concatenated version.
+[2025-12-17 08:54:51,579][root][WARNING] - Token mismatch detected! Full tokenization length: 1636, Concatenated tokens length: 1646. Using concatenated version.
+[2025-12-17 08:54:51,580][root][WARNING] - Token mismatch detected! Full tokenization length: 1773, Concatenated tokens length: 1786. Using concatenated version.
+[2025-12-17 08:54:51,583][root][WARNING] - Token mismatch detected! Full tokenization length: 1512, Concatenated tokens length: 1527. Using concatenated version.
+[2025-12-17 08:54:51,584][root][WARNING] - Token mismatch detected! Full tokenization length: 1165, Concatenated tokens length: 1173. Using concatenated version.
+[2025-12-17 08:54:51,585][root][WARNING] - Token mismatch detected! Full tokenization length: 1054, Concatenated tokens length: 1062. Using concatenated version.
+[2025-12-17 08:54:51,587][root][WARNING] - Token mismatch detected! Full tokenization length: 1139, Concatenated tokens length: 1147. Using concatenated version.
+[2025-12-17 08:54:51,592][root][WARNING] - Token mismatch detected! Full tokenization length: 1106, Concatenated tokens length: 1114. Using concatenated version.
+[2025-12-17 08:54:51,593][root][WARNING] - Token mismatch detected! Full tokenization length: 1216, Concatenated tokens length: 1224. Using concatenated version.
+[2025-12-17 08:54:51,597][root][WARNING] - Token mismatch detected! Full tokenization length: 1302, Concatenated tokens length: 1310. Using concatenated version.
+[2025-12-17 08:54:51,599][root][WARNING] - Token mismatch detected! Full tokenization length: 2094, Concatenated tokens length: 2117. Using concatenated version.
+[2025-12-17 08:54:51,604][root][WARNING] - Token mismatch detected! Full tokenization length: 985, Concatenated tokens length: 994. Using concatenated version.
+[2025-12-17 08:54:51,607][root][WARNING] - Token mismatch detected! Full tokenization length: 1227, Concatenated tokens length: 1238. Using concatenated version.
+[2025-12-17 08:54:51,611][root][WARNING] - Token mismatch detected! Full tokenization length: 1672, Concatenated tokens length: 1685. Using concatenated version.
+[2025-12-17 08:54:51,613][root][WARNING] - Token mismatch detected! Full tokenization length: 1108, Concatenated tokens length: 1121. Using concatenated version.
+[2025-12-17 08:54:51,613][root][WARNING] - Token mismatch detected! Full tokenization length: 1160, Concatenated tokens length: 1168. Using concatenated version.
+[2025-12-17 08:54:51,615][root][WARNING] - Token mismatch detected! Full tokenization length: 1956, Concatenated tokens length: 1973. Using concatenated version.
+[2025-12-17 08:54:51,618][root][WARNING] - Token mismatch detected! Full tokenization length: 1352, Concatenated tokens length: 1361. Using concatenated version.
+[2025-12-17 08:54:51,620][root][WARNING] - Token mismatch detected! Full tokenization length: 2389, Concatenated tokens length: 2413. Using concatenated version.
+[2025-12-17 08:54:51,621][root][WARNING] - Token mismatch detected! Full tokenization length: 1301, Concatenated tokens length: 1310. Using concatenated version.
+[2025-12-17 08:54:51,624][root][WARNING] - Token mismatch detected! Full tokenization length: 1090, Concatenated tokens length: 1099. Using concatenated version.
+[2025-12-17 08:54:51,631][root][WARNING] - Token mismatch detected! Full tokenization length: 883, Concatenated tokens length: 890. Using concatenated version.
+[2025-12-17 08:54:51,631][root][WARNING] - Token mismatch detected! Full tokenization length: 1484, Concatenated tokens length: 1495. Using concatenated version.
+[2025-12-17 08:54:51,633][root][WARNING] - Token mismatch detected! Full tokenization length: 1318, Concatenated tokens length: 1327. Using concatenated version.
+[2025-12-17 08:54:51,637][root][WARNING] - Token mismatch detected! Full tokenization length: 1194, Concatenated tokens length: 1202. Using concatenated version.
+[2025-12-17 08:54:51,647][root][WARNING] - Token mismatch detected! Full tokenization length: 1054, Concatenated tokens length: 1061. Using concatenated version.
+[2025-12-17 08:54:51,650][root][WARNING] - Token mismatch detected! Full tokenization length: 2306, Concatenated tokens length: 2327. Using concatenated version.
+[2025-12-17 08:54:51,650][root][WARNING] - Token mismatch detected! Full tokenization length: 1564, Concatenated tokens length: 1576. Using concatenated version.
+[2025-12-17 08:54:51,652][root][WARNING] - Token mismatch detected! Full tokenization length: 1743, Concatenated tokens length: 1768. Using concatenated version.
+[2025-12-17 08:54:51,661][root][WARNING] - Token mismatch detected! Full tokenization length: 3156, Concatenated tokens length: 3186. Using concatenated version.
+[2025-12-17 08:54:51,661][root][WARNING] - Token mismatch detected! Full tokenization length: 1906, Concatenated tokens length: 1923. Using concatenated version.
+[2025-12-17 08:54:51,665][root][WARNING] - Token mismatch detected! Full tokenization length: 2073, Concatenated tokens length: 2089. Using concatenated version.
+[2025-12-17 08:54:51,666][root][WARNING] - Token mismatch detected! Full tokenization length: 905, Concatenated tokens length: 914. Using concatenated version.
+[2025-12-17 08:54:51,669][root][WARNING] - Token mismatch detected! Full tokenization length: 1551, Concatenated tokens length: 1565. Using concatenated version.
+[2025-12-17 08:54:51,669][root][WARNING] - Token mismatch detected! Full tokenization length: 1988, Concatenated tokens length: 2000. Using concatenated version.
+[2025-12-17 08:54:51,672][root][WARNING] - Token mismatch detected! Full tokenization length: 1015, Concatenated tokens length: 1022. Using concatenated version.
+[2025-12-17 08:54:51,673][root][WARNING] - Token mismatch detected! Full tokenization length: 1091, Concatenated tokens length: 1099. Using concatenated version.
+[2025-12-17 08:54:51,678][root][WARNING] - Token mismatch detected! Full tokenization length: 1885, Concatenated tokens length: 1899. Using concatenated version.
+[2025-12-17 08:54:51,680][root][WARNING] - Token mismatch detected! Full tokenization length: 1459, Concatenated tokens length: 1469. Using concatenated version.
+[2025-12-17 08:54:51,683][root][WARNING] - Token mismatch detected! Full tokenization length: 1050, Concatenated tokens length: 1058. Using concatenated version.
+[2025-12-17 08:54:51,686][root][WARNING] - Token mismatch detected! Full tokenization length: 1385, Concatenated tokens length: 1394. Using concatenated version.
+[2025-12-17 08:54:51,688][root][WARNING] - Token mismatch detected! Full tokenization length: 1469, Concatenated tokens length: 1483. Using concatenated version.
+[2025-12-17 08:54:51,688][root][WARNING] - Token mismatch detected! Full tokenization length: 1465, Concatenated tokens length: 1479. Using concatenated version.
+[2025-12-17 08:54:51,688][root][WARNING] - Token mismatch detected! Full tokenization length: 1080, Concatenated tokens length: 1087. Using concatenated version.
+[2025-12-17 08:54:51,692][root][WARNING] - Token mismatch detected! Full tokenization length: 1065, Concatenated tokens length: 1073. Using concatenated version.
+[2025-12-17 08:54:51,698][root][WARNING] - Token mismatch detected! Full tokenization length: 1082, Concatenated tokens length: 1090. Using concatenated version.
+[2025-12-17 08:54:51,699][root][WARNING] - Token mismatch detected! Full tokenization length: 1529, Concatenated tokens length: 1539. Using concatenated version.
+[2025-12-17 08:54:51,701][root][WARNING] - Token mismatch detected! Full tokenization length: 1355, Concatenated tokens length: 1364. Using concatenated version.
+[2025-12-17 08:54:51,705][root][WARNING] - Token mismatch detected! Full tokenization length: 3146, Concatenated tokens length: 3181. Using concatenated version.
+[2025-12-17 08:54:51,707][root][WARNING] - Token mismatch detected! Full tokenization length: 1545, Concatenated tokens length: 1558. Using concatenated version.
+[2025-12-17 08:54:51,710][root][WARNING] - Token mismatch detected! Full tokenization length: 1168, Concatenated tokens length: 1176. Using concatenated version.
+[2025-12-17 08:54:51,710][root][WARNING] - Token mismatch detected! Full tokenization length: 2407, Concatenated tokens length: 2431. Using concatenated version.
+[2025-12-17 08:54:51,717][root][WARNING] - Token mismatch detected! Full tokenization length: 1144, Concatenated tokens length: 1153. Using concatenated version.
+[2025-12-17 08:54:51,718][root][WARNING] - Token mismatch detected! Full tokenization length: 994, Concatenated tokens length: 1001. Using concatenated version.
+[2025-12-17 08:54:51,722][root][WARNING] - Token mismatch detected! Full tokenization length: 1405, Concatenated tokens length: 1412. Using concatenated version.
+[2025-12-17 08:54:51,726][root][WARNING] - Token mismatch detected! Full tokenization length: 1810, Concatenated tokens length: 1835. Using concatenated version.
+[2025-12-17 08:54:51,727][root][WARNING] - Token mismatch detected! Full tokenization length: 985, Concatenated tokens length: 993. Using concatenated version.
+[2025-12-17 08:54:51,727][root][WARNING] - Token mismatch detected! Full tokenization length: 1588, Concatenated tokens length: 1600. Using concatenated version.
+[2025-12-17 08:54:51,734][root][WARNING] - Token mismatch detected! Full tokenization length: 3336, Concatenated tokens length: 3355. Using concatenated version.
+[2025-12-17 08:54:51,737][root][WARNING] - Token mismatch detected! Full tokenization length: 1735, Concatenated tokens length: 1759. Using concatenated version.
+[2025-12-17 08:54:51,737][root][WARNING] - Token mismatch detected! Full tokenization length: 1403, Concatenated tokens length: 1413. Using concatenated version.
+[2025-12-17 08:54:51,739][root][WARNING] - Token mismatch detected! Full tokenization length: 1080, Concatenated tokens length: 1088. Using concatenated version.
+[2025-12-17 08:54:51,739][root][WARNING] - Token mismatch detected! Full tokenization length: 2037, Concatenated tokens length: 2049. Using concatenated version.
+[2025-12-17 08:54:51,743][root][WARNING] - Token mismatch detected! Full tokenization length: 1554, Concatenated tokens length: 1566. Using concatenated version.
+[2025-12-17 08:54:51,748][root][WARNING] - Token mismatch detected! Full tokenization length: 964, Concatenated tokens length: 972. Using concatenated version.
+[2025-12-17 08:54:51,748][root][WARNING] - Token mismatch detected! Full tokenization length: 1101, Concatenated tokens length: 1109. Using concatenated version.
+[2025-12-17 08:54:51,751][root][WARNING] - Token mismatch detected! Full tokenization length: 1123, Concatenated tokens length: 1131. Using concatenated version.
+[2025-12-17 08:54:51,755][root][WARNING] - Token mismatch detected! Full tokenization length: 1649, Concatenated tokens length: 1669. Using concatenated version.
+[2025-12-17 08:54:51,756][root][WARNING] - Token mismatch detected! Full tokenization length: 3263, Concatenated tokens length: 3287. Using concatenated version.
+[2025-12-17 08:54:51,760][root][WARNING] - Token mismatch detected! Full tokenization length: 1259, Concatenated tokens length: 1268. Using concatenated version.
+[2025-12-17 08:54:51,763][root][WARNING] - Token mismatch detected! Full tokenization length: 1618, Concatenated tokens length: 1631. Using concatenated version.
+[2025-12-17 08:54:51,763][root][WARNING] - Token mismatch detected! Full tokenization length: 1474, Concatenated tokens length: 1481. Using concatenated version.
+[2025-12-17 08:54:51,767][root][WARNING] - Token mismatch detected! Full tokenization length: 741, Concatenated tokens length: 749. Using concatenated version.
+[2025-12-17 08:54:51,770][root][WARNING] - Token mismatch detected! Full tokenization length: 1657, Concatenated tokens length: 1677. Using concatenated version.
+[2025-12-17 08:54:51,773][root][WARNING] - Token mismatch detected! Full tokenization length: 939, Concatenated tokens length: 947. Using concatenated version.
+[2025-12-17 08:54:51,776][root][WARNING] - Token mismatch detected! Full tokenization length: 1840, Concatenated tokens length: 1862. Using concatenated version.
+[2025-12-17 08:54:51,784][root][WARNING] - Token mismatch detected! Full tokenization length: 1671, Concatenated tokens length: 1694. Using concatenated version.
+[2025-12-17 08:54:51,786][root][WARNING] - Token mismatch detected! Full tokenization length: 1362, Concatenated tokens length: 1380. Using concatenated version.
+[2025-12-17 08:54:51,788][root][WARNING] - Token mismatch detected! Full tokenization length: 1098, Concatenated tokens length: 1106. Using concatenated version.
+[2025-12-17 08:54:51,793][root][WARNING] - Token mismatch detected! Full tokenization length: 1912, Concatenated tokens length: 1927. Using concatenated version.
+[2025-12-17 08:54:51,796][root][WARNING] - Token mismatch detected! Full tokenization length: 1113, Concatenated tokens length: 1121. Using concatenated version.
+[2025-12-17 08:54:51,799][root][WARNING] - Token mismatch detected! Full tokenization length: 1082, Concatenated tokens length: 1092. Using concatenated version.
+[2025-12-17 08:54:51,800][root][WARNING] - Token mismatch detected! Full tokenization length: 2855, Concatenated tokens length: 2873. Using concatenated version.
+[2025-12-17 08:54:51,800][root][WARNING] - Token mismatch detected! Full tokenization length: 1159, Concatenated tokens length: 1167. Using concatenated version.
+[2025-12-17 08:54:51,803][root][WARNING] - Token mismatch detected! Full tokenization length: 2244, Concatenated tokens length: 2266. Using concatenated version.
+[2025-12-17 08:54:51,811][root][WARNING] - Token mismatch detected! Full tokenization length: 1110, Concatenated tokens length: 1118. Using concatenated version.
+[2025-12-17 08:54:51,812][root][WARNING] - Token mismatch detected! Full tokenization length: 1041, Concatenated tokens length: 1049. Using concatenated version.
+[2025-12-17 08:54:51,812][root][WARNING] - Token mismatch detected! Full tokenization length: 1622, Concatenated tokens length: 1635. Using concatenated version.
+[2025-12-17 08:54:51,814][root][WARNING] - Token mismatch detected! Full tokenization length: 1058, Concatenated tokens length: 1066. Using concatenated version.
+[2025-12-17 08:54:51,814][root][WARNING] - Token mismatch detected! Full tokenization length: 1865, Concatenated tokens length: 1877. Using concatenated version.
+[2025-12-17 08:54:51,816][root][WARNING] - Token mismatch detected! Full tokenization length: 1169, Concatenated tokens length: 1179. Using concatenated version.
+[2025-12-17 08:54:51,822][root][WARNING] - Token mismatch detected! Full tokenization length: 1028, Concatenated tokens length: 1036. Using concatenated version.
+[2025-12-17 08:54:51,824][root][WARNING] - Token mismatch detected! Full tokenization length: 1068, Concatenated tokens length: 1076. Using concatenated version.
+[2025-12-17 08:54:51,825][root][WARNING] - Token mismatch detected! Full tokenization length: 3383, Concatenated tokens length: 3407. Using concatenated version.
+[2025-12-17 08:54:51,826][root][WARNING] - Token mismatch detected! Full tokenization length: 1227, Concatenated tokens length: 1236. Using concatenated version.
+[2025-12-17 08:54:51,827][root][WARNING] - Token mismatch detected! Full tokenization length: 2949, Concatenated tokens length: 2974. Using concatenated version.
+[2025-12-17 08:54:51,827][root][WARNING] - Token mismatch detected! Full tokenization length: 1164, Concatenated tokens length: 1172. Using concatenated version.
+[2025-12-17 08:54:51,837][root][WARNING] - Token mismatch detected! Full tokenization length: 1007, Concatenated tokens length: 1016. Using concatenated version.
+[2025-12-17 08:54:51,839][root][WARNING] - Token mismatch detected! Full tokenization length: 1840, Concatenated tokens length: 1849. Using concatenated version.
+[2025-12-17 08:54:51,846][root][WARNING] - Token mismatch detected! Full tokenization length: 1886, Concatenated tokens length: 1900. Using concatenated version.
+[2025-12-17 08:54:51,849][root][WARNING] - Token mismatch detected! Full tokenization length: 1730, Concatenated tokens length: 1753. Using concatenated version.
+[2025-12-17 08:54:51,852][root][WARNING] - Token mismatch detected! Full tokenization length: 1824, Concatenated tokens length: 1852. Using concatenated version.
+[2025-12-17 08:54:51,859][root][WARNING] - Token mismatch detected! Full tokenization length: 1538, Concatenated tokens length: 1560. Using concatenated version.
+[2025-12-17 08:54:51,861][root][WARNING] - Token mismatch detected! Full tokenization length: 1680, Concatenated tokens length: 1694. Using concatenated version.
+[2025-12-17 08:54:51,863][root][WARNING] - Token mismatch detected! Full tokenization length: 1648, Concatenated tokens length: 1674. Using concatenated version.
+[2025-12-17 08:54:51,864][root][WARNING] - Token mismatch detected! Full tokenization length: 1063, Concatenated tokens length: 1071. Using concatenated version.
+[2025-12-17 08:54:51,866][root][WARNING] - Token mismatch detected! Full tokenization length: 1675, Concatenated tokens length: 1696. Using concatenated version.
+[2025-12-17 08:54:51,867][root][WARNING] - Token mismatch detected! Full tokenization length: 1665, Concatenated tokens length: 1677. Using concatenated version.
+[2025-12-17 08:54:51,868][root][WARNING] - Token mismatch detected! Full tokenization length: 1695, Concatenated tokens length: 1720. Using concatenated version.
+[2025-12-17 08:54:51,874][root][WARNING] - Token mismatch detected! Full tokenization length: 1335, Concatenated tokens length: 1352. Using concatenated version.
+[2025-12-17 08:54:51,875][root][WARNING] - Token mismatch detected! Full tokenization length: 1112, Concatenated tokens length: 1120. Using concatenated version.
+[2025-12-17 08:54:51,876][root][WARNING] - Token mismatch detected! Full tokenization length: 1149, Concatenated tokens length: 1160. Using concatenated version.
+[2025-12-17 08:54:51,879][root][WARNING] - Token mismatch detected! Full tokenization length: 1141, Concatenated tokens length: 1149. Using concatenated version.
+[2025-12-17 08:54:51,880][root][WARNING] - Token mismatch detected! Full tokenization length: 1221, Concatenated tokens length: 1229. Using concatenated version.
+[2025-12-17 08:54:51,883][root][WARNING] - Token mismatch detected! Full tokenization length: 1140, Concatenated tokens length: 1156. Using concatenated version.
+[2025-12-17 08:54:51,884][root][WARNING] - Token mismatch detected! Full tokenization length: 1339, Concatenated tokens length: 1351. Using concatenated version.
+[2025-12-17 08:54:51,885][root][WARNING] - Token mismatch detected! Full tokenization length: 1631, Concatenated tokens length: 1647. Using concatenated version.
+[2025-12-17 08:54:51,889][root][WARNING] - Token mismatch detected! Full tokenization length: 1536, Concatenated tokens length: 1546. Using concatenated version.
+[2025-12-17 08:54:51,895][root][WARNING] - Token mismatch detected! Full tokenization length: 1079, Concatenated tokens length: 1087. Using concatenated version.
+[2025-12-17 08:54:51,896][root][WARNING] - Token mismatch detected! Full tokenization length: 1527, Concatenated tokens length: 1539. Using concatenated version.
+[2025-12-17 08:54:51,897][root][WARNING] - Token mismatch detected! Full tokenization length: 1131, Concatenated tokens length: 1139. Using concatenated version.
+[2025-12-17 08:54:51,898][root][WARNING] - Token mismatch detected! Full tokenization length: 1273, Concatenated tokens length: 1284. Using concatenated version.
+[2025-12-17 08:54:51,907][root][WARNING] - Token mismatch detected! Full tokenization length: 956, Concatenated tokens length: 964. Using concatenated version.
+[2025-12-17 08:54:51,909][root][WARNING] - Token mismatch detected! Full tokenization length: 2585, Concatenated tokens length: 2602. Using concatenated version.
+[2025-12-17 08:54:51,914][root][WARNING] - Token mismatch detected! Full tokenization length: 1225, Concatenated tokens length: 1236. Using concatenated version.
+[2025-12-17 08:54:51,915][root][WARNING] - Token mismatch detected! Full tokenization length: 1835, Concatenated tokens length: 1846. Using concatenated version.
+[2025-12-17 08:54:51,915][root][WARNING] - Token mismatch detected! Full tokenization length: 1356, Concatenated tokens length: 1371. Using concatenated version.
+[2025-12-17 08:54:51,917][root][WARNING] - Token mismatch detected! Full tokenization length: 2119, Concatenated tokens length: 2137. Using concatenated version.
+[2025-12-17 08:54:51,921][root][WARNING] - Token mismatch detected! Full tokenization length: 1145, Concatenated tokens length: 1153. Using concatenated version.
+[2025-12-17 08:54:51,927][root][WARNING] - Token mismatch detected! Full tokenization length: 1106, Concatenated tokens length: 1114. Using concatenated version.
+[2025-12-17 08:54:51,931][root][WARNING] - Token mismatch detected! Full tokenization length: 1430, Concatenated tokens length: 1441. Using concatenated version.
+[2025-12-17 08:54:51,933][root][WARNING] - Token mismatch detected! Full tokenization length: 1648, Concatenated tokens length: 1659. Using concatenated version.
+[2025-12-17 08:54:51,936][root][WARNING] - Token mismatch detected! Full tokenization length: 1417, Concatenated tokens length: 1428. Using concatenated version.
+[2025-12-17 08:54:51,938][root][WARNING] - Token mismatch detected! Full tokenization length: 1750, Concatenated tokens length: 1767. Using concatenated version.
+[2025-12-17 08:54:51,945][root][WARNING] - Token mismatch detected! Full tokenization length: 1820, Concatenated tokens length: 1836. Using concatenated version.
+[2025-12-17 08:54:51,945][root][WARNING] - Token mismatch detected! Full tokenization length: 1129, Concatenated tokens length: 1137. Using concatenated version.
+[2025-12-17 08:54:51,945][root][WARNING] - Token mismatch detected! Full tokenization length: 1441, Concatenated tokens length: 1451. Using concatenated version.
+[2025-12-17 08:54:51,947][root][WARNING] - Token mismatch detected! Full tokenization length: 1030, Concatenated tokens length: 1038. Using concatenated version.
+[2025-12-17 08:54:51,950][root][WARNING] - Token mismatch detected! Full tokenization length: 1051, Concatenated tokens length: 1059. Using concatenated version.
+[2025-12-17 08:54:51,956][root][WARNING] - Token mismatch detected! Full tokenization length: 1039, Concatenated tokens length: 1047. Using concatenated version.
+[2025-12-17 08:54:51,958][root][WARNING] - Token mismatch detected! Full tokenization length: 1335, Concatenated tokens length: 1344. Using concatenated version.
+[2025-12-17 08:54:51,959][root][WARNING] - Token mismatch detected! Full tokenization length: 1098, Concatenated tokens length: 1106. Using concatenated version.
+[2025-12-17 08:54:51,962][root][WARNING] - Token mismatch detected! Full tokenization length: 2475, Concatenated tokens length: 2492. Using concatenated version.
+[2025-12-17 08:54:51,962][root][WARNING] - Token mismatch detected! Full tokenization length: 1068, Concatenated tokens length: 1076. Using concatenated version.
+[2025-12-17 08:54:51,963][root][WARNING] - Token mismatch detected! Full tokenization length: 3459, Concatenated tokens length: 3488. Using concatenated version.
+[2025-12-17 08:54:51,971][root][WARNING] - Token mismatch detected! Full tokenization length: 1042, Concatenated tokens length: 1050. Using concatenated version.
+[2025-12-17 08:54:51,973][root][WARNING] - Token mismatch detected! Full tokenization length: 895, Concatenated tokens length: 903. Using concatenated version.
+[2025-12-17 08:54:51,973][root][WARNING] - Token mismatch detected! Full tokenization length: 1117, Concatenated tokens length: 1124. Using concatenated version.
+[2025-12-17 08:54:51,977][root][WARNING] - Token mismatch detected! Full tokenization length: 1406, Concatenated tokens length: 1418. Using concatenated version.
+[2025-12-17 08:54:51,982][root][WARNING] - Token mismatch detected! Full tokenization length: 1662, Concatenated tokens length: 1674. Using concatenated version.
+[2025-12-17 08:54:51,982][root][WARNING] - Token mismatch detected! Full tokenization length: 1544, Concatenated tokens length: 1563. Using concatenated version.
+[2025-12-17 08:54:51,984][root][WARNING] - Token mismatch detected! Full tokenization length: 1379, Concatenated tokens length: 1388. Using concatenated version.
+[2025-12-17 08:54:51,993][root][WARNING] - Token mismatch detected! Full tokenization length: 1253, Concatenated tokens length: 1263. Using concatenated version.
+[2025-12-17 08:54:51,996][root][WARNING] - Token mismatch detected! Full tokenization length: 1085, Concatenated tokens length: 1093. Using concatenated version.
+[2025-12-17 08:54:51,997][root][WARNING] - Token mismatch detected! Full tokenization length: 1470, Concatenated tokens length: 1486. Using concatenated version.
+[2025-12-17 08:54:52,002][root][WARNING] - Token mismatch detected! Full tokenization length: 1880, Concatenated tokens length: 1894. Using concatenated version.
+[2025-12-17 08:54:52,007][root][WARNING] - Token mismatch detected! Full tokenization length: 1774, Concatenated tokens length: 1788. Using concatenated version.
+[2025-12-17 08:54:52,011][root][WARNING] - Token mismatch detected! Full tokenization length: 1216, Concatenated tokens length: 1224. Using concatenated version.
+[2025-12-17 08:54:52,018][root][WARNING] - Token mismatch detected! Full tokenization length: 1515, Concatenated tokens length: 1528. Using concatenated version.
+[2025-12-17 08:54:52,024][root][WARNING] - Token mismatch detected! Full tokenization length: 1998, Concatenated tokens length: 2015. Using concatenated version.
+[2025-12-17 08:54:52,026][root][WARNING] - Token mismatch detected! Full tokenization length: 1561, Concatenated tokens length: 1575. Using concatenated version.
+[2025-12-17 08:54:52,036][root][WARNING] - Token mismatch detected! Full tokenization length: 1222, Concatenated tokens length: 1230. Using concatenated version.
+[2025-12-17 08:54:52,036][root][WARNING] - Token mismatch detected! Full tokenization length: 1919, Concatenated tokens length: 1934. Using concatenated version.
+[2025-12-17 08:54:52,037][root][WARNING] - Token mismatch detected! Full tokenization length: 1103, Concatenated tokens length: 1111. Using concatenated version.
+[2025-12-17 08:54:52,043][root][WARNING] - Token mismatch detected! Full tokenization length: 1948, Concatenated tokens length: 1970. Using concatenated version.
+[2025-12-17 08:54:52,048][root][WARNING] - Token mismatch detected! Full tokenization length: 1136, Concatenated tokens length: 1144. Using concatenated version.
+[2025-12-17 08:54:52,062][root][WARNING] - Token mismatch detected! Full tokenization length: 5255, Concatenated tokens length: 5284. Using concatenated version.
+[2025-12-17 08:54:52,064][root][WARNING] - Token mismatch detected! Full tokenization length: 1755, Concatenated tokens length: 1767. Using concatenated version.
+[2025-12-17 08:54:52,067][root][WARNING] - Token mismatch detected! Full tokenization length: 1567, Concatenated tokens length: 1580. Using concatenated version.
+[2025-12-17 08:54:52,068][root][WARNING] - Token mismatch detected! Full tokenization length: 1490, Concatenated tokens length: 1508. Using concatenated version.
+[2025-12-17 08:54:52,075][root][WARNING] - Token mismatch detected! Full tokenization length: 1091, Concatenated tokens length: 1098. Using concatenated version.
+[2025-12-17 08:54:52,080][root][WARNING] - Token mismatch detected! Full tokenization length: 1375, Concatenated tokens length: 1384. Using concatenated version.
+[2025-12-17 08:54:52,085][root][WARNING] - Token mismatch detected! Full tokenization length: 1274, Concatenated tokens length: 1287. Using concatenated version.
+[2025-12-17 08:54:52,098][root][WARNING] - Token mismatch detected! Full tokenization length: 1197, Concatenated tokens length: 1205. Using concatenated version.
+[2025-12-17 08:54:52,112][root][WARNING] - Token mismatch detected! Full tokenization length: 1414, Concatenated tokens length: 1423. Using concatenated version.
+[2025-12-17 08:54:52,145][root][WARNING] - Token mismatch detected! Full tokenization length: 2281, Concatenated tokens length: 2312. Using concatenated version.
+[2025-12-17 08:54:52,149][root][WARNING] - Token mismatch detected! Full tokenization length: 2005, Concatenated tokens length: 2023. Using concatenated version.
+[2025-12-17 08:54:52,155][root][WARNING] - Token mismatch detected! Full tokenization length: 1136, Concatenated tokens length: 1143. Using concatenated version.
+[2025-12-17 08:54:52,162][root][WARNING] - Token mismatch detected! Full tokenization length: 1139, Concatenated tokens length: 1147. Using concatenated version.
+[2025-12-17 08:54:52,175][root][WARNING] - Token mismatch detected! Full tokenization length: 1971, Concatenated tokens length: 1985. Using concatenated version.
+[2025-12-17 08:54:52,177][root][WARNING] - Token mismatch detected! Full tokenization length: 1501, Concatenated tokens length: 1511. Using concatenated version.
+[2025-12-17 08:54:52,194][root][WARNING] - Token mismatch detected! Full tokenization length: 1560, Concatenated tokens length: 1572. Using concatenated version.
+[2025-12-17 08:54:52,197][root][WARNING] - Token mismatch detected! Full tokenization length: 1608, Concatenated tokens length: 1621. Using concatenated version.
+[2025-12-17 08:54:52,208][root][WARNING] - Token mismatch detected! Full tokenization length: 1512, Concatenated tokens length: 1522. Using concatenated version.
+[2025-12-17 08:54:52,210][root][WARNING] - Token mismatch detected! Full tokenization length: 1124, Concatenated tokens length: 1132. Using concatenated version.
+[2025-12-17 08:54:52,221][root][WARNING] - Token mismatch detected! Full tokenization length: 1303, Concatenated tokens length: 1312. Using concatenated version.
+[2025-12-17 08:54:52,227][root][WARNING] - Token mismatch detected! Full tokenization length: 1363, Concatenated tokens length: 1374. Using concatenated version.
+[2025-12-17 08:54:52,240][root][WARNING] - Token mismatch detected! Full tokenization length: 1676, Concatenated tokens length: 1688. Using concatenated version.
+[2025-12-17 08:54:52,252][root][WARNING] - Token mismatch detected! Full tokenization length: 1204, Concatenated tokens length: 1214. Using concatenated version.
+[2025-12-17 08:54:52,254][root][WARNING] - Token mismatch detected! Full tokenization length: 1639, Concatenated tokens length: 1655. Using concatenated version.
+[2025-12-17 08:54:52,267][root][WARNING] - Token mismatch detected! Full tokenization length: 1725, Concatenated tokens length: 1736. Using concatenated version.
+[2025-12-17 08:54:52,272][root][WARNING] - Token mismatch detected! Full tokenization length: 1355, Concatenated tokens length: 1366. Using concatenated version.
+[2025-12-17 08:54:52,283][root][WARNING] - Token mismatch detected! Full tokenization length: 1548, Concatenated tokens length: 1559. Using concatenated version.
+[2025-12-17 08:54:52,300][root][WARNING] - Token mismatch detected! Full tokenization length: 1484, Concatenated tokens length: 1496. Using concatenated version.
+[2025-12-17 08:54:52,308][root][WARNING] - Token mismatch detected! Full tokenization length: 1724, Concatenated tokens length: 1748. Using concatenated version.
+[2025-12-17 08:54:52,311][root][WARNING] - Token mismatch detected! Full tokenization length: 1152, Concatenated tokens length: 1160. Using concatenated version.
+[2025-12-17 08:54:52,319][root][WARNING] - Token mismatch detected! Full tokenization length: 1090, Concatenated tokens length: 1097. Using concatenated version.
+[2025-12-17 08:54:52,328][root][WARNING] - Token mismatch detected! Full tokenization length: 1665, Concatenated tokens length: 1677. Using concatenated version.
+[2025-12-17 08:54:52,340][root][WARNING] - Token mismatch detected! Full tokenization length: 1112, Concatenated tokens length: 1120. Using concatenated version.
+[2025-12-17 08:54:52,343][root][WARNING] - Token mismatch detected! Full tokenization length: 1851, Concatenated tokens length: 1864. Using concatenated version.
+[2025-12-17 08:54:52,351][root][WARNING] - Token mismatch detected! Full tokenization length: 929, Concatenated tokens length: 937. Using concatenated version.
+[2025-12-17 08:54:52,365][root][WARNING] - Token mismatch detected! Full tokenization length: 963, Concatenated tokens length: 975. Using concatenated version.
+[2025-12-17 08:54:52,381][root][WARNING] - Token mismatch detected! Full tokenization length: 2017, Concatenated tokens length: 2040. Using concatenated version.
+[2025-12-17 08:54:52,388][root][WARNING] - Token mismatch detected! Full tokenization length: 1718, Concatenated tokens length: 1732. Using concatenated version.
+[2025-12-17 08:54:52,394][root][WARNING] - Token mismatch detected! Full tokenization length: 1328, Concatenated tokens length: 1337. Using concatenated version.
+[2025-12-17 08:54:52,406][root][WARNING] - Token mismatch detected! Full tokenization length: 1511, Concatenated tokens length: 1523. Using concatenated version.
+[2025-12-17 08:54:52,413][root][WARNING] - Token mismatch detected! Full tokenization length: 2019, Concatenated tokens length: 2031. Using concatenated version.
+[2025-12-17 08:54:52,417][root][WARNING] - Token mismatch detected! Full tokenization length: 1081, Concatenated tokens length: 1088. Using concatenated version.
+[2025-12-17 08:54:52,422][root][WARNING] - Token mismatch detected! Full tokenization length: 853, Concatenated tokens length: 861. Using concatenated version.
+[2025-12-17 08:54:52,434][root][WARNING] - Token mismatch detected! Full tokenization length: 1713, Concatenated tokens length: 1725. Using concatenated version.
+[2025-12-17 08:54:52,439][root][WARNING] - Token mismatch detected! Full tokenization length: 1628, Concatenated tokens length: 1640. Using concatenated version.
+[2025-12-17 08:54:52,447][root][WARNING] - Token mismatch detected! Full tokenization length: 1331, Concatenated tokens length: 1340. Using concatenated version.
+[2025-12-17 08:54:52,469][root][WARNING] - Token mismatch detected! Full tokenization length: 1310, Concatenated tokens length: 1325. Using concatenated version.
+[2025-12-17 08:54:52,475][root][WARNING] - Token mismatch detected! Full tokenization length: 1786, Concatenated tokens length: 1811. Using concatenated version.
+[2025-12-17 08:54:52,497][root][WARNING] - Token mismatch detected! Full tokenization length: 1818, Concatenated tokens length: 1830. Using concatenated version.
+[2025-12-17 08:54:52,511][root][WARNING] - Token mismatch detected! Full tokenization length: 1092, Concatenated tokens length: 1102. Using concatenated version.
+[2025-12-17 08:54:52,525][root][WARNING] - Token mismatch detected! Full tokenization length: 1143, Concatenated tokens length: 1153. Using concatenated version.
+[2025-12-17 08:54:52,554][root][WARNING] - Token mismatch detected! Full tokenization length: 2670, Concatenated tokens length: 2684. Using concatenated version.
+[2025-12-17 08:54:52,556][root][WARNING] - Token mismatch detected! Full tokenization length: 3782, Concatenated tokens length: 3812. Using concatenated version.
+[2025-12-17 08:54:52,587][root][WARNING] - Token mismatch detected! Full tokenization length: 1518, Concatenated tokens length: 1539. Using concatenated version.
+[2025-12-17 08:54:52,599][root][WARNING] - Token mismatch detected! Full tokenization length: 1042, Concatenated tokens length: 1050. Using concatenated version.
+[2025-12-17 08:54:52,616][root][WARNING] - Token mismatch detected! Full tokenization length: 1607, Concatenated tokens length: 1619. Using concatenated version.
+step:1 - train/loss:2.244222640991211 - train/lr(1e-3):0.0005000000000000001 - train/time(s):9.880624532699585
+Epoch 1/20:  10%|█         | 1/10 [00:11<01:39, 11.10s/it]step:2 - train/loss:2.0270440578460693 - train/lr(1e-3):0.0010000000000000002 - train/time(s):8.942503690719604
+Epoch 1/20:  20%|██        | 2/10 [00:20<01:18,  9.84s/it]Error executing job with overrides: ['data.train_files=/Data/wyh/datasets/Verl-Data/train/textcraft/train_gemini_adapt.parquet', 'data.val_files=/Data/wyh/datasets/Verl-Data/train/textcraft/train_gemini_adapt.parquet', 'data.train_batch_size=32', 'data.micro_batch_size=2', 'data.max_length=4096', 'data.multiturn.enable=true', 'data.multiturn.messages_key=messages', 'model.partial_pretrain=/Data/public/Qwen3-1.7B', 'model.enable_gradient_checkpointing=true', 'optim.lr=1e-5', 'optim.betas=[0.9,0.95]', 'optim.weight_decay=0.01', 'optim.lr_warmup_steps_ratio=0.1', 'optim.clip_grad=1.0', 'optim.lr_scheduler=cosine', 'trainer.default_local_dir=/Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/new_ckp', 'trainer.project_name=textcraft-sft', 'trainer.experiment_name=textcraft-sft-qwen3-1.7b-gemini-adapt', 'trainer.logger=[console,wandb]', 'trainer.seed=42', 'trainer.total_epochs=20', 'trainer.save_freq=80', 'trainer.test_freq=80', 'ulysses_sequence_parallel_size=2', 'use_remove_padding=true']
+step:3 - train/loss:1.9354437589645386 - train/lr(1e-3):0.0015 - train/time(s):8.774406433105469
+Epoch 1/20:  30%|███       | 3/10 [00:28<01:05,  9.35s/it]Epoch 1/20:  30%|███       | 3/10 [00:28<01:07,  9.61s/it]
+Error executing job with overrides: ['data.train_files=/Data/wyh/datasets/Verl-Data/train/textcraft/train_gemini_adapt.parquet', 'data.val_files=/Data/wyh/datasets/Verl-Data/train/textcraft/train_gemini_adapt.parquet', 'data.train_batch_size=32', 'data.micro_batch_size=2', 'data.max_length=4096', 'data.multiturn.enable=true', 'data.multiturn.messages_key=messages', 'model.partial_pretrain=/Data/public/Qwen3-1.7B', 'model.enable_gradient_checkpointing=true', 'optim.lr=1e-5', 'optim.betas=[0.9,0.95]', 'optim.weight_decay=0.01', 'optim.lr_warmup_steps_ratio=0.1', 'optim.clip_grad=1.0', 'optim.lr_scheduler=cosine', 'trainer.default_local_dir=/Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/new_ckp', 'trainer.project_name=textcraft-sft', 'trainer.experiment_name=textcraft-sft-qwen3-1.7b-gemini-adapt', 'trainer.logger=[console,wandb]', 'trainer.seed=42', 'trainer.total_epochs=20', 'trainer.save_freq=80', 'trainer.test_freq=80', 'ulysses_sequence_parallel_size=2', 'use_remove_padding=true']
+Traceback (most recent call last):
+  File "/Data/wyh/verl/verl/trainer/fsdp_sft_trainer.py", line 838, in main
+    run_sft(config)
+  File "/Data/wyh/verl/verl/trainer/fsdp_sft_trainer.py", line 831, in run_sft
+    trainer.fit()
+  File "/Data/wyh/verl/verl/trainer/fsdp_sft_trainer.py", line 752, in fit
+    for step_in_epoch, data in enumerate(
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/tqdm/std.py", line 1181, in __iter__
+    for obj in iterable:
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torchdata/stateful_dataloader/stateful_dataloader.py", line 450, in __next__
+    return super().__next__()
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 734, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torchdata/stateful_dataloader/stateful_dataloader.py", line 1456, in _next_data
+    return self._process_data(data, worker_id, state_dict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torchdata/stateful_dataloader/stateful_dataloader.py", line 1543, in _process_data
+    data.reraise()
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/_utils.py", line 769, in reraise
+    raise exception
+ValueError: Caught ValueError in DataLoader worker process 3.
+Original Traceback (most recent call last):
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torchdata/stateful_dataloader/worker.py", line 242, in _worker_loop
+    data = fetcher.fetch(index)  # type: ignore[union-attr]
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+            ~~~~~~~~~~~~^^^^^
+  File "/Data/wyh/verl/verl/utils/dataset/multiturn_sft_dataset.py", line 362, in __getitem__
+    raise ValueError(f"{sequence_length=} is larger than {self.max_length=}")
+ValueError: sequence_length=5284 is larger than self.max_length=4096
+
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
+Traceback (most recent call last):
+  File "/Data/wyh/verl/verl/trainer/fsdp_sft_trainer.py", line 838, in main
+    run_sft(config)
+  File "/Data/wyh/verl/verl/trainer/fsdp_sft_trainer.py", line 831, in run_sft
+    trainer.fit()
+  File "/Data/wyh/verl/verl/trainer/fsdp_sft_trainer.py", line 752, in fit
+    for step_in_epoch, data in enumerate(
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/tqdm/std.py", line 1169, in __iter__
+    for obj in iterable:
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torchdata/stateful_dataloader/stateful_dataloader.py", line 450, in __next__
+    return super().__next__()
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 734, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torchdata/stateful_dataloader/stateful_dataloader.py", line 1456, in _next_data
+    return self._process_data(data, worker_id, state_dict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torchdata/stateful_dataloader/stateful_dataloader.py", line 1543, in _process_data
+    data.reraise()
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/_utils.py", line 769, in reraise
+    raise exception
+ValueError: Caught ValueError in DataLoader worker process 3.
+Original Traceback (most recent call last):
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torchdata/stateful_dataloader/worker.py", line 242, in _worker_loop
+    data = fetcher.fetch(index)  # type: ignore[union-attr]
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/utils/data/_utils/fetch.py", line 52, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+            ~~~~~~~~~~~~^^^^^
+  File "/Data/wyh/verl/verl/utils/dataset/multiturn_sft_dataset.py", line 362, in __getitem__
+    raise ValueError(f"{sequence_length=} is larger than {self.max_length=}")
+ValueError: sequence_length=5284 is larger than self.max_length=4096
+
+
+Set the environment variable HYDRA_FULL_ERROR=1 for a complete stack trace.
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mtextcraft-sft-qwen3-1.7b-gemini-adapt[0m at: [34m[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20251217_085449-czuhs31y/logs[0m
+Exception ignored in: <function ResourceTracker.__del__ at 0x7f5bafabd300>
+Traceback (most recent call last):
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 80, in __del__
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 89, in _stop
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/multiprocess/resource_tracker.py", line 102, in _stop_locked
+AttributeError: '_thread.RLock' object has no attribute '_recursion_count'
+[rank1]:[W1217 08:55:21.061674838 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+W1217 08:55:23.887000 993903 /Data/wyh/conda_envs/verl/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py:900] Sending process 993988 closing signal SIGTERM
+E1217 08:55:24.465000 993903 /Data/wyh/conda_envs/verl/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 1) local_rank: 1 (pid: 993989) of binary: /home/wyh/miniconda3/envs/verl/bin/python3.12
+Traceback (most recent call last):
+  File "/home/wyh/miniconda3/envs/verl/bin/torchrun", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 357, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/distributed/run.py", line 901, in main
+    run(args)
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/distributed/run.py", line 892, in run
+    elastic_launch(
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 143, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/wyh/miniconda3/envs/verl/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 277, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+verl.trainer.fsdp_sft_trainer FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-12-17_08:55:23
+  host      : ADM-Cube-L20
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 993989)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+
+================================================================================
+训练完成，退出码: 1
+完整日志已保存到: /Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/logs/train_20251217_085430.log
+================================================================================
+训练失败，跳过评估

@@ -1,0 +1,29 @@
+{
+    "task_name": "webshop",
+    "model": "qwen-max",
+    "total_samples": 2,
+    "completed_samples": 2,
+    "average_score": 0.42857142857142855,
+    "success_rate": 0.0,
+    "total_time_seconds": 87.74163842201233,
+    "avg_time_per_sample": 43.870819211006165,
+    "trajectory_file": "/Data/wyh/datasets/Sampling-Data/webshop_qwen-max_20251127_090652/webshop_trajectories.jsonl",
+    "config": {
+        "api_key": "sk-270abfbb3c92433ebdb6b0669a7c3ac7",
+        "task_name": "webshop",
+        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "model": "qwen-max",
+        "max_tokens": 4096,
+        "temperature": 1.0,
+        "top_p": 1.0,
+        "inference_file": "/Data/wyh/datasets/AgentGym-RL-Data/train/webshop_train_2.json",
+        "output_dir": "/Data/wyh/datasets/Sampling-Data/webshop_qwen-max_20251127_090652",
+        "env_server_base": "http://127.0.0.1:36001",
+        "max_round": 15,
+        "data_len": 500,
+        "timeout": 2400,
+        "seed": 42,
+        "action_format": "react",
+        "num_samples": 1
+    }
+}

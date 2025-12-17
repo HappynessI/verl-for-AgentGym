@@ -1,0 +1,54 @@
+
+====================================
+TextCraft GRPO训练日志分析报告
+====================================
+
+## 主要问题
+
+### 1. System Prompt不一致（已修复）
+- 训练数据使用简单prompt：只要求输出action
+- Eval脚本使用复杂prompt：要求Thought + Action格式
+- 修复：已将eval脚本的prompt改为与训练一致
+
+### 2. 所有turn_scores = 0（严重问题！）
+从日志中观察到：
+- 所有validation episode的turn_scores全为0
+- 但每个episode有16-49个turn，说明交互有进行
+- 这意味着模型生成的所有action都无效
+
+### 3. 训练正常性分析
+
+日志显示：
+- 框架正常运行，没有代码错误
+- Validation generation正常完成
+- RewardLoopWorker正常处理turn_scores
+- 但缺少训练指标（actor/pg_loss, critic/reward等）
+
+### 4. 可能原因
+
+A. 模型输出格式问题：
+   - 模型可能没有遵循正确的action格式
+   - 需要查看模型实际生成的内容
+
+B. 训练数据质量问题：
+   - 374个样本可能不足以学习有效策略
+   - 数据可能缺少成功示例
+
+C. TextCraft环境问题：
+   - 环境可能对action格式要求严格
+   - 可能需要specific的命令格式
+
+### 5. 建议的下一步
+
+1. 检查模型实际输出
+   - 查看validation时模型生成了什么
+   - 对比TextCraft期望的action格式
+
+2. 检查训练数据
+   - 查看数据中的action示例
+   - 确认是否有成功的episode
+
+3. 运行修复后的eval
+   - 使用统一的prompt测试模型
+   - 查看模型在eval中的表现
+

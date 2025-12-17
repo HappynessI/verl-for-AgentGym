@@ -1,0 +1,19 @@
+
+================================================================================
+TextCraft Evaluation Summary
+================================================================================
+Model: /Data/public/Qwen3-1.7B
+Data: /Data/wyh/datasets/Verl-Data/eval/textcraft/test.parquet
+Total samples: 100
+Max rounds: 50
+
+Results:
+--------
+Average Reward: 0.3700
+Success Rate: 0.3700 (37/100)
+
+Output files:
+-------------
+Results: /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/Qwen3-1.7B/eval_results_20251217_014918.jsonl
+Summary: /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/Qwen3-1.7B/eval_summary_20251217_014918.txt
+================================================================================

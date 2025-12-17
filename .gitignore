@@ -1,0 +1,25 @@
+# 排除 VLA-Data 整个目录
+VLA-Data/
+
+# 排除 Verl-Data 中的模型检查点
+Verl-Data/outputs/textcraft_sft/new_ckp/
+Verl-Data/outputs/textcraft_sft/*/global_step_*/
+Verl-Data/outputs/*/checkpoints/
+
+# 排除 AgentGym-Data 中的 tool 相关轨迹数据
+AgentGym-Data/**/tool_*.json
+AgentGym-Data/**/.cache/
+
+# 排除其他大文件和临时文件
+*.whl
+*.pyc
+__pycache__/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# 排除可能的大型日志文件
+*.log.gz
+*.tar.gz
+*.zip

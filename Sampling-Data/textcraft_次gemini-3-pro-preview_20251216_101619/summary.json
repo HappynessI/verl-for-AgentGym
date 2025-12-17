@@ -1,0 +1,29 @@
+{
+    "task_name": "textcraft",
+    "model": "[次]gemini-3-pro-preview",
+    "total_samples": 374,
+    "completed_samples": 374,
+    "average_score": 0.9358288770053476,
+    "success_rate": 0.9358288770053476,
+    "total_time_seconds": 49032.61246752739,
+    "avg_time_per_sample": 131.10324189178448,
+    "trajectory_file": "/Data/wyh/datasets/Sampling-Data/textcraft_次gemini-3-pro-preview_20251216_101619/textcraft_trajectories.jsonl",
+    "config": {
+        "api_key": "sk-7HWdZiaoPNzAxAaieSs5NwRyPjknm0Q2tvih2x2Pd4N04ZB3",
+        "task_name": "textcraft",
+        "base_url": "https://once.novai.su/v1",
+        "model": "[次]gemini-3-pro-preview",
+        "max_tokens": 16384,
+        "temperature": 0.3,
+        "top_p": 0.95,
+        "inference_file": "/Data/wyh/datasets/AgentGym-RL-Data/train/textcraft_train.json",
+        "output_dir": "/Data/wyh/datasets/Sampling-Data/textcraft_次gemini-3-pro-preview_20251216_101619",
+        "env_server_base": "http://127.0.0.1:36003",
+        "max_round": 25,
+        "data_len": 400,
+        "timeout": 2400,
+        "seed": 42,
+        "action_format": "adapt",
+        "num_samples": 1
+    }
+}

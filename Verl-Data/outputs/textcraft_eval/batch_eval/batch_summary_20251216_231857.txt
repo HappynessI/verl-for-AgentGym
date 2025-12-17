@@ -1,0 +1,64 @@
+============================================================================
+批量评估总结报告
+============================================================================
+
+评估时间: 2025年 12月 17日 星期三 10:05:40 CST
+随机种子: 42
+数据集: /Data/wyh/datasets/Verl-Data/eval/textcraft/test.parquet
+测试样本数: 100
+TextCraft服务器: http://127.0.0.1:36002
+
+ADaPT配置参数:
+  - max_new_tokens: 150
+  - temperature: 0.0
+  - top_p: 1.0
+  - max_rounds: 50
+  - do_sample: False
+
+============================================================================
+评估结果
+============================================================================
+
+模型名称                                       状态     成功率       耗时    
+----------------------------------------------------------------------------
+SFT-huggingface                                    SUCCESS    (24/100)        9017s     
+SFT-huggingface                                    CACHED     0.2400          0s        
+SFT-huggingface                                    CACHED     0.2400          0s        
+Qwen3-1.7B                                         SUCCESS    (37/100)        10910s    
+Qwen3-4B-Instruct-2507                             SUCCESS    (21/100)        18855s    
+Qwen3-8B                                           SUCCESS    未找到结果 21s       
+
+状态说明:
+  SUCCESS - 本次新评估成功
+  CACHED  - 使用已有评估结果（跳过）
+  FAIL    - 评估失败
+  SKIP    - 跳过（模型不存在等原因）
+
+============================================================================
+详细结果文件位置
+============================================================================
+
+输出目录: /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval
+批量日志: /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/batch_test_20251216_231857.log
+批量摘要: /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/batch_summary_20251216_231857.txt
+
+各模型结果文件夹:
+  Qwen3-1.7B/
+    -rw-r--r-- 1 wyh wyh 2.0M 12月17日 04:51 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/Qwen3-1.7B/eval_20251216_231857.log
+    -rw-r--r-- 1 wyh wyh 1.6M 12月17日 04:51 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/Qwen3-1.7B/eval_20251216_231857_results.jsonl
+    -rw-r--r-- 1 wyh wyh  736 12月17日 04:51 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/Qwen3-1.7B/eval_20251216_231857_summary.txt
+  Qwen3-4B-Instruct-2507/
+    -rw-r--r-- 1 wyh wyh 3.0M 12月17日 10:05 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/Qwen3-4B-Instruct-2507/eval_20251216_231857.log
+    -rw-r--r-- 1 wyh wyh 2.4M 12月17日 10:05 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/Qwen3-4B-Instruct-2507/eval_20251216_231857_results.jsonl
+    -rw-r--r-- 1 wyh wyh  772 12月17日 10:05 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/Qwen3-4B-Instruct-2507/eval_20251216_231857_summary.txt
+  Qwen3-8B/
+    -rw-r--r-- 1 wyh wyh 16K 12月17日 10:05 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/Qwen3-8B/eval_20251216_231857.log
+  SFT-global_step_160/
+  SFT-global_step_220/
+  SFT-global_step_80/
+  SFT-huggingface/
+    -rw-r--r-- 1 wyh wyh 2.0M 12月17日 01:49 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/SFT-huggingface/eval_20251216_231857.log
+    -rw-r--r-- 1 wyh wyh 1.4M 12月17日 01:49 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/SFT-huggingface/eval_20251216_231857_results.jsonl
+    -rw-r--r-- 1 wyh wyh  800 12月17日 01:49 /Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/batch_eval/SFT-huggingface/eval_20251216_231857_summary.txt
+
+============================================================================
