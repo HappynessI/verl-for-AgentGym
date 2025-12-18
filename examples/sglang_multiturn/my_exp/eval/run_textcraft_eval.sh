@@ -21,7 +21,7 @@ export CUDA_VISIBLE_DEVICES=3
 MODEL_PATH="${MODEL_PATH:-/Data/public/Qwen3-1.7B}"
 DATA_PATH="/Data/wyh/datasets/Verl-Data/eval/textcraft/test.parquet"
 OUTPUT_DIR="/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval"
-TEXTCRAFT_SERVER="http://127.0.0.1:36004"
+TEXTCRAFT_SERVER="http://127.0.0.1:36003"
 MAX_SAMPLES=${MAX_SAMPLES:--1}  # -1 means all samples
 NUM_SAMPLES_PER_TASK=${NUM_SAMPLES_PER_TASK:-1}  # Number of samples per task (default: 1)
 
@@ -34,8 +34,8 @@ echo ""
 
 # ADaPT风格参数配置
 MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-150}    # ADaPT: 150 (单行输出)
-TEMPERATURE=0.6       # ADaPT: 0.0 (贪心解码)
-TOP_P=0.9               # ADaPT: 1.0
+TEMPERATURE=0.3       # ADaPT: 0.0 (贪心解码)
+TOP_P=0.95               # ADaPT: 1.0
 # DO_SAMPLE=""             # ADaPT: 不采样 (空字符串=不传--do_sample)
 DO_SAMPLE="--do_sample"
 
