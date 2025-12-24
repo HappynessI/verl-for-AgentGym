@@ -20,6 +20,7 @@ from tqdm import tqdm
 import requests
 import torch
 from vllm import LLM, SamplingParams
+from transformers import AutoTokenizer
 
 # Add verl to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -30,105 +31,54 @@ logger = logging.getLogger(__name__)
 
 
 class SimpleTextCraftAgent:
-    """TextCraft Agent - 使用vLLM高性能推理 + ADaPT风格"""
+    """TextCraft Agent - 使用vLLM高性能推理 + Chat Template格式"""
     
-    def __init__(self, llm, max_new_tokens=150, temperature=0.0, top_p=1.0):
+    def __init__(self, llm, tokenizer, max_new_tokens=150, temperature=0.0, top_p=1.0):
         self.llm = llm  # vLLM的LLM对象
-        self.max_new_tokens = max_new_tokens  # ADaPT: 150
-        self.temperature = temperature  # ADaPT: 0.0
-        self.top_p = top_p  # ADaPT: 1.0
+        self.tokenizer = tokenizer  # Tokenizer用于chat template
+        self.max_new_tokens = max_new_tokens
+        self.temperature = temperature
+        self.top_p = top_p
         
         # vLLM的SamplingParams
         self.sampling_params = SamplingParams(
             temperature=temperature,
             top_p=top_p,
             max_tokens=max_new_tokens,
-            stop=['\n'],  # ADaPT: 单行输出
         )
         
-        # === 原始简单prompt（已注释） ===
-        # self.system_prompt = (
-        #     'You are an agent in the TextCraft environment. Your goal is to craft items by gathering resources and following recipes.\n\n'
-        #     'You can use actions like:\n'
-        #     '- move [direction]\n'
-        #     '- get [object]\n'
-        #     '- craft [item]\n'
-        #     '- inventory\n'
-        #     '- look\n\n'
-        #     'Instructions:\n'
-        #     '- Read the task instruction carefully\n'
-        #     '- Gather necessary resources\n'
-        #     '- Follow crafting recipes\n'
-        #     '- Complete the crafting goal\n\n'
-        #     'Your response should contain only the action.'
-        # )
-        
-        # === ADaPT风格的few-shot prompt ===
+        # System prompt - 将作为第一条system message
         self.system_prompt = self._build_adapt_prompt()
     
     def _build_adapt_prompt(self) -> str:
-        """构建ADaPT风格的few-shot prompt（参考ADaPT L252-393）"""
-        return '''You are given few useful crafting recipes to craft items in Minecraft. Crafting commands are of the format "craft [target object] using [input ingredients]". You can either "fetch" an object (ingredients) from the inventory or the environment or "craft" (target) using any of the crafting commands. 
+        """构建新版提示词（双括号格式 + 核心逻辑补丁）"""
+        return '''You are a Minecraft Assistant.
 
-You can use ONLY these crafting commands provided, do not use your own crafting commands. However, if the crafting command uses a generic ingredient like "planks", you can use special types of the same ingredient e.g. "dark oak planks" in the command instead. 
+**Core Protocol:**
+1. Think: First, analyze the situation and output `Think: ...`
+2. Action: You MUST wrap your final command inside `[[ ]]`.
+   Format: `Action: [[ command ]]`
+   Output ONE command only.
+3. Stop: Do NOT simulate the environment's response.
 
-For any other natural language or thoughts, use prefix 'think: '.
-
-Here is a demo of how to fetch and craft objects.
-
-Goal: craft dark oak sign
-
-> think: I should check if I can fetch dark oak sign directly from the environment or the inventory.
-OK.
-
-> inventory: 
-Inventory: [stick] (1) [dark oak planks] (8)
-
-> get dark oak sign
-Could not find dark oak sign
-
-> think: I cannot get dark oak sign directly, I need to craft it. From the crafting commands, I can use: craft dark oak sign using 6 dark oak planks, 1 stick. Ingredients needed: 6 dark oak planks, 1 stick. Input assumption: I have all the neccessary ingredients in my inventory. Let me verify this first.
-OK.
-
-> inventory
-Inventory: [stick] (1) [dark oak planks] (8)
-
-> think: I found my ingredients: 6 dark oak planks, 1 stick in my inventory. My assumption is true, I can proceed. I will use the crafting command: craft dark oak sign using 6 dark oak planks
-OK.
-
-> craft 1 dark oak sign using 6 dark oak planks, 1 stick
-Crafted 1 minecraft:dark_oak_sign
-
-> inventory 
-Inventory: [dark oak sign] (1)
-
-> think: I now have dark oak sign in my inventory. Task Completed!
-OK.
-
-Goal: fetch 2 dark oak logs.
-
-> think: I should check my inventory first, to see if I already have dark oak sign. Otherwise, I will directly try to get it from the environment.
-OK.
-
-> inventory
-Inventory: [stick] (1)
-
-> get 2 dark oak logs.
-Got 2 dark oak logs
-
-> inventory
-Inventory: [dark oak log] (2) [stick] (1)
-
-> think: I have 2 dark oak logs in my inventory. Task Completed!
-OK.
-
-Now here is a different goal. You can use these crafting commands to accomplish the goal. When you have the desired item in your inventory, think: Task Completed! If you have tried your best but cannot proceed, think: task failed!'''
+**Core Command Set (API):**
+* `craft [target] using [ingredients]`
+  - Rule: If a recipe uses a generic ingredient (e.g., "planks"), you can use a specific type (e.g., "oak planks").
+* `get [item]`
+  - Rule: If no crafting recipe exists for an item, use this to fetch it directly.
+* `inventory`
+'''
     
     def generate(self, messages: List[Dict[str, str]]) -> str:
-        """生成模型响应（vLLM + ADaPT风格：stop at newline）"""
-        prompt = self._build_prompt(messages)
+        """生成模型响应（使用Chat Template）"""
+        # 使用tokenizer的apply_chat_template
+        prompt = self.tokenizer.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            tokenize=False  # 返回字符串而非token ids
+        )
         
-        # vLLM推理：直接传入prompt字符串
+        # vLLM推理
         outputs = self.llm.generate([prompt], self.sampling_params)
         
         # 提取生成的文本
@@ -140,29 +90,7 @@ Now here is a different goal. You can use these crafting commands to accomplish 
         
         return response.strip()
     
-    def _build_prompt(self, messages: List[Dict[str, str]]) -> str:
-        """构建prompt - ADaPT风格不使用chat template，直接拼接"""
-        # ADaPT使用简单的字符串拼接，不需要chat template
-        prompt_parts = []
-        
-        # 添加system prompt（ADaPT的few-shot examples）
-        prompt_parts.append(self.system_prompt)
-        prompt_parts.append("\n\n")
-        
-        # 添加对话历史（ADaPT格式：直接拼接，user的内容前加\n，assistant的内容后加\n）
-        for msg in messages:
-            if msg["role"] == "user":
-                # User message (环境观察)
-                prompt_parts.append(msg["content"])
-                prompt_parts.append("\n>")  # ADaPT格式：每行以 > 开头
-            elif msg["role"] == "assistant":
-                # Assistant message (agent action/think)
-                prompt_parts.append(" ")
-                prompt_parts.append(msg["content"])
-                prompt_parts.append("\n>")
-        
-        prompt = "".join(prompt_parts)
-        return prompt
+    # 删除旧的 _build_prompt 方法，不再需要手动拼接
 
 
 async def evaluate_one_episode(
@@ -179,7 +107,8 @@ async def evaluate_one_episode(
                        这确保多次采样使用相同的任务
     """
     instance_id = f"eval_{session_id}"
-    messages = []
+    # 初始化messages - 添加system message
+    messages = [{"role": "system", "content": agent.system_prompt}]
     conversations = []
     done = False
     total_reward = 0.0  # 累积reward
@@ -237,7 +166,12 @@ async def evaluate_one_episode(
     
     # === 验证：打印首轮完整prompt ===
     if session_id == 0:
-        first_prompt = agent._build_prompt(messages)
+        # 使用tokenizer.apply_chat_template查看完整prompt
+        first_prompt = agent.tokenizer.apply_chat_template(
+            messages,
+            add_generation_prompt=True,
+            tokenize=False
+        )
         print("="*80)
         print("首轮完整Prompt (用于验证system prompt传递):")
         print("="*80)
@@ -253,17 +187,14 @@ async def evaluate_one_episode(
         try:
             response = agent.generate(messages)
             
-            # === ADaPT风格处理：检查think:前缀 ===
-            response_stripped = response.lstrip('> ').strip()
-            
-            # 如果是think:，处理终止条件
-            if response_stripped.startswith('think:'):
-                if 'task completed' in response_stripped.lower():
-                    done = True
-                    logger.info(f"Session {session_id} Turn {turn}: Task Completed (from think)")
-                elif 'task failed' in response_stripped.lower():
-                    done = True
-                    logger.info(f"Session {session_id} Turn {turn}: Task Failed (from think)")
+            # 检查终止条件（新格式：Action: [[ Task Completed! ]] 或 Think: task completed）
+            response_lower = response.lower()
+            if 'task completed' in response_lower:
+                done = True
+                logger.info(f"Session {session_id} Turn {turn}: Task Completed")
+            elif 'task failed' in response_lower:
+                done = True
+                logger.info(f"Session {session_id} Turn {turn}: Task Failed")
             
             messages.append({"role": "assistant", "content": response})
             conversations.append({"role": "assistant", "content": response})
@@ -292,6 +223,7 @@ async def evaluate_one_episode(
         logger.warning(f"Failed to finalize: {e}")
     
     success = total_reward > 0.0
+    # 不计算system message
     num_turns = len([m for m in messages if m["role"] == "assistant"])
     
     logger.info("=" * 80)
@@ -376,6 +308,16 @@ async def main():
     
     logger.info("Loading model with vLLM...")
     logger.info(f"  GPU memory utilization: {args.gpu_memory_utilization}")
+    
+    # 加载tokenizer（用于chat template）
+    logger.info("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_path,
+        trust_remote_code=True
+    )
+    logger.info("✓ Tokenizer loaded")
+    
+    # 加载vLLM模型
     llm = LLM(
         model=args.model_path,
         trust_remote_code=True,
@@ -388,6 +330,7 @@ async def main():
     
     agent = SimpleTextCraftAgent(
         llm=llm,
+        tokenizer=tokenizer,  # 传入tokenizer
         max_new_tokens=args.max_new_tokens,
         temperature=args.temperature,
         top_p=args.top_p,
@@ -398,15 +341,15 @@ async def main():
     logger.info(f"  gpu_memory_utilization: {args.gpu_memory_utilization} (使用GPU显存比例)")
     logger.info(f"  tensor_parallel_size: 1 (单GPU)")
     logger.info(f"  dtype: bfloat16")
+    logger.info(f"  使用Chat Template: True (与训练格式一致)")
     logger.info("=" * 80)
-    logger.info("Generation Parameters (ADaPT风格):")
+    logger.info("Generation Parameters:")
     logger.info(f"  max_length: {args.max_length}")
-    logger.info(f"  max_new_tokens: {args.max_new_tokens} (ADaPT: 150)")
-    logger.info(f"  temperature: {args.temperature} (ADaPT: 0.0)")
-    logger.info(f"  top_p: {args.top_p} (ADaPT: 1.0)")
-    logger.info(f"  do_sample: {args.do_sample} (ADaPT: False)")
-    logger.info(f"  stop_tokens: ['\\n'] (implemented as eos_token_id)")
-    logger.info(f"  max_rounds: {args.max_rounds} (ADaPT: 40)")
+    logger.info(f"  max_new_tokens: {args.max_new_tokens}")
+    logger.info(f"  temperature: {args.temperature}")
+    logger.info(f"  top_p: {args.top_p}")
+    logger.info(f"  do_sample: {args.do_sample}")
+    logger.info(f"  max_rounds: {args.max_rounds}")
     logger.info("=" * 80)
     
     logger.info("Initializing TextCraft interaction...")
