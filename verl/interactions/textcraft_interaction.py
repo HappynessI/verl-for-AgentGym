@@ -61,56 +61,34 @@ class TextCraftInteraction(AgentGymBaseInteraction):
     def extract_action(self, text: str) -> Optional[str]:
         """从模型输出中提取TextCraft action
         
-        完全遵循ADaPT项目的实现逻辑（textcraft.py step方法）
-        支持两种格式：
-        1. ADaPT格式: "> command" 或最后一行非think的内容（从后往前找）
-        2. ReAct格式: "Action:" 关键词
+        新版格式：只提取 [[ ... ]] 中的内容
+        格式示例：
+        - Action: [[ inventory ]]
+        - Action: [[ get 3 logs ]]
+        - Action: [[ craft 4 stick using 2 oak planks ]]
+        
+        括号外的任何内容（包括Think:、幻觉等）都会被丢弃
         """
         text = text.strip()
         
         # 移除chat template标记
-        text = re.sub(r'^assistant\s*\n?', '', text, flags=re.IGNORECASE | re.MULTILINE)
         text = re.sub(r'<\|im_start\|>assistant\s*\n?', '', text, flags=re.IGNORECASE)
         text = re.sub(r'<\|im_end\|>', '', text)
-        text = re.sub(r'</?think>', '', text, flags=re.IGNORECASE)
         
-        # === 方法1: ADaPT格式（从最后一行往回找）===
-        lines = text.split('\n')
-        extracted_action = ""
-        for line in reversed(lines):  # 关键：从后往前遍历！
-            line = line.strip()
-            # 跳过空行和OK
-            if not line or line == 'OK.' or line == 'OK':
-                continue
-            # 移除开头的 ">"
-            if line.startswith('>'):
-                cmd = line[1:].strip()
-                # 跳过think:开头的命令
-                if not cmd.lower().startswith('think:'):
-                    extracted_action = cmd
-                    break
-            else:
-                # 没有>前缀，检查是否是think:
-                if not line.lower().startswith('think:'):
-                    extracted_action = line
-                    break
+        # 使用正则提取 [[ ... ]] 中的内容（最后一个匹配）
+        # 匹配模式：[[ 后面跟任意字符（非贪婪），直到 ]]
+        action_matches = re.findall(r'\[\[\s*(.*?)\s*\]\]', text, re.DOTALL)
         
-        if extracted_action:
-            # 清理action字符串（完全遵循ADaPT的方式）
-            action = re.sub(r"[^A-Za-z0-9, ]+", "", extracted_action)  # 替换为空字符串
-            action = " ".join(action.split()).strip()
-            if action:
-                return action
-        
-        # === 方法2: ReAct格式回退（Action:关键词）===
-        action_matches = re.findall(r"Action:\s*(.*?)(?=\n|$)", text, re.DOTALL)
         if action_matches:
+            # 取最后一个匹配（模型可能生成多个action，取最新的）
             action = action_matches[-1].strip()
-            action = re.sub(r"[^A-Za-z0-9, ]+", "", action)
-            action = " ".join(action.split()).strip()
+            # 清理多余的空白字符
+            action = " ".join(action.split())
             if action:
+                logger.debug(f"Extracted action from [[ ]]: {action}")
                 return action
         
+        logger.warning(f"No [[ ]] format found in text: {text[:100]}...")
         return None
     
     def get_invalid_action_prompt(self) -> str:

@@ -22,7 +22,7 @@
 #   - 不使用chat template，直接拼接prompt (与ADaPT一致)
 #   - Few-shot prompt包含2个完整示例
 #   - 贪心解码 (temperature=0.0, do_sample=False)
-#   - 单行输出 (stop at \n, max_new_tokens=150)
+#   - max_tokens=150（stop token机制已失效，依赖此参数控制长度）
 
 set -e
 
@@ -32,9 +32,9 @@ export CUDA_VISIBLE_DEVICES=2
 MODEL_PATH="${MODEL_PATH:-/Data/public/Qwen3-1.7B}"
 DATA_PATH="/Data/wyh/datasets/Verl-Data/eval/textcraft/test.parquet"
 OUTPUT_DIR="/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval"
-TEXTCRAFT_SERVER="http://127.0.0.1:36004"
+TEXTCRAFT_SERVER="http://127.0.0.1:36003"
 MAX_SAMPLES=${MAX_SAMPLES:--1}  # -1 means all samples
-NUM_SAMPLES_PER_TASK=${NUM_SAMPLES_PER_TASK:-1}  # Number of samples per task (default: 1)
+NUM_SAMPLES_PER_TASK=8  # Number of samples per task (default: 1)
 
 echo "评估配置 (vLLM版本):"
 echo "  模型路径: $MODEL_PATH"
@@ -45,9 +45,9 @@ echo "  推理引擎: vLLM (高性能)"
 echo ""
 
 # ADaPT风格参数配置
-MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-150}    # ADaPT: 150 (单行输出)
-TEMPERATURE=0.0       # ADaPT: 0.0 (贪心解码)
-TOP_P=1.0                # ADaPT: 1.0
+MAX_NEW_TOKENS=512  # ADaPT: 150 (单行输出)
+TEMPERATURE=0.3       # ADaPT: 0.0 (贪心解码)
+TOP_P=0.95                # ADaPT: 1.0
 MAX_LENGTH=8192          # 上下文长度
 
 # vLLM GPU配置
@@ -76,7 +76,7 @@ echo "  temperature: $TEMPERATURE (ADaPT: 0.0, 贪心解码)" | tee -a "$LOG_FIL
 echo "  top_p: $TOP_P (ADaPT: 1.0)" | tee -a "$LOG_FILE"
 echo "  max_length: $MAX_LENGTH" | tee -a "$LOG_FILE"
 echo "  max_rounds: 40 (ADaPT默认)" | tee -a "$LOG_FILE"
-echo "  stop_tokens: ['\\n'] (单行输出)" | tee -a "$LOG_FILE"
+echo "  注意: stop token机制已失效，依赖max_tokens=150控制长度" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "日志: $LOG_FILE" | tee -a "$LOG_FILE"
 echo "================================================================================" | tee -a "$LOG_FILE"
@@ -97,11 +97,12 @@ python examples/sglang_multiturn/my_exp/eval/eval_textcraft_qwen3_1.7b_vllm.py \
     --textcraft_server "$TEXTCRAFT_SERVER" \
     --max_samples "$MAX_SAMPLES" \
     --num_samples_per_task "$NUM_SAMPLES_PER_TASK" \
-    --max_rounds 40 \
+    --max_rounds 25 \
     --max_length "$MAX_LENGTH" \
     --max_new_tokens "$MAX_NEW_TOKENS" \
     --temperature "$TEMPERATURE" \
     --top_p "$TOP_P" \
+    --seed 42 \
     --gpu_memory_utilization "$GPU_MEMORY_UTILIZATION" \
     2>&1 | tee -a "$LOG_FILE"
 

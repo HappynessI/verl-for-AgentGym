@@ -63,80 +63,73 @@ class SimpleTextCraftAgent:
         self.system_prompt = self._build_adapt_prompt()
     
     def _build_adapt_prompt(self) -> str:
-        """构建ADaPT风格的few-shot prompt（参考ADaPT L252-393）"""
-        return '''You are given few useful crafting recipes to craft items in Minecraft. Crafting commands are of the format "craft [target object] using [input ingredients]". You can either "fetch" an object (ingredients) from the inventory or the environment or "craft" (target) using any of the crafting commands. 
+        """构建新版提示词（双括号格式，严格action提取）"""
+        return '''You are a Minecraft Assistant.
 
-You can use ONLY these crafting commands provided, do not use your own crafting commands. However, if the crafting command uses a generic ingredient like "planks", you can use special types of the same ingredient e.g. "dark oak planks" in the command instead. 
+Core Protocol:
 
-For any other natural language or thoughts, use prefix 'think: '.
+Think: First, output Think: ... to analyze the current situation.
 
-Here is a demo of how to fetch and craft objects.
+Action: After deciding the next step, you MUST wrap the command inside [[ ]].
 
-Goal: craft dark oak sign
+Format: Action: [[ command ]]
 
-> think: I should check if I can fetch dark oak sign directly from the environment or the inventory.
-OK.
+Example: Action: [[ inventory ]] or Action: [[ get 3 logs ]]
 
-> inventory: 
-Inventory: [stick] (1) [dark oak planks] (8)
+Core Command Set (API):
 
-> get dark oak sign
-Could not find dark oak sign
+craft [target] using [ingredients]
 
-> think: I cannot get dark oak sign directly, I need to craft it. From the crafting commands, I can use: craft dark oak sign using 6 dark oak planks, 1 stick. Ingredients needed: 6 dark oak planks, 1 stick. Input assumption: I have all the neccessary ingredients in my inventory. Let me verify this first.
-OK.
+get [item]
 
-> inventory
-Inventory: [stick] (1) [dark oak planks] (8)
+inventory
 
-> think: I found my ingredients: 6 dark oak planks, 1 stick in my inventory. My assumption is true, I can proceed. I will use the crafting command: craft dark oak sign using 6 dark oak planks
-OK.
+Interaction Example:
 
-> craft 1 dark oak sign using 6 dark oak planks, 1 stick
-Crafted 1 minecraft:dark_oak_sign
+[Environment]
+Goal: craft stick
 
-> inventory 
-Inventory: [dark oak sign] (1)
+[You]
+Think: I need to check my inventory to see if I have planks.
+Action: [[ inventory ]]
 
-> think: I now have dark oak sign in my inventory. Task Completed!
-OK.
+[Environment]
+Inventory: [oak planks] (2)
 
-Goal: fetch 2 dark oak logs.
+[You]
+Think: I have planks, so I can craft sticks directly.
+Action: [[ craft 4 stick using 2 oak planks ]]
 
-> think: I should check my inventory first, to see if I already have dark oak sign. Otherwise, I will directly try to get it from the environment.
-OK.
+[Environment]
+Crafted 4 sticks.
 
-> inventory
-Inventory: [stick] (1)
-
-> get 2 dark oak logs.
-Got 2 dark oak logs
-
-> inventory
-Inventory: [dark oak log] (2) [stick] (1)
-
-> think: I have 2 dark oak logs in my inventory. Task Completed!
-OK.
-
-Now here is a different goal. You can use these crafting commands to accomplish the goal. When you have the desired item in your inventory, think: Task Completed! If you have tried your best but cannot proceed, think: task failed!'''
+[You]
+Think: Task completed.
+Action: [[ Task Completed! ]]'''
     
     def generate(self, messages: List[Dict[str, str]]) -> str:
-        """生成模型响应（ADaPT风格：stop at newline）"""
+        """生成模型响应（ADaPT风格）
+        
+        注意：原本想用stop=['\n']来限制单次生成，但Qwen tokenizer会将换行符合并进复合token
+        （如token 382 = '.\n\n'），导致从未生成单独的token 198（'\n'），stop机制失效。
+        实际依赖max_new_tokens和模型从SFT学到的生成长度模式。
+        """
         prompt = self._build_prompt(messages)
         
         inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=self.max_length)
         inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
         
-        # 获取\n的token id作为stop token（ADaPT: stop=['\n']）
-        newline_token_id = self.tokenizer.encode('\n', add_special_tokens=False)[0]
+        # ❌ Stop token机制已失效（Qwen tokenizer将\n合并进复合token，从未生成token 198）
+        # newline_token_id = self.tokenizer.encode('\n', add_special_tokens=False)[0]
         
         with torch.no_grad():
             # ADaPT风格：temperature=0等价于do_sample=False（贪心解码）
             gen_kwargs = {
-                'max_new_tokens': self.max_new_tokens,  # ADaPT: 150
+                'max_new_tokens': self.max_new_tokens,  # ADaPT: 150（实际控制生成长度）
                 'do_sample': self.do_sample,  # ADaPT: False
                 'pad_token_id': self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
-                'eos_token_id': [self.tokenizer.eos_token_id, newline_token_id],  # Stop at \n or EOS
+                # ❌ 注释掉无效的stop token配置
+                # 'eos_token_id': [self.tokenizer.eos_token_id, newline_token_id],
             }
             
             # 只有do_sample=True时才传temperature和top_p
@@ -267,17 +260,14 @@ async def evaluate_one_episode(
         try:
             response = agent.generate(messages)
             
-            # === ADaPT风格处理：检查think:前缀 ===
-            response_stripped = response.lstrip('> ').strip()
-            
-            # 如果是think:，处理终止条件
-            if response_stripped.startswith('think:'):
-                if 'task completed' in response_stripped.lower():
-                    done = True
-                    logger.info(f"Session {session_id} Turn {turn}: Task Completed (from think)")
-                elif 'task failed' in response_stripped.lower():
-                    done = True
-                    logger.info(f"Session {session_id} Turn {turn}: Task Failed (from think)")
+            # 检查终止条件（新格式：Action: [[ Task Completed! ]] 或 Think: task completed）
+            response_lower = response.lower()
+            if 'task completed' in response_lower:
+                done = True
+                logger.info(f"Session {session_id} Turn {turn}: Task Completed")
+            elif 'task failed' in response_lower:
+                done = True
+                logger.info(f"Session {session_id} Turn {turn}: Task Failed")
             
             messages.append({"role": "assistant", "content": response})
             conversations.append({"role": "assistant", "content": response})
@@ -413,8 +403,8 @@ async def main():
     logger.info(f"  temperature: {args.temperature} (ADaPT: 0.0)")
     logger.info(f"  top_p: {args.top_p} (ADaPT: 1.0)")
     logger.info(f"  do_sample: {args.do_sample} (ADaPT: False)")
-    logger.info(f"  stop_tokens: ['\\n'] (implemented as eos_token_id)")
     logger.info(f"  max_rounds: {args.max_rounds} (ADaPT: 40)")
+    logger.info(f"  注意: stop token机制已失效（tokenizer将\\n合并进复合token），依赖max_new_tokens控制长度")
     logger.info("=" * 80)
     
     logger.info("Initializing TextCraft interaction...")

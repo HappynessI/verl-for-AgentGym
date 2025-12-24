@@ -1,6 +1,15 @@
 #!/bin/bash
 # TextCraft GRPO测试脚本 - 小规模快速测试
 # 使用4xL20 GPU，小batch size快速验证
+# 
+# 使用方法：
+#   bash run_textcraft_grpo_test.sh
+# 
+# 测试配置：
+#   - Batch Size: 16 (小)
+#   - Epochs: 1 (快速测试)
+#   - Rollout N: 2 (快速)
+#   - Save Freq: 10 (少量保存)
 
 set -e
 

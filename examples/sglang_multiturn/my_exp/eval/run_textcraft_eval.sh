@@ -11,11 +11,11 @@
 #   - 不使用chat template，直接拼接prompt (与ADaPT一致)
 #   - Few-shot prompt包含2个完整示例
 #   - 贪心解码 (temperature=0.0, do_sample=False)
-#   - 单行输出 (stop at \n, max_new_tokens=150)
+#   - max_new_tokens=150（stop token机制已失效，依赖此参数控制长度）
 
 set -e
 
-export CUDA_VISIBLE_DEVICES=3
+export CUDA_VISIBLE_DEVICES=0
 
 # 允许通过环境变量覆盖模型路径（用于训练后自动评估）
 MODEL_PATH="${MODEL_PATH:-/Data/public/Qwen3-1.7B}"
@@ -23,7 +23,7 @@ DATA_PATH="/Data/wyh/datasets/Verl-Data/eval/textcraft/test.parquet"
 OUTPUT_DIR="/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval"
 TEXTCRAFT_SERVER="http://127.0.0.1:36003"
 MAX_SAMPLES=${MAX_SAMPLES:--1}  # -1 means all samples
-NUM_SAMPLES_PER_TASK=${NUM_SAMPLES_PER_TASK:-1}  # Number of samples per task (default: 1)
+NUM_SAMPLES_PER_TASK=2 # Number of samples per task (default: 1)
 
 echo "评估配置:"
 echo "  模型路径: $MODEL_PATH"
@@ -33,8 +33,8 @@ echo "  每个任务采样次数: $NUM_SAMPLES_PER_TASK"
 echo ""
 
 # ADaPT风格参数配置
-MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-150}    # ADaPT: 150 (单行输出)
-TEMPERATURE=0.3       # ADaPT: 0.0 (贪心解码)
+MAX_NEW_TOKENS=2048   # ADaPT: 150 (单行输出)
+TEMPERATURE=0.7       # ADaPT: 0.0 (贪心解码)
 TOP_P=0.95               # ADaPT: 1.0
 # DO_SAMPLE=""             # ADaPT: 不采样 (空字符串=不传--do_sample)
 DO_SAMPLE="--do_sample"
@@ -58,7 +58,7 @@ echo "  temperature: $TEMPERATURE (ADaPT: 0.0, 贪心解码)" | tee -a "$LOG_FIL
 echo "  top_p: $TOP_P (ADaPT: 1.0)" | tee -a "$LOG_FILE"
 echo "  do_sample: ${DO_SAMPLE:-False} (ADaPT: False)" | tee -a "$LOG_FILE"
 echo "  max_rounds: 40 (ADaPT默认)" | tee -a "$LOG_FILE"
-echo "  stop_tokens: ['\\n'] (单行输出)" | tee -a "$LOG_FILE"
+echo "  注意: stop token机制已失效，依赖max_new_tokens=150控制长度" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "日志: $LOG_FILE" | tee -a "$LOG_FILE"
 echo "================================================================================" | tee -a "$LOG_FILE"
