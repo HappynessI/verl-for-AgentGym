@@ -78,7 +78,7 @@ class AgentGymBaseInteraction(BaseInteraction):
             'kwargs': kwargs
         }
         
-        logger.info(f"Started interaction {instance_id} with env_id {env_id}")
+        # logger.info(f"Started interaction {instance_id} with env_id {env_id}")
     
     async def generate_response(
         self, 
@@ -125,22 +125,22 @@ class AgentGymBaseInteraction(BaseInteraction):
         
         if not last_assistant_msg:
             # 没有action，返回初始observation
-            logger.warning(f"[{instance_id}] No assistant message found")
+            # logger.warning(f"[{instance_id}] No assistant message found")
             return False, session['initial_observation'], 0.0, {}
         
         # DEBUG: 记录原始assistant输出（使用WARNING确保显示）
-        logger.warning(f"[{instance_id}] Step {session['step_count']} - Raw assistant (len={len(last_assistant_msg)}): {last_assistant_msg[:500]}{'...' if len(last_assistant_msg) > 500 else ''}")
+        # logger.warning(f"[{instance_id}] Step {session['step_count']} - Raw assistant (len={len(last_assistant_msg)}): {last_assistant_msg[:500]}{'...' if len(last_assistant_msg) > 500 else ''}")
         
         # 提取action（子类可覆盖此方法）
         action = self.extract_action(last_assistant_msg)
         
         # DEBUG: 记录提取的action
-        if action:
-            logger.warning(f"[{instance_id}] Step {session['step_count']} - Extracted action: '{action}'")
+        # if action:
+        #     logger.warning(f"[{instance_id}] Step {session['step_count']} - Extracted action: '{action}'")
         
         # 如果没有提取到有效action，提示用户
         if not action:
-            logger.warning(f"[{instance_id}] Step {session['step_count']} - Failed to extract valid action from assistant message")
+            # logger.warning(f"[{instance_id}] Step {session['step_count']} - Failed to extract valid action from assistant message")
             return False, self.get_invalid_action_prompt(), 0.0, {}
         
         # 执行action
@@ -168,7 +168,7 @@ class AgentGymBaseInteraction(BaseInteraction):
         done = data.get('done', False)
         
         # DEBUG: 记录环境返回（所有情况）
-        logger.warning(f"[{instance_id}] Step {session['step_count']} - Env response: reward={reward}, done={done}, obs='{observation[:200]}{'...' if len(observation) > 200 else ''}'")
+        # logger.warning(f"[{instance_id}] Step {session['step_count']} - Env response: reward={reward}, done={done}, obs='{observation[:200]}{'...' if len(observation) > 200 else ''}'")
         
         return done, observation, reward, {}
     
@@ -200,7 +200,7 @@ class AgentGymBaseInteraction(BaseInteraction):
         """清理交互session"""
         if instance_id in self.instance_sessions:
             del self.instance_sessions[instance_id]
-            logger.info(f"Finalized interaction {instance_id}")
+            # logger.info(f"Finalized interaction {instance_id}")
     
     def extract_action(self, text: str) -> Optional[str]:
         """
@@ -222,4 +222,6 @@ class AgentGymBaseInteraction(BaseInteraction):
         子类可覆盖以提供环境特定的提示
         """
         return "Please provide a valid action."
+
+
 
