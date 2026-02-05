@@ -1,0 +1,82 @@
+# ============================================================
+# TextCraft RL 训练环境 Docker Compose 配置
+# ============================================================
+# 使用方法:
+#   1. 构建镜像: docker-compose build
+#   2. 启动容器: docker-compose up -d
+#   3. 进入容器: docker exec -it textcraft-rl bash
+#   4. 停止容器: docker-compose down
+# ============================================================
+
+version: '3.8'
+
+services:
+  textcraft-rl:
+    container_name: textcraft-rl
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: textcraft-rl:latest
+    
+    # GPU 配置 - 使用所有可用 GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # 网络配置
+    network_mode: host
+    ipc: host
+    
+    # 共享内存配置（RL 训练需要大量共享内存）
+    shm_size: '64gb'
+    
+    # 环境变量
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HF_HOME=/workspace/cache/huggingface
+      - WANDB_DIR=/workspace/outputs/wandb
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+      - NCCL_DEBUG=WARN
+      - CUDA_DEVICE_ORDER=PCI_BUS_ID
+    
+    # 卷挂载
+    volumes:
+      # verl 代码（开发模式）
+      - /Data/wyh/verl:/workspace/verl:rw
+      
+      # 数据集目录
+      - /Data/wyh/datasets:/workspace/datasets:rw
+      
+      # 模型目录
+      - /Data/public:/workspace/models:ro
+      
+      # 输出目录
+      - /Data/wyh/datasets/Verl-Data/outputs:/workspace/outputs:rw
+      
+      # HuggingFace 缓存
+      - /Data/cache/huggingface:/workspace/cache/huggingface:rw
+      
+      # 共享内存（用于多进程通信）
+      - /dev/shm:/dev/shm
+    
+    # 工作目录
+    working_dir: /workspace/verl
+    
+    # 保持容器运行
+    stdin_open: true
+    tty: true
+    
+    # 重启策略
+    restart: unless-stopped
+
+# 可选：创建命名卷用于持久化
+# volumes:
+#   verl-cache:
+#   verl-outputs:
+

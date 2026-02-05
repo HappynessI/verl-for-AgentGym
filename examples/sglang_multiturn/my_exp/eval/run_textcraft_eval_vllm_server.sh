@@ -3,9 +3,9 @@ set -e
 
 # 配置参数
 VLLM_SERVER_URL="http://localhost:8000"
-TEXTCRAFT_SERVER="http://127.0.0.1:3222"
-DATA_PATH="/agent_distill/Data/Verl-Data/eval/textcraft/test.parquet"
-OUTPUT_DIR="/agent_distill/Data/Verl-Data/eval/textcraft/textcraft_eval"
+TEXTCRAFT_SERVER="http://127.0.0.1:36001"
+DATA_PATH="/Data/wyh/datasets/Verl-Data/eval/textcraft/test.parquet"
+OUTPUT_DIR="/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval"
 
 # 环境变量覆盖
 MAX_SAMPLES=${MAX_SAMPLES:--1}          # -1 means all samples
@@ -24,7 +24,7 @@ LOG_FILE="$LOG_DIR/eval_service_${TIMESTAMP}.log"
 
 
 # 运行评估
-python examples/sglang_multiturn/my_exp/eval/eval_textcraft_vllm_server.py \
+python /Data/wyh/verl/examples/sglang_multiturn/my_exp/eval/eval_textcraft_vllm_server.py \
   --vllm_server_url "$VLLM_SERVER_URL" \
   --textcraft_server "$TEXTCRAFT_SERVER" \
   --data_path "$DATA_PATH" \

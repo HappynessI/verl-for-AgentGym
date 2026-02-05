@@ -45,7 +45,7 @@ class NaiveRewardLoopManager(RewardLoopManagerBase):
         ground_truth = data_item.non_tensor_batch["reward_model"]["ground_truth"]
         extra_info = data_item.non_tensor_batch.get("extra_info", {})
         tool_extra_fields = data_item.non_tensor_batch.get("tool_extra_fields", None)
-        print(f"[DEBUG] tool_extra_fields type: {type(tool_extra_fields)}, content: {tool_extra_fields}")
+        # print(f"[DEBUG] tool_extra_fields type: {type(tool_extra_fields)}, content: {tool_extra_fields}")  # 注释: 冗余DEBUG日志
         if tool_extra_fields is not None:
             extra_info.update(tool_extra_fields.items())
 
@@ -59,32 +59,32 @@ class NaiveRewardLoopManager(RewardLoopManagerBase):
         # Check both locations: non_tensor_batch directly and tool_extra_fields
         if "turn_scores" in data_item.non_tensor_batch:
             turn_scores_raw = data_item.non_tensor_batch["turn_scores"]
-            print(f"[DEBUG] Found turn_scores in non_tensor_batch: {turn_scores_raw}")
+            # print(f"[DEBUG] Found turn_scores in non_tensor_batch: {turn_scores_raw}")  # 注释: 冗余DEBUG日志
         elif "turn_scores" in extra_info:
             turn_scores_raw = extra_info["turn_scores"]
-            print(f"[DEBUG] Found turn_scores in extra_info (from tool_extra_fields): {turn_scores_raw}")
+            # print(f"[DEBUG] Found turn_scores in extra_info (from tool_extra_fields): {turn_scores_raw}")  # 注释: 冗余DEBUG日志
         else:
             turn_scores_raw = None
-            print(f"[DEBUG] No turn_scores found anywhere")
+            # print(f"[DEBUG] No turn_scores found anywhere")  # 注释: 冗余DEBUG日志
         
         if turn_scores_raw is not None:
             # Normalize: extract the list from numpy object array and convert to Python list
             if isinstance(turn_scores_raw, np.ndarray) and turn_scores_raw.size > 0:
                 turn_scores = turn_scores_raw[0] if turn_scores_raw.ndim > 0 else turn_scores_raw
-                print(f"[DEBUG] Extracted from numpy: {turn_scores}, type: {type(turn_scores)}")
+                # print(f"[DEBUG] Extracted from numpy: {turn_scores}, type: {type(turn_scores)}")  # 注释: 冗余DEBUG日志
             else:
                 turn_scores = turn_scores_raw
-                print(f"[DEBUG] Direct use: {turn_scores}, type: {type(turn_scores)}")
+                # print(f"[DEBUG] Direct use: {turn_scores}, type: {type(turn_scores)}")  # 注释: 冗余DEBUG日志
                 
             if isinstance(turn_scores, (list, np.ndarray)):
                 extra_info["turn_scores"] = [float(s) for s in turn_scores]
-                print(f"[DEBUG] Final turn_scores (list): {extra_info['turn_scores']}")
+                # print(f"[DEBUG] Final turn_scores (list): {extra_info['turn_scores']}")  # 注释: 冗余DEBUG日志
             elif isinstance(turn_scores, (int, float)):
                 extra_info["turn_scores"] = [float(turn_scores)]
-                print(f"[DEBUG] Final turn_scores (scalar): {extra_info['turn_scores']}")
+                # print(f"[DEBUG] Final turn_scores (scalar): {extra_info['turn_scores']}")  # 注释: 冗余DEBUG日志
             else:
                 extra_info["turn_scores"] = []
-                print(f"[DEBUG] Cannot parse turn_scores, set to empty: {turn_scores}")
+                # print(f"[DEBUG] Cannot parse turn_scores, set to empty: {turn_scores}")  # 注释: 冗余DEBUG日志
 
         response_str = await self.loop.run_in_executor(
             None, lambda: self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)

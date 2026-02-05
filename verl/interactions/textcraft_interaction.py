@@ -85,10 +85,10 @@ class TextCraftInteraction(AgentGymBaseInteraction):
             # 清理多余的空白字符
             action = " ".join(action.split())
             if action:
-                logger.debug(f"Extracted action from [[ ]]: {action}")
+                # logger.debug(f"Extracted action from [[ ]]: {action}")
                 return action
         
-        logger.warning(f"No [[ ]] format found in text: {text[:100]}...")
+        # logger.warning(f"No [[ ]] format found in text: {text[:100]}...")
         return None
     
     def get_invalid_action_prompt(self) -> str:

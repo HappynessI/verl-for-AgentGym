@@ -1,5 +1,5 @@
 #!/bin/bash
-# TextCraft评估脚本 - Qwen3-1.7B (vLLM高性能推理 + ADaPT风格)
+# TextCraft评估脚本 - Qwen3-1.7B (vLLM混合架构版本)
 # 
 # 使用方法:
 #   全量测试: bash run_textcraft_eval_vllm.sh
@@ -8,33 +8,28 @@
 #   使用其他GPU: CUDA_VISIBLE_DEVICES=3 bash run_textcraft_eval_vllm.sh
 #   调整GPU显存利用率: GPU_MEMORY_UTILIZATION=0.85 bash run_textcraft_eval_vllm.sh
 #
-# vLLM优势:
-#   - PagedAttention: 更高效的内存管理
-#   - 更快的推理速度（约2-3x）
-#   - 更高的吞吐量
+# 架构特点:
+#   - Chat Template: 确保格式与训练一致
+#   - Stop Control: 利用vLLM字符串级停止防止幻觉
+#   - PagedAttention: 高效的内存管理
+#   - 高性能推理: 约2-3x速度提升
 #
 # vLLM GPU配置:
 #   - gpu_memory_utilization: 0.9 (默认使用90%的GPU显存)
 #   - 可通过环境变量 GPU_MEMORY_UTILIZATION 调整
 #   - 脚本会在开始和结束时显示GPU状态
-#
-# ADaPT配置说明:
-#   - 不使用chat template，直接拼接prompt (与ADaPT一致)
-#   - Few-shot prompt包含2个完整示例
-#   - 贪心解码 (temperature=0.0, do_sample=False)
-#   - max_tokens=150（stop token机制已失效，依赖此参数控制长度）
 
 set -e
 
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=1
 
 # 允许通过环境变量覆盖模型路径（用于训练后自动评估）
 MODEL_PATH="${MODEL_PATH:-/Data/public/Qwen3-1.7B}"
 DATA_PATH="/Data/wyh/datasets/Verl-Data/eval/textcraft/test.parquet"
 OUTPUT_DIR="/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval"
-TEXTCRAFT_SERVER="http://127.0.0.1:36003"
+TEXTCRAFT_SERVER="http://127.0.0.1:36002"
 MAX_SAMPLES=${MAX_SAMPLES:--1}  # -1 means all samples
-NUM_SAMPLES_PER_TASK=8  # Number of samples per task (default: 1)
+NUM_SAMPLES_PER_TASK=2  # Number of samples per task (default: 1)
 
 echo "评估配置 (vLLM版本):"
 echo "  模型路径: $MODEL_PATH"
@@ -45,8 +40,8 @@ echo "  推理引擎: vLLM (高性能)"
 echo ""
 
 # ADaPT风格参数配置
-MAX_NEW_TOKENS=512  # ADaPT: 150 (单行输出)
-TEMPERATURE=0.3       # ADaPT: 0.0 (贪心解码)
+MAX_NEW_TOKENS=1024  # ADaPT: 150 (单行输出)
+TEMPERATURE=0.4       # ADaPT: 0.0 (贪心解码)
 TOP_P=0.95                # ADaPT: 1.0
 MAX_LENGTH=8192          # 上下文长度
 
@@ -59,7 +54,7 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/eval_vllm_${TIMESTAMP}.log"
 
 echo "================================================================================" | tee "$LOG_FILE"
-echo "TextCraft评估 - Qwen3-1.7B (vLLM + ADaPT风格)" | tee -a "$LOG_FILE"
+echo "TextCraft评估 - Qwen3-1.7B (vLLM混合架构)" | tee -a "$LOG_FILE"
 echo "================================================================================" | tee -a "$LOG_FILE"
 echo "GPU: $CUDA_VISIBLE_DEVICES" | tee -a "$LOG_FILE"
 echo "模型: $MODEL_PATH" | tee -a "$LOG_FILE"
@@ -70,13 +65,13 @@ echo "" | tee -a "$LOG_FILE"
 echo "vLLM GPU配置:" | tee -a "$LOG_FILE"
 echo "  gpu_memory_utilization: $GPU_MEMORY_UTILIZATION (使用GPU显存比例)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
-echo "ADaPT参数配置:" | tee -a "$LOG_FILE"
-echo "  max_new_tokens: $MAX_NEW_TOKENS (ADaPT: 150)" | tee -a "$LOG_FILE"
-echo "  temperature: $TEMPERATURE (ADaPT: 0.0, 贪心解码)" | tee -a "$LOG_FILE"
-echo "  top_p: $TOP_P (ADaPT: 1.0)" | tee -a "$LOG_FILE"
+echo "采样参数配置:" | tee -a "$LOG_FILE"
+echo "  max_new_tokens: $MAX_NEW_TOKENS" | tee -a "$LOG_FILE"
+echo "  temperature: $TEMPERATURE" | tee -a "$LOG_FILE"
+echo "  top_p: $TOP_P" | tee -a "$LOG_FILE"
 echo "  max_length: $MAX_LENGTH" | tee -a "$LOG_FILE"
-echo "  max_rounds: 40 (ADaPT默认)" | tee -a "$LOG_FILE"
-echo "  注意: stop token机制已失效，依赖max_tokens=150控制长度" | tee -a "$LOG_FILE"
+echo "  max_rounds: 25" | tee -a "$LOG_FILE"
+echo "  stop_control: Enabled (字符串级停止，防止幻觉)" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "日志: $LOG_FILE" | tee -a "$LOG_FILE"
 echo "================================================================================" | tee -a "$LOG_FILE"

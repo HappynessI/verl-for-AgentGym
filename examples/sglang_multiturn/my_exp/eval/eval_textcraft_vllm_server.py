@@ -26,24 +26,27 @@ import aiohttp
 import fcntl
 
 # Add verl to path
-# Replace the old sys.path.insert line with this:
-
-project_root = Path("/agent_distill")
+# 文件路径: /Data/wyh/verl/examples/sglang_multiturn/my_exp/eval/eval_textcraft_vllm_server.py
+# 需要向上5级到达项目根目录: /Data/wyh/verl
+project_root = Path(__file__).parent.parent.parent.parent.parent
 if not (project_root / "verl").exists():
     raise RuntimeError(f"verl not found in {project_root}")
 sys.path.insert(0, str(project_root))
-# sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 
 
 from verl.interactions.textcraft_interaction import TextCraftInteraction
+
+# 确保日志目录存在
+log_dir = Path("/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/logs")
+log_dir.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(f"/agent_distill/logs/eval_client_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+        logging.FileHandler(log_dir / f"eval_client_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     ]
 )
 logger = logging.getLogger("TextCraftEval")
@@ -63,17 +66,87 @@ class AsyncTextCraftAgent:
         self.system_prompt = self._build_adapt_prompt()
     
     def _build_adapt_prompt(self) -> str:
-        return '''You are a Minecraft Assistant. Your goal is to craft items efficiently. Minimize the number of turns. Do not fetch ingredients multiple times if you can fetch the total amount in one turn. Crafting commands are of the format "craft [target object] using [input ingredients]". You can either "fetch" an object (ingredients) from the inventory or the environment or "craft" (target) using any of the crafting commands. 
-You can use ONLY these crafting commands provided, do not use your own crafting commands. However, if the crafting command uses a generic ingredient like "planks", you can use special types of the same ingredient e.g. "dark oak planks" in the command instead. 
+        return '''You are a Minecraft Assistant. Your goal is to craft items by managing resources and recipes.
 
 **CORE PROTOCOL (Strictly Follow):**
-1. **ONE ACTION**: Output exactly ONE action per turn.
-2. **BOX FORMAT**: Wrap your command in `[[ ]]`. Example: `Action: [[ inventory ]]`
+1. **THINK FIRST**: Before any action, analyze the current state using the "Reasoning Logic" below.
+2. **ONE ACTION**: Output exactly ONE action per turn.
+3. **BOX FORMAT**: Wrap your command in `[[ ]]`. Example: `Action: [[ inventory ]]`
+4. **NO HALLUCINATION**: Do NOT simulate the Environment's response. Stop immediately after outputting the Action.
+
+**REASONING LOGIC (The Algorithm):**
+When trying to acquire an item [Target]:
+1. **Check Inventory**: Do you already have [Target]?
+   - If YES -> Task Complete / Proceed to next step.
+   - If NO -> Go to step 2.
+2. **Check Recipe**: Is there a crafting recipe for [Target]?
+   - If YES -> Check if you have the [Ingredients].
+     - If you have Ingredients -> `craft [Target] ...`
+     - If you miss Ingredients -> **NEW SUB-GOAL**: Get the missing [Ingredient] (Repeat Logic from Step 1).
+   - If NO (Base Material) -> `get [Target]` directly from environment.
+3. **Handle Errors**:
+   - If `get` fails -> The item might require crafting from a sub-ingredient (e.g., gold ingot needs gold nuggets). Check recipes again.
+   - If `craft` fails -> Check if you have the exact items.
 
 **CORE COMMAND SET (API):**
-* `craft [target] using [ingredients]` (e.g., "craft 2 stick using 4 bamboo")
-* `get [item]` (e.g., "get 10 log")
+* `craft [target] using [ingredients]` (e.g., "craft 1 stick using 2 bamboo")
+* `get [item]` (e.g., "get 3 log")
 * `inventory` (Check what you have)
+
+**INTERACTION EXAMPLES:**
+
+[Environment]
+Goal: craft powered rail
+Recipes:
+- craft 6 powered rail using 1 redstone, 1 stick, 6 gold ingot
+- craft 1 gold ingot using 9 gold nugget
+- craft 1 stick using 2 bamboo
+
+[You]
+Think: Recipe for powered rail needs redstone, stick, gold ingot. I need to check what I have.
+Action: [[ inventory ]]
+
+[Environment]
+Inventory: [redstone] (1)
+
+[You]
+Think: I have redstone. I miss stick and gold ingot. Gold ingot has a recipe (needs gold nugget). I should get gold nugget first.
+Action: [[ get 54 gold nugget ]]
+
+[Environment]
+Got 54 gold nugget.
+
+[You]
+Think: Now I have nuggets. I can craft gold ingots.
+Action: [[ craft 6 gold ingot using 54 gold nugget ]]
+
+[Environment]
+Crafted 6 gold ingot.
+
+[You]
+Think: Now I need a stick. Recipe says stick needs bamboo. I need to get bamboo.
+Action: [[ get 2 bamboo ]]
+
+[Environment]
+Got 2 bamboo.
+
+[You]
+Think: I have bamboo. I can craft the stick.
+Action: [[ craft 1 stick using 2 bamboo ]]
+
+[Environment]
+Crafted 1 stick.
+
+[You]
+Think: I have redstone, gold ingots, and stick. I can finally craft the powered rail.
+Action: [[ craft 6 powered rail using 1 redstone, 1 stick, 6 gold ingot ]]
+
+[Environment]
+Crafted 6 powered rail.
+
+[You]
+Think: Goal achieved.
+Action: [[ Task Completed! ]]
 '''
     
     async def generate(self, messages: List[Dict[str, str]], session: aiohttp.ClientSession) -> str:
@@ -462,10 +535,10 @@ def main():
     
     # Paths
     parser.add_argument('--data_path', type=str, 
-                        default='/agent_distill/Data/Verl-Data/eval/textcraft/test.parquet',
+                        default='/Data/wyh/datasets/Verl-Data/textcraft/train.parquet',
                         help='Path to test dataset (parquet format)')
     parser.add_argument('--output_dir', type=str,
-                        default='/agent_distill/Data/Verl-Data/eval/textcraft/textcraft_eval',
+                        default='/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval',
                         help='Directory to save evaluation results')
     
     # Environment

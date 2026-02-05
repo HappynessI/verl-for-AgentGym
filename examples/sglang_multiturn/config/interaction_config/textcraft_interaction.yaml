@@ -7,8 +7,8 @@ interaction:
     config:
       # TextCraft环境服务器地址
       # 确保在训练前启动服务器：
-      # cd AgentGym/agentenv-textcraft && python -m agentenv_textcraft.launch --port 36002
-      env_server_base: "http://127.0.0.1:36002"
+      # cd AgentGym/agentenv-textcraft && textcraft --host 0.0.0.0 --port 36001
+      env_server_base: "http://127.0.0.1:36001"
       
       # 请求超时（秒）
       timeout: 600

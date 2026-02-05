@@ -40,7 +40,7 @@ actor_rollout_ref:
     kl_loss_type: low_var_kl
     entropy_coeff: 0
     fsdp_config:
-      param_offload: False
+      param_offload: True
       optimizer_offload: False
       model_dtype: bfloat16
 

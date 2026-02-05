@@ -403,10 +403,10 @@ class vLLMHttpServerBase:
         # 支持validation时使用自定义max_tokens（参考AgentGym-RL）
         if "max_tokens" in sampling_params:
             max_tokens = min(sampling_params.pop("max_tokens"), self.config.max_model_len - len(prompt_ids))
-            print(f"[DEBUG vLLM] Using max_tokens from sampling_params: {max_tokens}")
+            # print(f"[DEBUG vLLM] Using max_tokens from sampling_params: {max_tokens}")  # 注释: 冗余DEBUG日志(每次推理都打印)
         else:
             max_tokens = self.config.max_model_len - len(prompt_ids)
-            print(f"[DEBUG vLLM] Using default max_tokens: {max_tokens}")
+            # print(f"[DEBUG vLLM] Using default max_tokens: {max_tokens}")  # 注释: 冗余DEBUG日志(每次推理都打印)
         
         # 清理vLLM不支持的参数（max_new_tokens是SGLang的参数）
         sampling_params.pop("max_new_tokens", None)

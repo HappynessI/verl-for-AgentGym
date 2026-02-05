@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """
-TextCraft评估脚本 - vLLM版本（高性能推理）
+TextCraft评估脚本 - vLLM混合架构版本
+
+关键改进：
+1. 保持Chat Template - 确保格式与训练一致
+2. 字符串级Stop控制 - 利用vLLM优势防止幻觉
+3. 高性能推理 - PagedAttention内存管理
 """
 
 import os
@@ -31,7 +36,13 @@ logger = logging.getLogger(__name__)
 
 
 class SimpleTextCraftAgent:
-    """TextCraft Agent - 使用vLLM高性能推理 + Chat Template格式"""
+    """TextCraft Agent - vLLM混合架构（Chat Template + Stop控制）
+    
+    关键特性：
+    1. 使用tokenizer.apply_chat_template确保格式与训练一致
+    2. 使用vLLM的字符串级stop参数防止模型幻觉环境反馈
+    3. 保持ADaPT风格的提示词和交互模式
+    """
     
     def __init__(self, llm, tokenizer, max_new_tokens=150, temperature=0.0, top_p=1.0):
         self.llm = llm  # vLLM的LLM对象
@@ -40,11 +51,23 @@ class SimpleTextCraftAgent:
         self.temperature = temperature
         self.top_p = top_p
         
+        # === 关键改进：添加stop参数防止幻觉 ===
+        # vLLM的stop参数支持字符串级匹配（在解码后的文本上工作）
+        # 当模型试图模拟环境反馈或自我对话时，立即停止
+        self.stop_strs = [
+            "<|im_end|>",           # Qwen标准结束符
+            "\n\n[Environment]",    # 防止模型模拟环境反馈
+            "\n\n[You]",            # 防止模型自我对话
+            "\nObservation:",       # 额外的安全网
+        ]
+        
         # vLLM的SamplingParams
         self.sampling_params = SamplingParams(
             temperature=temperature,
             top_p=top_p,
             max_tokens=max_new_tokens,
+            stop=self.stop_strs,           # 字符串级停止条件
+            skip_special_tokens=False,     # 保留特殊token以便正确处理格式
         )
         
         # System prompt - 将作为第一条system message
@@ -136,19 +159,25 @@ Action: [[ Task Completed! ]]
 '''
     
     def generate(self, messages: List[Dict[str, str]]) -> str:
-        """生成模型响应（使用Chat Template）"""
-        # 使用tokenizer的apply_chat_template
+        """生成模型响应（使用Chat Template + Stop控制）"""
+        # 使用tokenizer的apply_chat_template确保格式与训练一致
         prompt = self.tokenizer.apply_chat_template(
             messages,
             add_generation_prompt=True,
             tokenize=False  # 返回字符串而非token ids
         )
         
-        # vLLM推理
+        # vLLM推理（stop参数已在sampling_params中设置）
         outputs = self.llm.generate([prompt], self.sampling_params)
         
         # 提取生成的文本
         response = outputs[0].outputs[0].text
+        
+        # 后处理：清理可能残留的stop string
+        # (vLLM通常会自动移除，但安全第一)
+        for stop_str in self.stop_strs:
+            if response.endswith(stop_str):
+                response = response[:-len(stop_str)]
         
         # Debug: 打印原始输出
         if len(response) < 50:
@@ -416,6 +445,8 @@ async def main():
     logger.info(f"  top_p: {args.top_p}")
     logger.info(f"  do_sample: {args.do_sample}")
     logger.info(f"  max_rounds: {args.max_rounds}")
+    logger.info(f"  stop_control: Enabled (防止幻觉)")
+    logger.info(f"  stop_strings: {agent.stop_strs}")
     logger.info("=" * 80)
     
     logger.info("Initializing TextCraft interaction...")
@@ -556,13 +587,14 @@ Sample-Level Metrics (all evaluations):
     
     summary = f"""
 {'=' * 80}
-TextCraft Evaluation Summary (vLLM)
+TextCraft Evaluation Summary (vLLM Hybrid)
 {'=' * 80}
 Model: {args.model_path}
 Data: {args.data_path}
 Total samples: {len(results)}
 Max rounds: {args.max_rounds}
 Random seed: {args.seed}
+Architecture: Chat Template + Stop Control (防幻觉优化)
 {multi_sample_info}
 Results:
 --------

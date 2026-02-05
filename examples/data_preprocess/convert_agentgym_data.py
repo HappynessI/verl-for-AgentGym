@@ -118,22 +118,87 @@ Instructions:
 
 Your response should contain only the SQL query.""",
     
-    "textcraft": """You are an agent in the TextCraft environment. Your goal is to craft items by gathering resources and following recipes.
+    "textcraft": """You are a Minecraft Assistant. Your goal is to craft items by managing resources and recipes.
 
-You can use actions like:
-- move [direction]
-- get [object]
-- craft [item]
-- inventory
-- look
+**CORE PROTOCOL (Strictly Follow):**
+1. **THINK FIRST**: Before any action, analyze the current state using the "Reasoning Logic" below.
+2. **ONE ACTION**: Output exactly ONE action per turn.
+3. **BOX FORMAT**: Wrap your command in `[[ ]]`. Example: `Action: [[ inventory ]]`
+4. **NO HALLUCINATION**: Do NOT simulate the Environment's response. Stop immediately after outputting the Action.
 
-Instructions:
-- Read the task instruction carefully
-- Gather necessary resources
-- Follow crafting recipes
-- Complete the crafting goal
+**REASONING LOGIC (The Algorithm):**
+When trying to acquire an item [Target]:
+1. **Check Inventory**: Do you already have [Target]?
+   - If YES -> Task Complete / Proceed to next step.
+   - If NO -> Go to step 2.
+2. **Check Recipe**: Is there a crafting recipe for [Target]?
+   - If YES -> Check if you have the [Ingredients].
+     - If you have Ingredients -> `craft [Target] ...`
+     - If you miss Ingredients -> **NEW SUB-GOAL**: Get the missing [Ingredient] (Repeat Logic from Step 1).
+   - If NO (Base Material) -> `get [Target]` directly from environment.
+3. **Handle Errors**:
+   - If `get` fails -> The item might require crafting from a sub-ingredient (e.g., gold ingot needs gold nuggets). Check recipes again.
+   - If `craft` fails -> Check if you have the exact items.
 
-Your response should contain only the action.""",
+**CORE COMMAND SET (API):**
+* `craft [target] using [ingredients]` (e.g., "craft 1 stick using 2 bamboo")
+* `get [item]` (e.g., "get 3 log")
+* `inventory` (Check what you have)
+
+**INTERACTION EXAMPLES:**
+
+[Environment]
+Goal: craft powered rail
+Recipes:
+- craft 6 powered rail using 1 redstone, 1 stick, 6 gold ingot
+- craft 1 gold ingot using 9 gold nugget
+- craft 1 stick using 2 bamboo
+
+[You]
+Think: Recipe for powered rail needs redstone, stick, gold ingot. I need to check what I have.
+Action: [[ inventory ]]
+
+[Environment]
+Inventory: [redstone] (1)
+
+[You]
+Think: I have redstone. I miss stick and gold ingot. Gold ingot has a recipe (needs gold nugget). I should get gold nugget first.
+Action: [[ get 54 gold nugget ]]
+
+[Environment]
+Got 54 gold nugget.
+
+[You]
+Think: Now I have nuggets. I can craft gold ingots.
+Action: [[ craft 6 gold ingot using 54 gold nugget ]]
+
+[Environment]
+Crafted 6 gold ingot.
+
+[You]
+Think: Now I need a stick. Recipe says stick needs bamboo. I need to get bamboo.
+Action: [[ get 2 bamboo ]]
+
+[Environment]
+Got 2 bamboo.
+
+[You]
+Think: I have bamboo. I can craft the stick.
+Action: [[ craft 1 stick using 2 bamboo ]]
+
+[Environment]
+Crafted 1 stick.
+
+[You]
+Think: I have redstone, gold ingots, and stick. I can finally craft the powered rail.
+Action: [[ craft 6 powered rail using 1 redstone, 1 stick, 6 gold ingot ]]
+
+[Environment]
+Crafted 6 powered rail.
+
+[You]
+Think: Goal achieved.
+Action: [[ Task Completed! ]]""",
     
     "searchqa": """You are a question answering assistant. Your goal is to answer questions by searching through documents and finding relevant information.
 

@@ -1,0 +1,61 @@
+# ============================================================
+# TextCraft RL 训练环境依赖列表
+# 基于 verl 环境导出，Python 3.12 + CUDA 12.8
+# ============================================================
+
+# === 核心深度学习框架 ===
+torch==2.8.0
+torchvision==0.23.0
+torchaudio==2.8.0
+torchdata==0.11.0
+torchao==0.9.0
+
+# === vLLM 推理引擎 ===
+vllm==0.11.0
+
+# === 注意力机制 ===
+flash_attn==2.8.1
+flashinfer-python==0.3.1
+
+# === Transformers 生态 ===
+transformers==4.56.1
+tokenizers>=0.19.0
+accelerate==1.12.0
+datasets>=2.20.0
+peft==0.18.0
+trl>=0.8.0
+
+# === 分布式训练 ===
+ray[default]==2.52.1
+tensordict>=0.4.0
+
+# === 日志和监控 ===
+wandb==0.23.1
+
+# === 配置管理 ===
+hydra-core==1.3.2
+
+# === 数据处理 ===
+pandas==2.3.3
+numpy>=1.26.0,<2.0.0
+scipy>=1.10.0
+pyarrow>=19.0.1
+
+# === 工具库 ===
+codetiming>=1.4.0
+dill>=0.3.7
+blobfile>=2.1.0
+hf-transfer>=0.1.5
+liger-kernel>=0.2.0
+
+# === 数学和文本处理 ===
+mathruler>=0.1.0
+pylatexenc>=2.10
+
+# === Qwen 多模态支持 ===
+qwen_vl_utils>=0.0.8
+
+# === 可选：性能优化 ===
+torch_memory_saver>=0.0.8
+xgrammar>=0.1.0
+

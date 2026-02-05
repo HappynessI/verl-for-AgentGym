@@ -147,7 +147,7 @@ class AgentGymBaseInteraction(BaseInteraction):
         step_url = f"{self.env_server_base}/step"
         try:
             # 注意：不是 /step/{env_id}，而是在body中传id
-            logger.debug(f"[{instance_id}] Sending action to env: '{action}'")
+            # logger.debug(f"[{instance_id}] Sending action to env: '{action}'")
             response = requests.post(
                 step_url, 
                 json={'id': env_id, 'action': action}, 

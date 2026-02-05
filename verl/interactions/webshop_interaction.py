@@ -162,7 +162,7 @@ class WebshopInteraction(BaseInteraction):
         # On first call, return initial observation without expecting action
         if step_count == 0:
             initial_obs = env_state["initial_observation"]
-            logger.info(f"[WEBSHOP] Instance {instance_id} Turn 1: returning initial observation (reward=0.0): {initial_obs[:200]}...")
+            # logger.info(f"[WEBSHOP] Instance {instance_id} Turn 1: returning initial observation (reward=0.0): {initial_obs[:200]}...")
             env_state["step_count"] += 1
             return False, initial_obs, 0.0, {"step_count": 1, "is_initial": True}
         
@@ -170,11 +170,11 @@ class WebshopInteraction(BaseInteraction):
         action = self._extract_action(messages)
         
         if action is None:
-            logger.warning(f"[WEBSHOP] Instance {instance_id} Turn {step_count+1}: NO ACTION FOUND in messages!")
-            logger.warning(f"[WEBSHOP] Last 3 messages: {messages[-3:] if len(messages) >= 3 else messages}")
+            # logger.warning(f"[WEBSHOP] Instance {instance_id} Turn {step_count+1}: NO ACTION FOUND in messages!")
+            # logger.warning(f"[WEBSHOP] Last 3 messages: {messages[-3:] if len(messages) >= 3 else messages}")
             return False, "Please provide a valid action (search[...] or click[...]).", 0.0, {}
         
-        logger.info(f"[WEBSHOP] Instance {instance_id} Turn {step_count+1}: executing action: {action}")
+        # logger.info(f"[WEBSHOP] Instance {instance_id} Turn {step_count+1}: executing action: {action}")
         
         try:
             # Execute action in environment
@@ -195,9 +195,9 @@ class WebshopInteraction(BaseInteraction):
             env_state["total_reward"] += reward
             env_state["step_count"] += 1
             
-            logger.info(f"[WEBSHOP] Instance {instance_id} Turn {env_state['step_count']}: "
-                       f"action={action}, reward={reward:.3f}, done={done}, cumulative={env_state['total_reward']:.3f}")
-            logger.info(f"[WEBSHOP] Observation: {observation[:300]}...")
+            # logger.info(f"[WEBSHOP] Instance {instance_id} Turn {env_state['step_count']}: "
+            #            f"action={action}, reward={reward:.3f}, done={done}, cumulative={env_state['total_reward']:.3f}")
+            # logger.info(f"[WEBSHOP] Observation: {observation[:300]}...")
             
             additional_data = {
                 "step_count": env_state["step_count"],
@@ -249,15 +249,15 @@ class WebshopInteraction(BaseInteraction):
                     # 使用findall找所有匹配，取最后一个（最新的action）
                     search_matches = re.findall(r'search\[([^\]]*)\]', content, re.IGNORECASE)
                     if search_matches:
-                        logger.debug(f"Action format incorrect, using fallback extraction (search)")
+                        # logger.debug(f"Action format incorrect, using fallback extraction (search)")
                         return f"search[{search_matches[-1]}]"
                     
                     click_matches = re.findall(r'click\[([^\]]*)\]', content, re.IGNORECASE)
                     if click_matches:
-                        logger.debug(f"Action format incorrect, using fallback extraction (click)")
+                        # logger.debug(f"Action format incorrect, using fallback extraction (click)")
                         return f"click[{click_matches[-1]}]"
                 
-                logger.debug(f"No valid action pattern found in: {content[:100]}...")
+                # logger.debug(f"No valid action pattern found in: {content[:100]}...")
                 return None
         
         return None
