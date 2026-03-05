@@ -1,0 +1,16 @@
+# SearchQA Interaction Configuration
+# SearchQA环境交互配置（搜索问答环境）
+
+interaction:
+  - name: searchqa
+    class_name: verl.interactions.searchqa_interaction.SearchQAInteraction
+    config:
+      # SearchQA环境服务器地址
+      env_server_base: "http://127.0.0.1:36003"
+      
+      # 请求超时（秒）
+      timeout: 600
+      
+      # 最大重试次数
+      max_retries: 3
+

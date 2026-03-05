@@ -29,7 +29,7 @@ recipe/wyh_exp/
 │   ├── __init__.py
 │   └── core_algos.py             # 核心算法（优势估计）
 ├── scripts/
-│   └── run_textcraft_turn_prefix.sh  # 训练脚本
+│   └── run_test_train.sh             # 训练脚本
 ├── ray_trainer.py                # Ray 训练器
 ├── fsdp_workers.py               # FSDP Workers
 └── interaction_adapter.py        # AgentGym 环境适配器
@@ -67,25 +67,14 @@ pip install -e .
 
 ### 3. 运行训练
 
-**方式A: Full-Trajectory RL**
 ```bash
-cd /Data/wyh/verl/recipe/wyh_exp/scripts
+cd /Data/wyh/verl
 
-TRAINING_MODE=full_trajectory \
-MODEL_PATH=/path/to/model \
-TRAIN_DATA=/path/to/train.parquet \
-bash run_textcraft_turn_prefix.sh
-```
+# 默认使用 turn_full_trajectory 优势估计器
+bash recipe/wyh_exp/scripts/run_test_train.sh
 
-**方式B: Prefix-Guided RL**
-```bash
-TRAINING_MODE=prefix_guided \
-PREFIX_STRATEGY=random \
-MIN_PREFIX_TURNS=1 \
-MAX_PREFIX_TURNS=5 \
-MODEL_PATH=/path/to/model \
-TRAIN_DATA=/path/to/train.parquet \
-bash run_textcraft_turn_prefix.sh
+# 指定其他优势估计器
+ADV_ESTIMATOR=turn_prefix_guided bash recipe/wyh_exp/scripts/run_test_train.sh
 ```
 
 ## 配置说明

@@ -2,7 +2,7 @@
 set -e
 
 # 配置参数
-MODEL_PATH="/Data/public/Qwen3-4B-Instruct-2507"
+MODEL_PATH="/Data/public/Qwen3-8B"
 PORT=8000
 TP_SIZE=1  
 DP_SIZE=1  

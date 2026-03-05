@@ -5,8 +5,18 @@
 
 通过 verl 的注册机制，注册自定义的优势估计器：
 - turn_full_trajectory: 方式A，整个轨迹作为小模型自己的轨迹进行 RL
+- turn_full_trajectory_with_is: 方式A + 重要性采样权重校正
 - turn_prefix_guided: 方式B，Prefix 作为参考，只对 rollout 部分进行 RL
 - turn_prefix_guided_dr: 方式B 的 Dr.GRPO 变体
+
+重要性采样（Importance Sampling）说明：
+    当使用外源模型（如大模型LLM）生成的轨迹训练小模型（SLM）时，
+    由于分布不匹配（distribution mismatch），需要使用重要性采样权重进行校正：
+    
+    IS权重 ρ = π_SLM(trajectory) / π_LLM(trajectory)
+           = exp(log π_SLM - log π_LLM)
+    
+    加权后的策略梯度：∇J = E_π_LLM[ρ * A * ∇log π_SLM]
 
 使用方法：
     在配置文件中设置 algorithm.adv_estimator = "turn_full_trajectory" 或其他
@@ -31,6 +41,10 @@ try:
 except ImportError:
     verl_F = None
     group_mean_std = None
+
+# 安全边界，防止指数运算溢出
+# exp(20) ≈ 4.85亿 (上限), exp(-20) ≈ 2e-9 (下限)
+SAFETY_BOUND = 20.0
 
 
 # ============================================================================

@@ -1,33 +1,35 @@
+#!/bin/bash
 set -e
 
 # ==================== 配置参数 ====================
 
 # -------------------- 模型和数据 --------------------
 MODEL_PATH=${MODEL_PATH:-"/Data/public/Qwen3-1.7B"}
-DATA_PATH=${DATA_PATH:-"/Data/wyh/datasets/Verl-Data/train/textcraft/train.parquet"}
-OUTPUT_DIR=${OUTPUT_DIR:-"/Data/wyh/datasets/Verl-Data/outputs/textcraft_grpo"}
+DATA_PATH=${DATA_PATH:-"/Data/wyh/datasets/Verl-Data/train/babyai/train.parquet"}
+VAL_DATA_PATH=${VAL_DATA_PATH:-"/Data/wyh/datasets/Verl-Data/eval/babyai/test.parquet"}
+OUTPUT_DIR=${OUTPUT_DIR:-"/Data/wyh/datasets/Verl-Data/outputs/babyai_grpo"}
 
 # -------------------- GPU配置 --------------------
-GPU_IDS=${GPU_IDS:-"3,4"}    # 使用的GPU编号
+GPU_IDS=${GPU_IDS:-"0,1"}    # 使用的GPU编号
 NUM_GPUS=${NUM_GPUS:-2}      # GPU数量（必须与GPU_IDS一致）
 
 # -------------------- 训练超参数 --------------------
-NUM_EPOCHS=${NUM_EPOCHS:-200}
+NUM_EPOCHS=${NUM_EPOCHS:-50}
 TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-64}    # 全局batch size
 MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-1}     # 每张GPU的micro batch
 LEARNING_RATE=${LEARNING_RATE:-5e-6}
-ENTROPY_COEFF=${ENTROPY_COEFF:-0.01}        # 熵奖励系数（防止策略坍缩，增加探索）
-SAVE_FREQ=${SAVE_FREQ:-100}                   # 每N个epoch保存checkpoint
-TEST_FREQ=${TEST_FREQ:-100}                   # 每N个epoch进行validation
+ENTROPY_COEFF=${ENTROPY_COEFF:-0.03}        # 熵奖励系数（防止策略坍缩，增加探索）
+SAVE_FREQ=${SAVE_FREQ:-50}                   # 每N个epoch保存checkpoint
+TEST_FREQ=${TEST_FREQ:-10}                   # 每N个epoch进行validation
 
 # -------------------- vLLM Rollout配置（训练采样）--------------------
 ROLLOUT_N=${ROLLOUT_N:-8}                   # 每个prompt采样数量（GRPO需要>1）
-TEMPERATURE=${TEMPERATURE:-1.0}             # 采样温度（建议0.5-1.0以探索）
+TEMPERATURE=${TEMPERATURE:-1.0}             # 采样温度
 TOP_P=${TOP_P:-1.0}                         # Nucleus采样参数
-GPU_MEMORY_UTIL=${GPU_MEMORY_UTIL:-0.7}     # vLLM GPU内存利用率
+GPU_MEMORY_UTIL=${GPU_MEMORY_UTIL:-0.6}     # vLLM GPU内存利用率
 MAX_NUM_SEQS=${MAX_NUM_SEQS:-256}           # vLLM最大并发序列数
-ENFORCE_EAGER=${ENFORCE_EAGER:-true}        # 使用eager模式（更灵活）
-FREE_CACHE_ENGINE=${FREE_CACHE_ENGINE:-true} # 释放KV cache（节省内存）
+ENFORCE_EAGER=${ENFORCE_EAGER:-true}        # 使用eager模式
+FREE_CACHE_ENGINE=${FREE_CACHE_ENGINE:-true} # 释放KV cache
 
 # -------------------- vLLM Validation配置 --------------------
 VAL_TEMPERATURE=${VAL_TEMPERATURE:-1.0}
@@ -36,19 +38,19 @@ VAL_DO_SAMPLE=${VAL_DO_SAMPLE:-true}
 VAL_N=${VAL_N:-1}                           # validation时每个prompt采样数量
 
 # -------------------- Token长度限制 --------------------
-MAX_PROMPT_LENGTH=${MAX_PROMPT_LENGTH:-2048}          # 第一轮任务描述最大长度
-MAX_RESPONSE_LENGTH=${MAX_RESPONSE_LENGTH:-9216}      # episode累积response总长度 (增大10%)
-ROLLOUT_PROMPT_LENGTH=${ROLLOUT_PROMPT_LENGTH:-9216}  # rollout最大prompt长度 (匹配response长度)
-MAX_MODEL_LEN=${MAX_MODEL_LEN:-12288}                 # vLLM最大序列长度 (增大以容纳更长response)
-PPO_MAX_TOKEN_LEN=${PPO_MAX_TOKEN_LEN:-14336}         # PPO训练最大token长度 (相应增大)
-MAX_NUM_BATCHED_TOKENS=${MAX_NUM_BATCHED_TOKENS:-12288} # vLLM批处理最大token数
+MAX_PROMPT_LENGTH=${MAX_PROMPT_LENGTH:-1024}          # BabyAI任务描述较短
+MAX_RESPONSE_LENGTH=${MAX_RESPONSE_LENGTH:-4096}      # episode累积response总长度
+ROLLOUT_PROMPT_LENGTH=${ROLLOUT_PROMPT_LENGTH:-4096}  # rollout最大prompt长度
+MAX_MODEL_LEN=${MAX_MODEL_LEN:-10240}                 # vLLM最大序列长度
+PPO_MAX_TOKEN_LEN=${PPO_MAX_TOKEN_LEN:-8192}          # PPO训练最大token长度
+MAX_NUM_BATCHED_TOKENS=${MAX_NUM_BATCHED_TOKENS:-10240} # vLLM批处理最大token数
 
 # -------------------- 环境服务器 --------------------
-TEXTCRAFT_SERVER=${TEXTCRAFT_SERVER:-"http://127.0.0.1:36001"}
+BABYAI_SERVER=${BABYAI_SERVER:-"http://127.0.0.1:36005"}
 
 # 实验名称
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-EXPERIMENT_NAME="textcraft_grpo_${TIMESTAMP}"
+EXPERIMENT_NAME="babyai_grpo_${TIMESTAMP}"
 
 # 日志目录
 LOG_DIR="$OUTPUT_DIR/logs"
@@ -67,12 +69,13 @@ fi
 
 # ==================== 打印配置 ====================
 echo "================================================================================" | tee "$LOG_FILE"
-echo "  TextCraft GRPO训练 - Qwen3-1.7B + 思考模式 (使用vLLM推理后端)" | tee -a "$LOG_FILE"
+echo "  BabyAI GRPO训练 - Qwen3-1.7B + 思考模式 (使用vLLM推理后端)" | tee -a "$LOG_FILE"
 echo "================================================================================" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "【模型和数据】" | tee -a "$LOG_FILE"
 echo "  模型路径: $MODEL_PATH" | tee -a "$LOG_FILE"
 echo "  训练数据: $DATA_PATH" | tee -a "$LOG_FILE"
+echo "  验证数据: $VAL_DATA_PATH" | tee -a "$LOG_FILE"
 echo "  输出目录: $OUTPUT_DIR" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "【GPU配置】" | tee -a "$LOG_FILE"
@@ -114,7 +117,7 @@ echo "  PPO Max Token Len: $PPO_MAX_TOKEN_LEN" | tee -a "$LOG_FILE"
 echo "  Max Batched Tokens: $MAX_NUM_BATCHED_TOKENS" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "【环境服务器】" | tee -a "$LOG_FILE"
-echo "  TextCraft Server: $TEXTCRAFT_SERVER" | tee -a "$LOG_FILE"
+echo "  BabyAI Server: $BABYAI_SERVER" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "【实验信息】" | tee -a "$LOG_FILE"
 echo "  实验名称: $EXPERIMENT_NAME" | tee -a "$LOG_FILE"
@@ -123,15 +126,14 @@ echo "==========================================================================
 echo "" | tee -a "$LOG_FILE"
 
 # ==================== 检查环境 ====================
-echo "检查TextCraft服务器..." | tee -a "$LOG_FILE"
-SERVER_RESPONSE=$(curl -s "$TEXTCRAFT_SERVER/" 2>&1)
-if [[ "$SERVER_RESPONSE" == *"TextCraft"* ]]; then
-    echo "✓ TextCraft服务器正常运行" | tee -a "$LOG_FILE"
+echo "检查BabyAI服务器..." | tee -a "$LOG_FILE"
+if curl -s "$BABYAI_SERVER/" > /dev/null 2>&1; then
+    echo "✓ BabyAI服务器正常运行" | tee -a "$LOG_FILE"
 else
-    echo "警告: TextCraft服务器 ($TEXTCRAFT_SERVER) 未运行！" | tee -a "$LOG_FILE"
+    echo "警告: BabyAI服务器 ($BABYAI_SERVER) 未运行！" | tee -a "$LOG_FILE"
     echo "请先启动服务器：" | tee -a "$LOG_FILE"
-    echo "  cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-textcraft" | tee -a "$LOG_FILE"
-    echo "  textcraft --host 0.0.0.0 --port 36001" | tee -a "$LOG_FILE"
+    echo "  cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-babyai" | tee -a "$LOG_FILE"
+    echo "  babyai --host 0.0.0.0 --port 36005" | tee -a "$LOG_FILE"
     exit 1
 fi
 echo "" | tee -a "$LOG_FILE"
@@ -153,18 +155,17 @@ export RAY_DEDUP_LOGS=0
 export CUDA_VISIBLE_DEVICES=$GPU_IDS
 
 # ==================== 日志级别控制 ====================
-# 关闭冗余的 DEBUG 日志，只保留重要信息
-export VLLM_LOGGING_LEVEL=WARNING        # vLLM日志级别: WARNING(警告)/ERROR(错误)/INFO(信息)
-export VLLM_CONFIGURE_LOGGING=0          # 禁用vLLM默认日志配置
-export PYTHONWARNINGS=ignore             # 忽略Python警告信息
-export RAY_DEDUP_LOGS=1                  # Ray日志去重(改为1以减少重复)
+export VLLM_LOGGING_LEVEL=WARNING
+export VLLM_CONFIGURE_LOGGING=0
+export PYTHONWARNINGS=ignore
+export RAY_DEDUP_LOGS=1
 
 python3 -m verl.trainer.main_ppo \
     --config-path='/Data/wyh/verl/examples/sglang_multiturn/config' \
-    --config-name='textcraft_grpo_train' \
+    --config-name='babyai_grpo_train' \
     algorithm.adv_estimator=grpo \
     data.train_files=$DATA_PATH \
-    data.val_files=$DATA_PATH \
+    data.val_files=$VAL_DATA_PATH \
     data.train_batch_size=$TRAIN_BATCH_SIZE \
     data.val_batch_size=4 \
     data.max_prompt_length=$MAX_PROMPT_LENGTH \
@@ -201,9 +202,8 @@ python3 -m verl.trainer.main_ppo \
     trainer.save_freq=$SAVE_FREQ \
     trainer.test_freq=$TEST_FREQ \
     trainer.default_local_dir=$OUTPUT_DIR \
-    trainer.project_name=textcraft_grpo \
+    trainer.project_name=babyai_grpo \
     trainer.experiment_name=$EXPERIMENT_NAME \
-    trainer.resume_mode=disable \
     2>&1 | tee -a "$LOG_FILE"
 
 echo "" | tee -a "$LOG_FILE"

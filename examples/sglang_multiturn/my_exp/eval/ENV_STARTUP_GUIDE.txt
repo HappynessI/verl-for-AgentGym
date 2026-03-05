@@ -1,0 +1,119 @@
+================================================================================
+                    AgentGym 环境服务器启动指南
+================================================================================
+
+【前置准备】
+conda activate agentgym  # 或你的环境名
+
+================================================================================
+1. TextCraft 环境 (端口 36001)
+================================================================================
+cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-textcraft
+textcraft --host 0.0.0.0 --port 36001
+
+# 验证: curl http://127.0.0.1:36001/
+
+================================================================================
+2. Webshop 环境 (端口 36001) 
+================================================================================
+# 注意: Webshop 和 TextCraft 默认都用 36001，不能同时启动
+cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-webshop
+webshop --host 0.0.0.0 --port 36001
+
+# 验证: curl http://127.0.0.1:36001/
+
+================================================================================
+3. SciWorld 环境 (端口 36002)
+================================================================================
+cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-sciworld
+sciworld --host 0.0.0.0 --port 36002
+
+# 验证: curl http://127.0.0.1:36002/
+
+================================================================================
+4. SearchQA 环境 (端口 36003)
+================================================================================
+cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-searchqa
+searchqa --host 0.0.0.0 --port 36003
+
+# 验证: curl http://127.0.0.1:36003/
+
+================================================================================
+5. BabyAI 环境 (端口 36005)
+================================================================================
+cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-babyai
+babyai --host 0.0.0.0 --port 36005
+
+# 验证: curl http://127.0.0.1:36005/
+
+================================================================================
+6. vLLM 推理服务 (端口 8000)
+================================================================================
+# 单 GPU 启动
+CUDA_VISIBLE_DEVICES=7 vllm serve /Data/public/Qwen3-1.7B \
+    --served-model-name qwen3 \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --max-model-len 16384 \
+    --gpu-memory-utilization 0.9
+
+# 验证: curl http://127.0.0.1:8000/v1/models
+
+# 查看当前加载的模型名称和路径:
+curl -s http://127.0.0.1:8000/v1/models | python3 -c "import sys,json;d=json.load(sys.stdin)['data'][0];print(f\"Model ID: {d['id']}\nModel Path: {d['root']}\")"
+
+# 停止 vLLM 服务
+kill $(ps aux | grep 'vllm serve' | grep -v grep | awk '{print $2}')
+
+================================================================================
+                         评估脚本运行指南
+================================================================================
+
+cd /Data/wyh/verl/examples/sglang_multiturn/my_exp/eval
+
+# BabyAI 评估
+bash run_babyai_eval_vllm_server.sh
+
+# TextCraft 评估
+bash run_textcraft_eval_vllm_server.sh
+
+# Webshop 评估
+bash run_webshop_eval_vllm_server.sh
+
+# SciWorld 评估
+bash run_sciworld_eval_vllm_server.sh
+
+# SearchQA 评估
+bash run_searchqa_eval_vllm_server.sh
+
+================================================================================
+                           常用参数覆盖
+================================================================================
+
+# 小规模测试
+MAX_SAMPLES=10 bash run_babyai_eval_vllm_server.sh
+
+# 调整并发
+CONCURRENCY=8 bash run_babyai_eval_vllm_server.sh
+
+# 多次采样
+NUM_SAMPLES_PER_TASK=8 bash run_babyai_eval_vllm_server.sh
+
+# 组合使用
+MAX_SAMPLES=50 CONCURRENCY=16 NUM_SAMPLES_PER_TASK=4 bash run_babyai_eval_vllm_server.sh
+
+================================================================================
+                           端口汇总表
+================================================================================
+
+| 环境      | 默认端口 | 服务名    |
+|-----------|----------|-----------|
+| TextCraft | 36001    | textcraft |
+| Webshop   | 36001    | webshop   |
+| SciWorld  | 36002    | sciworld  |
+| SearchQA  | 36003    | searchqa  |
+| BabyAI    | 36005    | babyai    |
+| vLLM      | 8000     | vllm      |
+
+================================================================================
+

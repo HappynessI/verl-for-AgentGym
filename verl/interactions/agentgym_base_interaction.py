@@ -4,6 +4,7 @@ AgentGym环境的通用Base Interaction类
 """
 
 import re
+import asyncio
 import logging
 import requests
 from typing import Dict, List, Tuple, Any, Optional
@@ -37,6 +38,20 @@ class AgentGymBaseInteraction(BaseInteraction):
         self.env_name = "agentgym"  # 子类应设置具体环境名
         self.max_rounds = 30  # 默认最大轮数
     
+    # =========================================================================
+    # 异步HTTP辅助方法 - 避免阻塞event loop
+    # =========================================================================
+    
+    async def _async_post(self, url: str, **kwargs) -> requests.Response:
+        """异步包装 requests.post，不阻塞event loop"""
+        kwargs.setdefault('timeout', self.timeout)
+        return await asyncio.to_thread(requests.post, url, **kwargs)
+    
+    async def _async_get(self, url: str, **kwargs) -> requests.Response:
+        """异步包装 requests.get，不阻塞event loop"""
+        kwargs.setdefault('timeout', self.timeout)
+        return await asyncio.to_thread(requests.get, url, **kwargs)
+    
     async def start_interaction(self, instance_id: str, **kwargs) -> None:
         """
         启动一个新的交互session
@@ -48,7 +63,7 @@ class AgentGymBaseInteraction(BaseInteraction):
         # 创建环境实例
         create_url = f"{self.env_server_base}/create"
         try:
-            response = requests.post(create_url, json=kwargs, timeout=self.timeout)
+            response = await self._async_post(create_url, json=kwargs)
             response.raise_for_status()
             data = response.json()
             # 兼容不同环境的返回格式：有些返回'env_id'，有些返回'id'
@@ -62,7 +77,7 @@ class AgentGymBaseInteraction(BaseInteraction):
         # 重置环境获取初始observation
         reset_url = f"{self.env_server_base}/reset"
         try:
-            response = requests.post(reset_url, json={'id': env_id}, timeout=self.timeout)
+            response = await self._async_post(reset_url, json={'id': env_id})
             response.raise_for_status()
             data = response.json()
         except Exception as e:
@@ -128,30 +143,19 @@ class AgentGymBaseInteraction(BaseInteraction):
             # logger.warning(f"[{instance_id}] No assistant message found")
             return False, session['initial_observation'], 0.0, {}
         
-        # DEBUG: 记录原始assistant输出（使用WARNING确保显示）
-        # logger.warning(f"[{instance_id}] Step {session['step_count']} - Raw assistant (len={len(last_assistant_msg)}): {last_assistant_msg[:500]}{'...' if len(last_assistant_msg) > 500 else ''}")
-        
         # 提取action（子类可覆盖此方法）
         action = self.extract_action(last_assistant_msg)
         
-        # DEBUG: 记录提取的action
-        # if action:
-        #     logger.warning(f"[{instance_id}] Step {session['step_count']} - Extracted action: '{action}'")
-        
         # 如果没有提取到有效action，提示用户
         if not action:
-            # logger.warning(f"[{instance_id}] Step {session['step_count']} - Failed to extract valid action from assistant message")
             return False, self.get_invalid_action_prompt(), 0.0, {}
         
-        # 执行action
+        # 执行action（异步，不阻塞event loop）
         step_url = f"{self.env_server_base}/step"
         try:
-            # 注意：不是 /step/{env_id}，而是在body中传id
-            # logger.debug(f"[{instance_id}] Sending action to env: '{action}'")
-            response = requests.post(
+            response = await self._async_post(
                 step_url, 
-                json={'id': env_id, 'action': action}, 
-                timeout=self.timeout
+                json=self._build_step_payload(env_id, action)
             )
             response.raise_for_status()
             data = response.json()
@@ -168,7 +172,8 @@ class AgentGymBaseInteraction(BaseInteraction):
         done = data.get('done', False)
         
         # DEBUG: 记录环境返回（所有情况）
-        # logger.warning(f"[{instance_id}] Step {session['step_count']} - Env response: reward={reward}, done={done}, obs='{observation[:200]}{'...' if len(observation) > 200 else ''}'")
+        if done or reward < 0:
+            logger.warning(f"[{instance_id}] Step {session['step_count']} - Env response: reward={reward}, done={done}, action='{action[:50] if action else 'None'}...', obs='{observation[:100]}...'")
         
         return done, observation, reward, {}
     
@@ -188,7 +193,7 @@ class AgentGymBaseInteraction(BaseInteraction):
         # 获取环境信息（包含最终reward）
         try:
             observe_url = f"{self.env_server_base}/observe"
-            response = requests.get(f"{observe_url}?id={env_id}", timeout=self.timeout)
+            response = await self._async_get(f"{observe_url}?id={env_id}")
             response.raise_for_status()
             data = response.json()
             return data.get('reward', 0.0)
@@ -201,6 +206,10 @@ class AgentGymBaseInteraction(BaseInteraction):
         if instance_id in self.instance_sessions:
             del self.instance_sessions[instance_id]
             # logger.info(f"Finalized interaction {instance_id}")
+    
+    def _build_step_payload(self, env_id: int, action: str) -> dict:
+        """构建 /step 请求的 payload，子类可覆盖以适配不同的字段名"""
+        return {'id': env_id, 'action': action}
     
     def extract_action(self, text: str) -> Optional[str]:
         """
@@ -222,6 +231,3 @@ class AgentGymBaseInteraction(BaseInteraction):
         子类可覆盖以提供环境特定的提示
         """
         return "Please provide a valid action."
-
-
-

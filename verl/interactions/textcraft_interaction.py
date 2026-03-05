@@ -2,7 +2,6 @@
 
 import re
 import logging
-import requests
 from typing import Optional
 from verl.interactions.agentgym_base_interaction import AgentGymBaseInteraction
 
@@ -27,11 +26,16 @@ class TextCraftInteraction(AgentGymBaseInteraction):
     async def start_interaction(self, instance_id: str, **kwargs) -> None:
         """
         TextCraft环境特殊处理：API返回的是'id'而非'env_id'
+        支持 prefix_actions：创建环境后 replay 指定的 actions 来同步状态
         """
+        prefix_actions = kwargs.pop('prefix_actions', None)
+        if prefix_actions is not None and not isinstance(prefix_actions, list):
+            prefix_actions = list(prefix_actions)
+
         # 创建环境实例
         create_url = f"{self.env_server_base}/create"
         try:
-            response = requests.post(create_url, json=kwargs, timeout=self.timeout)
+            response = await self._async_post(create_url, json=kwargs)
             response.raise_for_status()
             data = response.json()
             # TextCraft返回的是'id'字段，不是'env_id'
@@ -57,6 +61,41 @@ class TextCraftInteraction(AgentGymBaseInteraction):
         }
         
         logger.info(f"Started TextCraft interaction {instance_id} with env_id {env_id}")
+
+        # Replay prefix actions to sync environment state
+        if prefix_actions:
+            await self._replay_prefix_actions(instance_id, prefix_actions)
+
+    async def _replay_prefix_actions(self, instance_id: str, actions: list[str]) -> None:
+        """Replay a sequence of actions to bring the environment to the post-prefix state."""
+        session = self.instance_sessions.get(instance_id)
+        if not session:
+            raise ValueError(f"Instance {instance_id} not found for prefix replay")
+
+        env_id = session['env_id']
+        step_url = f"{self.env_server_base}/step"
+
+        for i, action in enumerate(actions):
+            if session['done']:
+                logger.warning(f"[{instance_id}] Env terminated during prefix replay at action {i}/{len(actions)}")
+                break
+            try:
+                response = await self._async_post(
+                    step_url,
+                    json=self._build_step_payload(env_id, action),
+                )
+                response.raise_for_status()
+                data = response.json()
+                session['step_count'] += 1
+                session['done'] = data.get('done', False)
+            except Exception as e:
+                logger.error(f"[{instance_id}] Prefix replay failed at action {i}: {action!r} - {e}")
+                raise
+
+        logger.info(
+            f"[{instance_id}] Replayed {len(actions)} prefix actions, "
+            f"step_count={session['step_count']}, done={session['done']}"
+        )
     
     def extract_action(self, text: str) -> Optional[str]:
         """从模型输出中提取TextCraft action
@@ -97,4 +136,3 @@ class TextCraftInteraction(AgentGymBaseInteraction):
                 "- craft 1 blue dye using 1 lapis lazuli\n"
                 "- get 9 slime ball\n"
                 "- inventory")
-

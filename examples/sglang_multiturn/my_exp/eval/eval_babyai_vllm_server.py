@@ -1,8 +1,6 @@
-
-
 #!/usr/bin/env python3
 """
-TextCraft Evaluation Client - vLLM Service Mode
+BabyAI Evaluation Client - vLLM Service Mode
 直接调用已部署的vLLM服务，无需本地加载模型
 """
 
@@ -26,19 +24,15 @@ import aiohttp
 import fcntl
 
 # Add verl to path
-# 文件路径: /Data/wyh/verl/examples/sglang_multiturn/my_exp/eval/eval_textcraft_vllm_server.py
-# 需要向上5级到达项目根目录: /Data/wyh/verl
 project_root = Path(__file__).parent.parent.parent.parent.parent
 if not (project_root / "verl").exists():
     raise RuntimeError(f"verl not found in {project_root}")
 sys.path.insert(0, str(project_root))
 
-
-
-from verl.interactions.textcraft_interaction import TextCraftInteraction
+from verl.interactions.babyai_interaction import BabyAIInteraction
 
 # 确保日志目录存在
-log_dir = Path("/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/logs")
+log_dir = Path("/Data/wyh/datasets/Verl-Data/outputs/babyai_eval/logs")
 log_dir.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
@@ -49,103 +43,69 @@ logging.basicConfig(
         logging.FileHandler(log_dir / f"eval_client_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     ]
 )
-logger = logging.getLogger("TextCraftEval")
+logger = logging.getLogger("BabyAIEval")
+
 
 # =============================================================================
 # Async Agent Class (HTTP Client)
 # =============================================================================
 
-class AsyncTextCraftAgent:
-    """TextCraft Agent - Uses HTTP calls to vLLM service"""
+class AsyncBabyAIAgent:
+    """BabyAI Agent - Uses HTTP calls to vLLM service"""
     
-    def __init__(self, server_url: str, max_new_tokens: int = 150, temperature: float = 0.0, top_p: float = 1.0):
+    def __init__(self, server_url: str, model_name: str = "qwen3", max_new_tokens: int = 512, temperature: float = 0.0, top_p: float = 1.0):
         self.server_url = server_url.rstrip('/')
+        self.model_name = model_name
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.top_p = top_p
-        self.system_prompt = self._build_adapt_prompt()
+        self.system_prompt = self._build_prompt()
     
-    def _build_adapt_prompt(self) -> str:
-        return '''You are a Minecraft Assistant. Your goal is to craft items by managing resources and recipes.
+    def _build_prompt(self) -> str:
+        return '''You are a BabyAI Navigation Agent. Your goal is to complete navigation tasks in a grid-world environment.
 
 **CORE PROTOCOL (Strictly Follow):**
-1. **THINK FIRST**: Before any action, analyze the current state using the "Reasoning Logic" below.
+1. **THINK FIRST**: Before any action, analyze the current observation and goal.
 2. **ONE ACTION**: Output exactly ONE action per turn.
-3. **BOX FORMAT**: Wrap your command in `[[ ]]`. Example: `Action: [[ inventory ]]`
+3. **BOX FORMAT**: Wrap your command in `[[ ]]`. Example: `Action: [[ turn left ]]`
 4. **NO HALLUCINATION**: Do NOT simulate the Environment's response. Stop immediately after outputting the Action.
 
-**REASONING LOGIC (The Algorithm):**
-When trying to acquire an item [Target]:
-1. **Check Inventory**: Do you already have [Target]?
-   - If YES -> Task Complete / Proceed to next step.
-   - If NO -> Go to step 2.
-2. **Check Recipe**: Is there a crafting recipe for [Target]?
-   - If YES -> Check if you have the [Ingredients].
-     - If you have Ingredients -> `craft [Target] ...`
-     - If you miss Ingredients -> **NEW SUB-GOAL**: Get the missing [Ingredient] (Repeat Logic from Step 1).
-   - If NO (Base Material) -> `get [Target]` directly from environment.
-3. **Handle Errors**:
-   - If `get` fails -> The item might require crafting from a sub-ingredient (e.g., gold ingot needs gold nuggets). Check recipes again.
-   - If `craft` fails -> Check if you have the exact items.
+**REASONING LOGIC:**
+1. **Understand Goal**: Parse the goal (e.g., "go to the red ball", "pick up the blue key")
+2. **Observe Environment**: Note visible objects, their positions, and available actions
+3. **Plan Path**: Determine the sequence of actions to reach the goal
+4. **Execute**: Take one action at a time, adjusting based on feedback
 
 **CORE COMMAND SET (API):**
-* `craft [target] using [ingredients]` (e.g., "craft 1 stick using 2 bamboo")
-* `get [item]` (e.g., "get 3 log")
-* `inventory` (Check what you have)
+* `turn left` / `turn right` - Rotate 90 degrees
+* `move forward` - Move one step forward (if not blocked)
+* `pickup [color] [object] [n]` - Pick up an object (e.g., "pickup red ball 1")
+* `drop` - Drop the carried object
+* `toggle` - Toggle a door (open/close)
+* `go to [object]` - Navigate to an object (e.g., "go to blue key 1")
+* `go through [door]` - Pass through an open door
+* `check available actions` - List all valid actions
 
-**INTERACTION EXAMPLES:**
-
-[Environment]
-Goal: craft powered rail
-Recipes:
-- craft 6 powered rail using 1 redstone, 1 stick, 6 gold ingot
-- craft 1 gold ingot using 9 gold nugget
-- craft 1 stick using 2 bamboo
-
-[You]
-Think: Recipe for powered rail needs redstone, stick, gold ingot. I need to check what I have.
-Action: [[ inventory ]]
+**INTERACTION EXAMPLE:**
 
 [Environment]
-Inventory: [redstone] (1)
+Your goal: go to the red ball
+In front of you in this room, you can see several objects: There is a red ball 1 3 steps in front of you and 1 steps to your left.
+The room has walls around you. You are facing a wall 5 steps away.
+You are not carrying anything.
+Available actions: ["turn left", "turn right", "move forward", "go to red ball 1", "check available actions"]
 
 [You]
-Think: I have redstone. I miss stick and gold ingot. Gold ingot has a recipe (needs gold nugget). I should get gold nugget first.
-Action: [[ get 54 gold nugget ]]
+Think: My goal is to reach the red ball. It's 3 steps ahead and 1 step to my left. I should use "go to red ball 1" to navigate there.
+Action: [[ go to red ball 1 ]]
 
 [Environment]
-Got 54 gold nugget.
+In front of you in this room, you can see several objects: There is a red ball 1 right in front of you 1 steps away.
+You are not carrying anything.
+Available actions: ["turn left", "turn right", "pickup red ball 1", "check available actions"]
 
 [You]
-Think: Now I have nuggets. I can craft gold ingots.
-Action: [[ craft 6 gold ingot using 54 gold nugget ]]
-
-[Environment]
-Crafted 6 gold ingot.
-
-[You]
-Think: Now I need a stick. Recipe says stick needs bamboo. I need to get bamboo.
-Action: [[ get 2 bamboo ]]
-
-[Environment]
-Got 2 bamboo.
-
-[You]
-Think: I have bamboo. I can craft the stick.
-Action: [[ craft 1 stick using 2 bamboo ]]
-
-[Environment]
-Crafted 1 stick.
-
-[You]
-Think: I have redstone, gold ingots, and stick. I can finally craft the powered rail.
-Action: [[ craft 6 powered rail using 1 redstone, 1 stick, 6 gold ingot ]]
-
-[Environment]
-Crafted 6 powered rail.
-
-[You]
-Think: Goal achieved.
+Think: I'm now facing the red ball. The goal was to "go to" it, so I've completed the task.
 Action: [[ Task Completed! ]]
 '''
     
@@ -153,7 +113,7 @@ Action: [[ Task Completed! ]]
         """Generates response by calling vLLM service via HTTP"""
         headers = {"Content-Type": "application/json"}
         payload = {
-            "model": "qwen3",
+            "model": self.model_name,
             "messages": [
                 {"role": "system", "content": self.system_prompt},
                 *messages
@@ -196,8 +156,8 @@ Action: [[ Task Completed! ]]
 # =============================================================================
 
 async def evaluate_one_episode(
-    agent: AsyncTextCraftAgent,
-    interaction: TextCraftInteraction,
+    agent: AsyncBabyAIAgent,
+    interaction: BabyAIInteraction,
     session_id: int,
     http_session: aiohttp.ClientSession,
     max_rounds: int = 50,
@@ -249,12 +209,27 @@ async def evaluate_one_episode(
             }
 
     # --- Interaction Loop ---
+    consecutive_empty = 0
+    max_consecutive_empty = 3  # 连续空响应超过此数则放弃
+    
     for turn in range(max_rounds):
         if done:
             break
         
         try:
             response = await agent.generate(messages, http_session)
+            
+            # 处理空响应（超时/错误导致）：不加入对话，避免雪崩循环
+            if not response.strip():
+                consecutive_empty += 1
+                logger.warning(f"Session {session_id} turn {turn}: empty response ({consecutive_empty}/{max_consecutive_empty})")
+                if consecutive_empty >= max_consecutive_empty:
+                    logger.warning(f"Session {session_id}: too many consecutive empty responses, giving up")
+                    break
+                continue  # 跳过本轮，不污染对话历史
+            
+            consecutive_empty = 0  # 收到有效响应，重置计数
+            
             response_lower = response.lower()
             if 'task completed' in response_lower or 'task failed' in response_lower:
                 done = True
@@ -332,14 +307,15 @@ async def run_evaluation(args: argparse.Namespace):
     """Main evaluation function with async HTTP client"""
     
     # Initialize components
-    interaction = TextCraftInteraction({
-        'env_server_base': args.textcraft_server,
+    interaction = BabyAIInteraction({
+        'env_server_base': args.babyai_server,
         'timeout': 600,
         'max_retries': 3
     })
     
-    agent = AsyncTextCraftAgent(
+    agent = AsyncBabyAIAgent(
         server_url=args.vllm_server_url,
+        model_name=args.model_name,
         max_new_tokens=args.max_new_tokens,
         temperature=args.temperature,
         top_p=args.top_p
@@ -390,7 +366,7 @@ async def run_evaluation(args: argparse.Namespace):
                 
                 # Prepare record
                 record = {
-                    "item_id": f"textcraft_{session_id}",
+                    "item_id": f"babyai_{session_id}",
                     "session_id": session_id,
                     "sample_idx": sample_idx,
                     "reward": result['reward'],
@@ -520,7 +496,7 @@ async def generate_summary(results_file: str, summary_file: str, args: argparse.
     # Prepare summary text
     metrics = [
         "=" * 60,
-        "TextCraft Evaluation Summary (vLLM Service Mode)",
+        "BabyAI Evaluation Summary (vLLM Service Mode)",
         f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "=" * 60,
         f"Model: {model_name}",
@@ -561,36 +537,38 @@ async def generate_summary(results_file: str, summary_file: str, args: argparse.
 # =============================================================================
 
 def main():
-    parser = argparse.ArgumentParser(description='TextCraft Evaluation Client (vLLM Service Mode)')
+    parser = argparse.ArgumentParser(description='BabyAI Evaluation Client (vLLM Service Mode)')
     
     # Paths
     parser.add_argument('--data_path', type=str, 
-                        default='/Data/wyh/datasets/Verl-Data/textcraft/train.parquet',
+                        default='/Data/wyh/datasets/Verl-Data/eval/babyai/test.parquet',
                         help='Path to test dataset (parquet format)')
     parser.add_argument('--output_dir', type=str,
-                        default='/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval',
+                        default='/Data/wyh/datasets/Verl-Data/outputs/babyai_eval',
                         help='Directory to save evaluation results')
     
     # Environment
-    parser.add_argument('--textcraft_server', type=str,
-                        default='http://127.0.0.1:3222',
-                        help='TextCraft environment server URL')
+    parser.add_argument('--babyai_server', type=str,
+                        default='http://127.0.0.1:36005',
+                        help='BabyAI environment server URL')
+    parser.add_argument('--model_name', type=str, default='qwen3',
+                        help='Model name as registered in vLLM (default: qwen3)')
     parser.add_argument('--vllm_server_url', type=str,
                         default='http://localhost:8000',
                         help='vLLM service URL (e.g., http://localhost:8000)')
     
     # Evaluation Config
-    parser.add_argument('--max_rounds', type=int, default=40,
+    parser.add_argument('--max_rounds', type=int, default=50,
                         help='Maximum interaction rounds per episode')
     parser.add_argument('--max_samples', type=int, default=-1,
                         help='Maximum samples to evaluate (-1 for all)')
     parser.add_argument('--num_samples_per_task', type=int, default=8,
                         help='Number of samples per task (for pass@k)')
-    parser.add_argument('--concurrency', type=int, default=256,
+    parser.add_argument('--concurrency', type=int, default=128,
                         help='Maximum concurrent requests to vLLM service')
     
     # Generation Params
-    parser.add_argument('--max_new_tokens', type=int, default=2000,
+    parser.add_argument('--max_new_tokens', type=int, default=512,
                         help='Maximum tokens to generate per response')
     parser.add_argument('--temperature', type=float, default=1.0,
                         help='Sampling temperature (0.0 for greedy)')
@@ -626,3 +604,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

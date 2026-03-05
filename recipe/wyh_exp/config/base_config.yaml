@@ -56,7 +56,6 @@ actor_rollout_ref:
     # 损失配置
     clip_ratio: 0.2
     loss_agg_mode: token-mean
-    entropy_coeff: 0.01
     
     # FSDP 配置
     fsdp_config:
