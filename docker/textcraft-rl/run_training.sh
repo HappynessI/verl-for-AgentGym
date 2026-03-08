@@ -14,6 +14,9 @@
 #
 # 支持的 EXPERIMENT 类型：
 #   grpo_baseline       —— GRPO 基线（ADV_ESTIMATOR=grpo）
+#   grpo_mis           —— GRPO + MIS（多轮重要性采样）
+#   grpo_tis           —— GRPO + TIS（_token-level Importance weighting with Segment-level grouping）
+#   drpo               —— DRPO（Decoupled Reward Policy Optimization）
 #   prefix_full         —— Prefix-RL 全轨迹（ADV_ESTIMATOR=turn_full_trajectory）
 #   prefix_guided       —— Prefix-RL 前缀引导（ADV_ESTIMATOR=turn_prefix_guided）
 #   prefix_guided_dr    —— Prefix-RL + Dr.GRPO（ADV_ESTIMATOR=turn_prefix_guided_dr）
@@ -48,6 +51,15 @@ case "$EXPERIMENT" in
     grpo_baseline)
         ADV_ESTIMATOR=${ADV_ESTIMATOR:-grpo}
         ;;
+    grpo_mis)
+        ADV_ESTIMATOR=${ADV_ESTIMATOR:-grpo}
+        ;;
+    grpo_tis)
+        ADV_ESTIMATOR=${ADV_ESTIMATOR:-grpo}
+        ;;
+    drpo)
+        ADV_ESTIMATOR=${ADV_ESTIMATOR:-grpo}
+        ;;
     prefix_full)
         ADV_ESTIMATOR=${ADV_ESTIMATOR:-turn_full_trajectory}
         ;;
@@ -63,7 +75,7 @@ case "$EXPERIMENT" in
         ;;
     *)
         log_error "未知的 EXPERIMENT 类型: $EXPERIMENT"
-        log_error "支持: grpo_baseline | prefix_full | prefix_guided | prefix_guided_dr | sft"
+        log_error "支持: grpo_baseline | grpo_mis | grpo_tis | drpo | prefix_full | prefix_guided | prefix_guided_dr | sft"
         exit 1
         ;;
 esac
@@ -92,7 +104,28 @@ fi
 # ============================================================
 # 3. 检查训练脚本
 # ============================================================
-TRAIN_SCRIPT="/workspace/verl/recipe/wyh_exp/scripts/run_test_train.sh"
+# 根据 EXPERIMENT 类型选择对应的训练脚本
+case "$EXPERIMENT" in
+    grpo_baseline)
+        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/run_textcraft_grpo_train.sh"
+        ;;
+    grpo_mis)
+        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/run_textcraft_grpo_mis.sh"
+        ;;
+    grpo_tis)
+        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/run_textcraft_grpo_tis.sh"
+        ;;
+    drpo)
+        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/run_textcraft_drpo_train.sh"
+        ;;
+    prefix_full|prefix_guided|prefix_guided_dr)
+        TRAIN_SCRIPT="/workspace/verl/recipe/wyh_exp/scripts/run_test_train.sh"
+        ;;
+    *)
+        log_error "未知的 EXPERIMENT 类型: $EXPERIMENT"
+        exit 1
+        ;;
+esac
 log_step "检查训练脚本"
 if [ ! -f "$TRAIN_SCRIPT" ]; then
     log_error "未找到训练脚本: $TRAIN_SCRIPT"
@@ -188,17 +221,24 @@ log_step "开始训练"
 
 cd /workspace/verl
 
-# 将参数导出为环境变量，run_test_train.sh 通过 ${VAR:-default} 读取
+# 将参数导出为环境变量，训练脚本通过 ${VAR:-default} 读取
 export ADV_ESTIMATOR
 export MODEL_PATH
 export NUM_EPOCHS
 export TRAIN_BATCH_SIZE
+export MICRO_BATCH_SIZE
+export PPO_MAX_TOKEN_LEN
 export LEARNING_RATE
 export ROLLOUT_N
 export ENABLE_THINKING
-export ENTROPY_COEFF=${ENTROPY_COEFF:-0.0}   # 默认关闭 entropy bonus
+export ENTROPY_COEFF=${ENTROPY_COEFF:-0.0}
 export OUTPUT_DIR
 export TEXTCRAFT_SERVER_URL
+# DRPO 特有参数
+export DELTA
+export BETA
+export TAU
+export LAMBDA
 
 bash "$TRAIN_SCRIPT" 2>&1 | tee "${OUTPUT_DIR}/logs/train.log"
 

@@ -58,8 +58,9 @@ logger = logging.getLogger("TextCraftEval")
 class AsyncTextCraftAgent:
     """TextCraft Agent - Uses HTTP calls to vLLM service"""
     
-    def __init__(self, server_url: str, max_new_tokens: int = 150, temperature: float = 0.0, top_p: float = 1.0):
+    def __init__(self, server_url: str, model_name: str = "qwen3", max_new_tokens: int = 150, temperature: float = 0.0, top_p: float = 1.0):
         self.server_url = server_url.rstrip('/')
+        self.model_name = model_name
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.top_p = top_p
@@ -153,7 +154,7 @@ Action: [[ Task Completed! ]]
         """Generates response by calling vLLM service via HTTP"""
         headers = {"Content-Type": "application/json"}
         payload = {
-            "model": "qwen3",
+            "model": self.model_name,
             "messages": [
                 {"role": "system", "content": self.system_prompt},
                 *messages
@@ -340,6 +341,7 @@ async def run_evaluation(args: argparse.Namespace):
     
     agent = AsyncTextCraftAgent(
         server_url=args.vllm_server_url,
+        model_name=args.model_name,
         max_new_tokens=args.max_new_tokens,
         temperature=args.temperature,
         top_p=args.top_p
@@ -396,9 +398,10 @@ async def run_evaluation(args: argparse.Namespace):
                     "reward": result['reward'],
                     "success": result['success'],
                     "num_turns": result['num_turns'],
-                    "conversations": result['conversations'],
-                    "initial_prompt": result['initial_prompt']
                 }
+                if not args.no_save_trajectories:
+                    record["conversations"] = result['conversations']
+                    record["initial_prompt"] = result['initial_prompt']
                 
                 # Write to file
                 await asyncio.to_thread(safe_write_record, output_file, record)
@@ -575,6 +578,8 @@ def main():
     parser.add_argument('--textcraft_server', type=str,
                         default='http://127.0.0.1:3222',
                         help='TextCraft environment server URL')
+    parser.add_argument('--model_name', type=str, default='qwen3',
+                        help='Model name as registered in vLLM')
     parser.add_argument('--vllm_server_url', type=str,
                         default='http://localhost:8000',
                         help='vLLM service URL (e.g., http://localhost:8000)')
@@ -598,6 +603,8 @@ def main():
                         help='Top-p sampling parameter')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed for reproducibility')
+    parser.add_argument('--no_save_trajectories', action='store_true',
+                        help='Do not save conversation trajectories (saves disk space)')
     
     args = parser.parse_args()
     

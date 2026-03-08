@@ -410,6 +410,11 @@ class DataParallelPPOActor(BasePPOActor):
             "old_log_probs",
             "advantages",
         ]
+        # Add keys for DRPO support
+        if "uid" in data.batch.keys():
+            select_keys.append("uid")
+        if "seq_level_rewards" in data.batch.keys():
+            select_keys.append("seq_level_rewards")
         if self.config.use_kl_loss:
             select_keys.append("ref_log_prob")
         # Include pre-computed IS weights if present in batch
@@ -480,25 +485,60 @@ class DataParallelPPOActor(BasePPOActor):
                     loss_mode = self.config.policy_loss.get("loss_mode", "vanilla")
                     # vanilla -> verl.trainer.ppo.core_algos.compute_policy_loss_vanilla
 
+                    # DRPO uses a different architecture - check loss_type from config
+                    # DRPO: Decoupled Reward Policy Optimization
+                    drpo_loss_type = getattr(self.config, 'loss_type', None)
+
                     # Extract pre-computed rollout correction weights if present
                     # Weights are computed centrally in trainer and added when algorithm.rollout_is=True
                     rollout_is_weights = model_inputs.get("rollout_is_weights", None)
 
-                    # gpg -> verl.trainer.ppo.core_algos.compute_policy_loss_gpg
-                    # clip_cov -> verl.trainer.ppo.core_algos.compute_policy_loss_clip_cov
-                    policy_loss_fn = get_policy_loss_fn(loss_mode)
+                    # DRPO support: check if loss_type is 'drpo'
+                    if drpo_loss_type == "drpo":
+                        # DRPO requires uid and seq_level_rewards
+                        uid = model_inputs.get("uid", None)
+                        seq_level_rewards = model_inputs.get("seq_level_rewards", None)
+                        delta = getattr(self.config, 'delta', 1e-4)
+                        beta = getattr(self.config, 'beta', 1e3)
+                        tau = getattr(self.config, 'tau', 10.0)
+                        Lambda = getattr(self.config, 'Lambda', 0.1)
+                        kl_type = getattr(self.config, 'ppo_kl_type', 'low_var_kl')
 
-                    # Compute policy loss (any function is expected to return 2 values)
-                    pg_loss, pg_metrics = policy_loss_fn(
-                        old_log_prob=old_log_prob,
-                        log_prob=log_prob,
-                        advantages=advantages,
-                        response_mask=response_mask,
-                        loss_agg_mode=loss_agg_mode,
-                        config=self.config,
-                        rollout_is_weights=rollout_is_weights,
-                    )
-                    micro_batch_metrics.update(pg_metrics)
+                        from verl.trainer.ppo.core_algos import compute_policy_loss_drpo
+                        pg_loss, pg_clipfrac, ppo_kl = compute_policy_loss_drpo(
+                            old_log_prob=old_log_prob,
+                            log_prob=log_prob,
+                            eos_mask=response_mask,
+                            uid=uid,
+                            seq_level_rewards=seq_level_rewards,
+                            delta=delta,
+                            beta=beta,
+                            tau=tau,
+                            Lambda=Lambda,
+                            kl_type=kl_type
+                        )
+                        pg_metrics = {
+                            "actor/pg_loss": pg_loss.detach().item(),
+                            "actor/pg_clipfrac": pg_clipfrac.detach().item(),
+                            "actor/ppo_kl": ppo_kl.detach().item(),
+                        }
+                        micro_batch_metrics.update(pg_metrics)
+                    else:
+                        # gpg -> verl.trainer.ppo.core_algos.compute_policy_loss_gpg
+                        # clip_cov -> verl.trainer.ppo.core_algos.compute_policy_loss_clip_cov
+                        policy_loss_fn = get_policy_loss_fn(loss_mode)
+
+                        # Compute policy loss (any function is expected to return 2 values)
+                        pg_loss, pg_metrics = policy_loss_fn(
+                            old_log_prob=old_log_prob,
+                            log_prob=log_prob,
+                            advantages=advantages,
+                            response_mask=response_mask,
+                            loss_agg_mode=loss_agg_mode,
+                            config=self.config,
+                            rollout_is_weights=rollout_is_weights,
+                        )
+                        micro_batch_metrics.update(pg_metrics)
 
                     # Skip if using pure rollout correction mode (metrics already in pg_metrics)
                     rollout_log_prob = model_inputs.get("rollout_log_probs", None)

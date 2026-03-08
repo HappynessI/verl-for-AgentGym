@@ -372,9 +372,10 @@ async def run_evaluation(args: argparse.Namespace):
                     "reward": result['reward'],
                     "success": result['success'],
                     "num_turns": result['num_turns'],
-                    "conversations": result['conversations'],
-                    "initial_prompt": result['initial_prompt']
                 }
+                if not args.no_save_trajectories:
+                    record["conversations"] = result['conversations']
+                    record["initial_prompt"] = result['initial_prompt']
                 
                 # Write to file
                 await asyncio.to_thread(safe_write_record, output_file, record)
@@ -576,6 +577,8 @@ def main():
                         help='Top-p sampling parameter')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed for reproducibility')
+    parser.add_argument('--no_save_trajectories', action='store_true',
+                        help='Do not save conversation trajectories (saves disk space)')
     
     args = parser.parse_args()
     

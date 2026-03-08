@@ -18,7 +18,7 @@ textcraft --host 0.0.0.0 --port 36001
 ================================================================================
 # 注意: Webshop 和 TextCraft 默认都用 36001，不能同时启动
 cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-webshop
-webshop --host 0.0.0.0 --port 36001
+webshop --host 0.0.0.0 --port 36002
 
 # 验证: curl http://127.0.0.1:36001/
 
@@ -50,7 +50,7 @@ babyai --host 0.0.0.0 --port 36005
 6. vLLM 推理服务 (端口 8000)
 ================================================================================
 # 单 GPU 启动
-CUDA_VISIBLE_DEVICES=7 vllm serve /Data/public/Qwen3-1.7B \
+CUDA_VISIBLE_DEVICES=3 vllm serve /Data/public/Qwen3-1.7B \
     --served-model-name qwen3 \
     --host 0.0.0.0 \
     --port 8000 \
@@ -64,6 +64,17 @@ curl -s http://127.0.0.1:8000/v1/models | python3 -c "import sys,json;d=json.loa
 
 # 停止 vLLM 服务
 kill $(ps aux | grep 'vllm serve' | grep -v grep | awk '{print $2}')
+
+
+------做采样------
+------端口8001------
+# 单 GPU 启动
+CUDA_VISIBLE_DEVICES=2 vllm serve /Data/public/Qwen3-1.7B \
+    --served-model-name qwen3 \
+    --host 0.0.0.0 \
+    --port 8001 \
+    --max-model-len 16384 \
+    --gpu-memory-utilization 0.9
 
 ================================================================================
                          评估脚本运行指南
@@ -101,6 +112,31 @@ NUM_SAMPLES_PER_TASK=8 bash run_babyai_eval_vllm_server.sh
 
 # 组合使用
 MAX_SAMPLES=50 CONCURRENCY=16 NUM_SAMPLES_PER_TASK=4 bash run_babyai_eval_vllm_server.sh
+
+================================================================================
+                       BabyAI 采样（每题 2 次）指令
+================================================================================
+
+# 在 AgentGym-RL 目录下进行 BabyAI 采样（每个 item 采样 2 次），并支持断点恢复：
+
+cd /Data/wyh/AgentGym-RL/AgentGym/sampling
+
+python api_eval.py \
+    --api_key "sk-9KNF5ptfJalmyr79Xr3rUMS2zehQBhqA83cLjqJwQ3fA2A8F" \
+    --base_url "https://once.novai.su/v1" \
+    --model "[次]gemini-3-pro-preview" \
+    --task_name "babyai" \
+    --env_server_base "http://127.0.0.1:36005" \
+    --max_round 25 \
+    --data_len 1000000 \
+    --temperature 1 \
+    --top_p 0.95 \
+    --max_tokens 16384 \
+    --action_format "adapt" \
+    --num_samples 2 \
+    --inference_file "/Data/wyh/datasets/AgentGym-RL-Data/train/babyai_train.json" \
+    --output_dir "/Data/wyh/datasets/Sampling-Data/babyai_次gemini-3-pro-preview_20260225_211539" \
+    --seed 42
 
 ================================================================================
                            端口汇总表

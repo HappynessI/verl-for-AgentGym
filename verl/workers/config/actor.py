@@ -65,6 +65,7 @@ class PolicyLossConfig(BaseConfig):
 
     Args:
         loss_mode (str): Loss function mode. Options: 'vanilla', 'clip-cov', 'kl-cov', 'gpg'.
+        loss_type (str): Loss type for DRPO: drpo / grpo / vanilla (used by DRPO algorithm).
         clip_cov_ratio (float): Ratio of tokens to be clipped for clip-cov loss.
         clip_cov_lb (float): Lower bound for clip-cov loss.
         clip_cov_ub (float): Upper bound for clip-cov loss.
@@ -73,6 +74,7 @@ class PolicyLossConfig(BaseConfig):
     """
 
     loss_mode: str = "vanilla"
+    loss_type: str = "vanilla"
     clip_cov_ratio: float = 0.0002
     clip_cov_lb: float = 1.0
     clip_cov_ub: float = 5.0
@@ -131,6 +133,8 @@ class ActorConfig(BaseConfig):
     ppo_micro_batch_size_per_gpu: Optional[int] = None
     ppo_infer_micro_batch_size_per_gpu: Optional[int] = None
     use_dynamic_bsz: bool = False
+    use_max_seq_len: bool = False
+    ppo_kl_type: str = "low_var_kl"
     ppo_max_token_len_per_gpu: int = 16384
     ppo_infer_max_token_len_per_gpu: int = 16384
     clip_ratio: float = 0.2
@@ -147,6 +151,10 @@ class ActorConfig(BaseConfig):
     use_torch_compile: bool = True
     kl_loss_coef: float = 0.001
     kl_loss_type: str = "low_var_kl"
+    delta: float = 1e-4
+    beta: float = 1000.0
+    tau: float = 10.0
+    Lambda: float = 0.1
     ppo_epochs: int = 1
     shuffle: bool = False
     data_loader_seed: int = 1

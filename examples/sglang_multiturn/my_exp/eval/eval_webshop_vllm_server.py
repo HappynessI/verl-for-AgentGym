@@ -47,8 +47,9 @@ logger = logging.getLogger("WebshopEval")
 class AsyncWebshopAgent:
     """Webshop Agent - Uses HTTP calls to vLLM service"""
     
-    def __init__(self, server_url: str, max_new_tokens: int = 512, temperature: float = 1.0, top_p: float = 1.0):
+    def __init__(self, server_url: str, model_name: str = "qwen3", max_new_tokens: int = 512, temperature: float = 1.0, top_p: float = 1.0):
         self.server_url = server_url.rstrip('/')
+        self.model_name = model_name
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.top_p = top_p
@@ -113,7 +114,7 @@ Action: click[Buy Now]
     async def generate(self, messages: List[Dict[str, str]], session: aiohttp.ClientSession) -> str:
         headers = {"Content-Type": "application/json"}
         payload = {
-            "model": "qwen3",
+            "model": self.model_name,
             "messages": [{"role": "system", "content": self.system_prompt}, *messages],
             "max_tokens": self.max_new_tokens,
             "temperature": self.temperature,
@@ -227,7 +228,7 @@ async def run_evaluation(args):
         'env_server_base': args.env_server,
         'timeout': 600, 'max_retries': 3
     })
-    agent = AsyncWebshopAgent(args.vllm_server_url, args.max_new_tokens, args.temperature, args.top_p)
+    agent = AsyncWebshopAgent(args.vllm_server_url, args.model_name, args.max_new_tokens, args.temperature, args.top_p)
     
     logger.info(f"Loading dataset: {args.data_path}")
     df = pq.read_table(args.data_path).to_pandas()
@@ -248,7 +249,10 @@ async def run_evaluation(args):
     async def worker(session_id, sample_idx):
         async with sem:
             result = await evaluate_one_episode(agent, interaction, session_id, session, args.max_rounds)
-            record = {"item_id": f"webshop_{session_id}", "session_id": session_id, "sample_idx": sample_idx, **result}
+            record = {"item_id": f"webshop_{session_id}", "session_id": session_id, "sample_idx": sample_idx,
+                      "reward": result['reward'], "success": result['success'], "num_turns": result['num_turns']}
+            if not args.no_save_trajectories:
+                record["conversations"] = result.get('conversations', [])
             await asyncio.to_thread(safe_write_record, output_file, record)
             return result
     
@@ -294,6 +298,7 @@ def main():
     parser.add_argument('--output_dir', default='/Data/wyh/datasets/Verl-Data/outputs/webshop_eval')
     parser.add_argument('--env_server', default='http://127.0.0.1:36001')
     parser.add_argument('--vllm_server_url', default='http://localhost:8000')
+    parser.add_argument('--model_name', default='qwen3')
     parser.add_argument('--max_rounds', type=int, default=15)
     parser.add_argument('--max_samples', type=int, default=-1)
     parser.add_argument('--num_samples_per_task', type=int, default=1)
@@ -302,6 +307,8 @@ def main():
     parser.add_argument('--temperature', type=float, default=1.0)
     parser.add_argument('--top_p', type=float, default=1.0)
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--no_save_trajectories', action='store_true',
+                        help='Do not save conversation trajectories')
     args = parser.parse_args()
     
     asyncio.run(run_evaluation(args))

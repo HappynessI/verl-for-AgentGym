@@ -1787,3 +1787,140 @@ def compute_policy_loss_rollout_correction_wrapper(
         rollout_token_veto_threshold=rollout_token_veto_threshold,
         rollout_is_batch_normalize=rollout_is_batch_normalize,
     )
+
+
+@register_policy_loss("drpo")
+def compute_policy_loss_drpo(
+    old_log_prob: torch.Tensor,
+    log_prob: torch.Tensor,
+    advantages: torch.Tensor,
+    response_mask: torch.Tensor,
+    loss_agg_mode: str = "token-mean",
+    config: Optional[ActorConfig] = None,
+    rollout_is_weights: torch.Tensor | None = None,
+    uid: torch.Tensor | None = None,
+    seq_level_rewards: torch.Tensor | None = None,
+    delta: float = 1e-4,
+    beta: float = 1e3,
+    tau: float = 10.0,
+    Lambda: float = 0.1,
+    kl_type: str = "low_var_kl",
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    """
+    DRPO (Decoupled Reward Policy Optimization) loss function.
+
+    Args:
+        old_log_prob: Log probability from the old policy
+        log_prob: Log probability from the current policy
+        advantages: Advantage values
+        response_mask: Mask for valid response tokens
+        loss_agg_mode: Loss aggregation mode
+        config: Actor config
+        rollout_is_weights: Rollout correction weights (not used in DRPO)
+        uid: Unique identifier for grouping responses
+        seq_level_rewards: Sequence-level rewards
+        delta: KL constraint threshold
+        beta: KL penalty coefficient
+        tau: Temperature parameter
+        Lambda: Length weight parameter
+        kl_type: KL type ('low_var_kl' or 'kl')
+
+    Returns:
+        pg_loss: Policy gradient loss
+        metrics: Dictionary of metrics
+    """
+    from verl.utils import group_mean_std
+
+    # Extract parameters from config if provided
+    if config is not None:
+        delta = getattr(config, 'delta', delta)
+        beta = getattr(config, 'beta', beta)
+        tau = getattr(config, 'tau', tau)
+        Lambda = getattr(config, 'Lambda', Lambda)
+        kl_type = getattr(config, 'ppo_kl_type', kl_type)
+
+    if uid is None or seq_level_rewards is None:
+        raise ValueError("DRPO loss requires uid and seq_level_rewards to be provided")
+
+    if torch.distributed.is_initialized():
+        global_old_log_prob = torch.cat(torch.distributed.nn.all_gather(old_log_prob), dim=0)
+        global_log_prob = torch.cat(torch.distributed.nn.all_gather(log_prob), dim=0)
+        global_eos_mask = torch.cat(torch.distributed.nn.all_gather(response_mask), dim=0)
+        global_uid = torch.cat(torch.distributed.nn.all_gather(uid), dim=0)
+        global_rewards = torch.cat(torch.distributed.nn.all_gather(seq_level_rewards), dim=0)
+    else:
+        global_old_log_prob = old_log_prob
+        global_log_prob = log_prob
+        global_eos_mask = response_mask
+        global_uid = uid
+        global_rewards = seq_level_rewards
+
+    # Calculate KL divergence
+    negative_approx_kl = global_log_prob - global_old_log_prob
+    ratio = torch.exp(negative_approx_kl)
+    if kl_type == 'low_var_kl':
+        ppo_kl = verl_F.masked_mean(-negative_approx_kl + ratio - 1, global_eos_mask)
+    elif kl_type == 'kl':
+        ppo_kl = verl_F.masked_mean(-negative_approx_kl, global_eos_mask)
+
+    global_scores = (global_log_prob * global_eos_mask).sum(dim=1) / global_eos_mask.sum(dim=1)
+    global_length_ratio = global_eos_mask.sum(dim=1) / global_eos_mask.size(-1)
+
+    # Group scores based on uid
+    sorted_uid, indices = global_uid.sort()
+    sorted_scores = global_scores[indices]
+    sorted_rewards = global_rewards[indices]
+    sorted_length_ratio = global_length_ratio[indices]
+
+    num_questions = global_uid.unique().numel()
+    num_responses_per_question = global_uid.size(0) // num_questions
+    grouped_scores = sorted_scores.view(num_questions, num_responses_per_question)
+    grouped_rewards = sorted_rewards.view(num_questions, num_responses_per_question)
+    grouped_length_ratio = sorted_length_ratio.view(num_questions, num_responses_per_question)
+
+    pos_mask = grouped_rewards == 1
+    neg_mask = grouped_rewards == 0
+    # Remove all zeros and all ones
+    valid_mask = (pos_mask.sum(dim=1) != 0) & (neg_mask.sum(dim=1) != 0)
+
+    if valid_mask.sum() > 0:
+        grouped_scores = grouped_scores[valid_mask]
+        grouped_rewards = grouped_rewards[valid_mask]
+        grouped_length_ratio = grouped_length_ratio[valid_mask]
+        pos_mask = pos_mask[valid_mask]
+        neg_mask = neg_mask[valid_mask]
+
+        neg_scores_masked = (grouped_scores / tau).masked_fill(~neg_mask, float('-inf'))
+
+        # Compute stable max while keeping dimension
+        neg_max, _ = neg_scores_masked.max(dim=-1, keepdim=True)
+        neg_max = torch.where(neg_max == float('-inf'), torch.zeros_like(neg_max), neg_max)
+
+        # Subtract max, exponentiate, and apply mask
+        neg_exp = torch.exp(((grouped_scores / tau) - neg_max.detach()) * neg_mask) * neg_mask
+        neg_sum_exp = neg_exp.sum(dim=-1, keepdim=True)
+
+        neg_logmeanexp = neg_sum_exp / (neg_sum_exp.detach() + torch.finfo(neg_sum_exp.dtype).eps)
+
+        weight = torch.exp((1 - grouped_length_ratio) / Lambda)
+        pg_losses = (weight * (grouped_scores - tau * neg_logmeanexp) * pos_mask).sum(
+            dim=1, keepdim=True
+        ) / (weight * pos_mask).sum(dim=1, keepdim=True)
+
+        pg_loss = pg_losses.sum() / num_questions
+    else:
+        pg_loss = torch.tensor(0.0) * global_scores.mean()
+
+    # KL constraint
+    constraint = torch.maximum(beta * (ppo_kl - delta), torch.zeros_like(ppo_kl)).detach() * ppo_kl
+
+    pg_loss = -pg_loss + constraint
+    pg_clipfrac = torch.gt(ppo_kl, delta).float()
+
+    metrics = {
+        "actor/pg_loss": pg_loss.detach().item(),
+        "actor/pg_clipfrac": pg_clipfrac.detach().item(),
+        "actor/ppo_kl": ppo_kl.detach().item(),
+    }
+
+    return pg_loss, metrics

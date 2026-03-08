@@ -119,6 +119,11 @@ algorithm:
     # Power used for weight scaling in "pow" method
     weight_pow: 2.0
 
+  # Filter groups configuration for DRPO
+  filter_groups:
+    enable: False  # We try to avoid forgetting to set enable
+    max_num_gen_batches: 0  # Non-positive values mean no upper limit
+
 # config for the trainer
 trainer:
 

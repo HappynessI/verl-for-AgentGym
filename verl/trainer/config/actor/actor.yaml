@@ -50,8 +50,11 @@ policy_loss:
   # # Required when using verl.utils.omega_conf_to_dataclass to instantiate dataclass configs
   _target_: verl.workers.config.PolicyLossConfig
 
-  # Loss function mode: vanilla / clip-cov / kl-cov /gpg from https://arxiv.org/abs/2505.22617
+  # Loss function mode: vanilla / clip-cov / kl-cov / gpg from https://arxiv.org/abs/2505.22617
   loss_mode: "vanilla"
+
+  # Loss type for DRPO: drpo / grpo / vanilla (used by DRPO algorithm)
+  loss_type: "vanilla"
 
   # Ratio of tokens to be clipped for clip-cov loss
   clip_cov_ratio: 0.0002
@@ -96,6 +99,19 @@ kl_loss_coef: 0.001
 
 # Type of KL divergence loss. Options: "kl"(k1), "abs", "mse"(k2), "low_var_kl"(k3), "full"
 kl_loss_type: low_var_kl
+
+# DRPO specific parameters
+# KL constraint threshold
+delta: 1e-4
+
+# KL penalty coefficient
+beta: 1000.0
+
+# Temperature parameter for DRPO
+tau: 10.0
+
+# Length weight parameter for DRPO (core DRPO hyperparameter)
+Lambda: 0.1
 
 # Number of PPO epochs per batch
 ppo_epochs: 1

@@ -101,9 +101,16 @@ services:
       - MODEL_NAME=${MODEL_NAME:-Qwen3-1.7B}
       - NUM_EPOCHS=${NUM_EPOCHS:-100}
       - TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-128}
-      - LEARNING_RATE=${LEARNING_RATE:-1e-6}
+      - MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-2}
+      - PPO_MAX_TOKEN_LEN=${PPO_MAX_TOKEN_LEN:-36864}
+      - LEARNING_RATE=${LEARNING_RATE:-5e-6}
       - ROLLOUT_N=${ROLLOUT_N:-8}
       - ADV_ESTIMATOR=${ADV_ESTIMATOR:-grpo}
+      # DRPO 特有参数
+      - DELTA=${DELTA:-1e-4}
+      - BETA=${BETA:-1e3}
+      - TAU=${TAU:-10}
+      - LAMBDA=${LAMBDA:-0.1}
 
     volumes: *common-volumes
 

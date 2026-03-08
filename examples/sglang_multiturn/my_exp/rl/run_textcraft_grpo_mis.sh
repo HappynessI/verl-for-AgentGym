@@ -5,61 +5,60 @@ set -e
 # -------------------- 模型和数据 --------------------
 MODEL_PATH=${MODEL_PATH:-"/Data/public/Qwen3-1.7B"}
 DATA_PATH=${DATA_PATH:-"/Data/wyh/datasets/Verl-Data/train/textcraft/train.parquet"}
-OUTPUT_DIR=${OUTPUT_DIR:-"/Data/wyh/datasets/Verl-Data/outputs/textcraft_grpo"}
+OUTPUT_DIR=${OUTPUT_DIR:-"/Data/wyh/datasets/Verl-Data/outputs/textcraft_grpo_mis"}
 
-# -------------------- GPU配置 --------------------
-GPU_IDS=${GPU_IDS:-"0,2"}  # 使用的GPU编号（L20 空卡）
-NUM_GPUS=${NUM_GPUS:-2}      # GPU数量（必须与GPU_IDS一致）
+# -------------------- GPU配置 (8卡144GB) --------------------
+GPU_IDS=${GPU_IDS:-"0,1,2,3,4,5,6,7"}  # 8卡144GB
+NUM_GPUS=${NUM_GPUS:-8}
 
-# -------------------- 训练超参数 --------------------
+# -------------------- 训练超参数 (适配8卡144GB) --------------------
 NUM_EPOCHS=${NUM_EPOCHS:-200}
-TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-32}    # 全局batch size（2卡半显存保守设置）
-MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-1}     # 每张GPU的micro batch
+TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-128}    # 全局batch size（8卡144GB可设更大）
+MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-8}      # 每张GPU的micro batch（144GB可增大到2）
 LEARNING_RATE=${LEARNING_RATE:-5e-6}
 SAVE_FREQ=${SAVE_FREQ:-100}                   # 每N个epoch保存checkpoint
-TEST_FREQ=${TEST_FREQ:-100}                   # 每N个epoch进行validation
+TEST_FREQ=${TEST_FREQ:-50}                   # 每N个epoch进行validation
 
-# -------------------- Rollout Correction（TIS / MIS）--------------------
-# TIS: Truncated Importance Sampling（截断IS，加权但不丢弃）
-# MIS: Masked Importance Sampling（拒绝采样，超阈值的token/序列直接mask）
-# 两者可同时开启，也可单独使用；设为 "none" 则关闭对应功能
-# 注：当前配置关闭 MIS/TIS，使用纯 GRPO（更稳定）
-ROLLOUT_IS=${ROLLOUT_IS:-"none"}        # 关闭 TIS
-ROLLOUT_IS_THRESHOLD=${ROLLOUT_IS_THRESHOLD:-2.0}   # TIS 截断阈值
-ROLLOUT_RS=${ROLLOUT_RS:-"none"}        # 关闭 MIS
-ROLLOUT_RS_THRESHOLD=${ROLLOUT_RS_THRESHOLD:-2.0}   # MIS 上阈值
-ROLLOUT_RS_THRESHOLD_LOWER=${ROLLOUT_RS_THRESHOLD_LOWER:-0.2} # MIS 下阈值（降为0.2保守）
+# -------------------- Rollout Correction（MIS开启）--------------------
+# MIS: Masked Importance Sampling（拒绝采样，超阈值的序列直接mask）
+# 开启MIS，超阈值的序列被mask掉，不参与梯度计算
+# 使用 sequence-level 的 IS + RS 实现 Seq-MIS
+ROLLOUT_IS=${ROLLOUT_IS:-"sequence"}        # 开启 IS（用于 Seq-MIS）
+ROLLOUT_IS_THRESHOLD=${ROLLOUT_IS_THRESHOLD:-2.0}
+ROLLOUT_RS=${ROLLOUT_RS:-"sequence"}        # 开启 MIS（sequence级别拒绝采样）
+ROLLOUT_RS_THRESHOLD=${ROLLOUT_RS_THRESHOLD:-2.0}   # MIS 上阈值（超过该值mask）
+ROLLOUT_RS_THRESHOLD_LOWER=${ROLLOUT_RS_THRESHOLD_LOWER:-0.2} # MIS 下阈值
 
 # -------------------- vLLM Rollout配置（训练采样）--------------------
-ROLLOUT_N=${ROLLOUT_N:-8}                   # 每个prompt采样数量（GRPO需要>1，半显存建议先3）
-TEMPERATURE=${TEMPERATURE:-0.8}             # 采样温度（更稳妥）
-TOP_P=${TOP_P:-0.95}                         # Nucleus采样参数（更稳妥）
-GPU_MEMORY_UTIL=${GPU_MEMORY_UTIL:-0.7}     # vLLM GPU内存利用率（兼容4/5卡可用显存较低）
-MAX_NUM_SEQS=${MAX_NUM_SEQS:-64}            # vLLM最大并发序列数
-ENFORCE_EAGER=${ENFORCE_EAGER:-true}        # 使用eager模式（更灵活）
-FREE_CACHE_ENGINE=${FREE_CACHE_ENGINE:-true} # 释放KV cache（节省内存）
-CALCULATE_LOG_PROBS=${CALCULATE_LOG_PROBS:-true}  # Rollout Correction 依赖 rollout_log_probs
+ROLLOUT_N=${ROLLOUT_N:-8}                   # 每个prompt采样数量（8卡可用更大）
+TEMPERATURE=${TEMPERATURE:-0.8}
+TOP_P=${TOP_P:-0.95}
+GPU_MEMORY_UTIL=${GPU_MEMORY_UTIL:-0.8}     # 144GB显存可用更高利用率
+MAX_NUM_SEQS=${MAX_NUM_SEQS:-128}           # 更大并发
+ENFORCE_EAGER=${ENFORCE_EAGER:-false}       # 144GB可用PagedAttention
+FREE_CACHE_ENGINE=${FREE_CACHE_ENGINE:-true}
+CALCULATE_LOG_PROBS=${CALCULATE_LOG_PROBS:-true}
 
 # -------------------- vLLM Validation配置 --------------------
 VAL_TEMPERATURE=${VAL_TEMPERATURE:-1.0}
 VAL_TOP_P=${VAL_TOP_P:-1.0}
-VAL_DO_SAMPLE=${VAL_DO_SAMPLE:-false}  # 关闭采样（验证结果更稳定可比较）
-VAL_N=${VAL_N:-1}                           # validation时每个prompt采样数量
+VAL_DO_SAMPLE=${VAL_DO_SAMPLE:-false}
+VAL_N=${VAL_N:-1}
 
 # -------------------- Token长度限制 --------------------
-MAX_PROMPT_LENGTH=${MAX_PROMPT_LENGTH:-2048}          # 第一轮任务描述最大长度
-MAX_RESPONSE_LENGTH=${MAX_RESPONSE_LENGTH:-16384}     # episode累积response总长度（激进，覆盖top 5%样本）
-ROLLOUT_PROMPT_LENGTH=${ROLLOUT_PROMPT_LENGTH:-16384}  # rollout最大prompt长度（与response同级）
-MAX_MODEL_LEN=${MAX_MODEL_LEN:-20480}                  # vLLM最大序列长度（激进）
-PPO_MAX_TOKEN_LEN=${PPO_MAX_TOKEN_LEN:-24576}          # PPO训练最大token长度（激进）
-MAX_NUM_BATCHED_TOKENS=${MAX_NUM_BATCHED_TOKENS:-16384} # vLLM批处理最大token数（激进）
+MAX_PROMPT_LENGTH=${MAX_PROMPT_LENGTH:-2048}
+MAX_RESPONSE_LENGTH=${MAX_RESPONSE_LENGTH:-16384}
+ROLLOUT_PROMPT_LENGTH=${ROLLOUT_PROMPT_LENGTH:-16384}
+MAX_MODEL_LEN=${MAX_MODEL_LEN:-20480}
+PPO_MAX_TOKEN_LEN=${PPO_MAX_TOKEN_LEN:-24576}
+MAX_NUM_BATCHED_TOKENS=${MAX_NUM_BATCHED_TOKENS:-16384}
 
 # -------------------- 环境服务器 --------------------
 TEXTCRAFT_SERVER=${TEXTCRAFT_SERVER:-"http://127.0.0.1:36001"}
 
 # 实验名称
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-EXPERIMENT_NAME="textcraft_grpo_${TIMESTAMP}"
+EXPERIMENT_NAME="textcraft_grpo_mis_${TIMESTAMP}"
 
 # 日志目录
 LOG_DIR="$OUTPUT_DIR/logs"
@@ -67,18 +66,15 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/train_${TIMESTAMP}.log"
 
 # ==================== 验证GPU配置 ====================
-# 计算GPU_IDS中的GPU数量
 GPU_COUNT=$(echo "$GPU_IDS" | tr ',' '\n' | wc -l)
 if [ "$GPU_COUNT" -ne "$NUM_GPUS" ]; then
     echo "错误: GPU_IDS中的GPU数量($GPU_COUNT)与NUM_GPUS($NUM_GPUS)不一致！"
-    echo "GPU_IDS=$GPU_IDS"
-    echo "请确保NUM_GPUS与GPU_IDS中逗号分隔的GPU数量一致"
     exit 1
 fi
 
 # ==================== 打印配置 ====================
 echo "================================================================================" | tee "$LOG_FILE"
-echo "  TextCraft GRPO训练 - Qwen3-1.7B + 思考模式 (使用vLLM推理后端)" | tee -a "$LOG_FILE"
+echo "  TextCraft GRPO+MIS训练 - Qwen3-1.7B (8卡144GB)" | tee -a "$LOG_FILE"
 echo "================================================================================" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "【模型和数据】" | tee -a "$LOG_FILE"
@@ -96,44 +92,22 @@ echo "  全局Batch Size: $TRAIN_BATCH_SIZE" | tee -a "$LOG_FILE"
 echo "  每GPU Micro Batch: $MICRO_BATCH_SIZE" | tee -a "$LOG_FILE"
 echo "  梯度累积步数: $((TRAIN_BATCH_SIZE / (NUM_GPUS * MICRO_BATCH_SIZE)))" | tee -a "$LOG_FILE"
 echo "  Learning Rate: $LEARNING_RATE" | tee -a "$LOG_FILE"
-echo "  Save Freq: 每 $SAVE_FREQ epochs" | tee -a "$LOG_FILE"
-echo "  Test Freq: 每 $TEST_FREQ epochs" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
-echo "【Rollout Correction (TIS / MIS)】" | tee -a "$LOG_FILE"
-echo "  TIS (rollout_is): $ROLLOUT_IS  阈值: $ROLLOUT_IS_THRESHOLD" | tee -a "$LOG_FILE"
+echo "【Rollout Correction (MIS开启)】" | tee -a "$LOG_FILE"
+echo "  TIS (rollout_is): $ROLLOUT_IS" | tee -a "$LOG_FILE"
 echo "  MIS (rollout_rs): $ROLLOUT_RS  上阈值: $ROLLOUT_RS_THRESHOLD  下阈值: $ROLLOUT_RS_THRESHOLD_LOWER" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
-echo "【vLLM Rollout配置】（训练时策略探索）" | tee -a "$LOG_FILE"
-echo "  后端: vLLM (内嵌模式)" | tee -a "$LOG_FILE"
+echo "【vLLM Rollout配置】" | tee -a "$LOG_FILE"
 echo "  采样数量 (N): $ROLLOUT_N" | tee -a "$LOG_FILE"
 echo "  Temperature: $TEMPERATURE" | tee -a "$LOG_FILE"
-echo "  Top-P: $TOP_P" | tee -a "$LOG_FILE"
 echo "  GPU内存利用率: $GPU_MEMORY_UTIL" | tee -a "$LOG_FILE"
-echo "  最大并发序列: $MAX_NUM_SEQS" | tee -a "$LOG_FILE"
-echo "  Eager模式: $ENFORCE_EAGER" | tee -a "$LOG_FILE"
-echo "  释放Cache: $FREE_CACHE_ENGINE" | tee -a "$LOG_FILE"
-echo "  计算rollout_log_probs: $CALCULATE_LOG_PROBS" | tee -a "$LOG_FILE"
-echo "" | tee -a "$LOG_FILE"
-echo "【vLLM Validation配置】（验证时策略评估）" | tee -a "$LOG_FILE"
-echo "  Temperature: $VAL_TEMPERATURE" | tee -a "$LOG_FILE"
-echo "  Top-P: $VAL_TOP_P" | tee -a "$LOG_FILE"
-echo "  Do Sample: $VAL_DO_SAMPLE" | tee -a "$LOG_FILE"
-echo "  采样数量 (N): $VAL_N" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "【Token长度限制】" | tee -a "$LOG_FILE"
-echo "  Max Prompt Length: $MAX_PROMPT_LENGTH" | tee -a "$LOG_FILE"
 echo "  Max Response Length: $MAX_RESPONSE_LENGTH" | tee -a "$LOG_FILE"
-echo "  Rollout Prompt Length: $ROLLOUT_PROMPT_LENGTH" | tee -a "$LOG_FILE"
-echo "  vLLM Max Model Len: $MAX_MODEL_LEN" | tee -a "$LOG_FILE"
-echo "  PPO Max Token Len: $PPO_MAX_TOKEN_LEN" | tee -a "$LOG_FILE"
-echo "  Max Batched Tokens: $MAX_NUM_BATCHED_TOKENS" | tee -a "$LOG_FILE"
-echo "" | tee -a "$LOG_FILE"
-echo "【环境服务器】" | tee -a "$LOG_FILE"
-echo "  TextCraft Server: $TEXTCRAFT_SERVER" | tee -a "$LOG_FILE"
+echo "  Max Model Len: $MAX_MODEL_LEN" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 echo "【实验信息】" | tee -a "$LOG_FILE"
 echo "  实验名称: $EXPERIMENT_NAME" | tee -a "$LOG_FILE"
-echo "  日志文件: $LOG_FILE" | tee -a "$LOG_FILE"
 echo "================================================================================" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
@@ -143,10 +117,7 @@ SERVER_RESPONSE=$(curl -s "$TEXTCRAFT_SERVER/" 2>&1)
 if [[ "$SERVER_RESPONSE" == *"TextCraft"* ]]; then
     echo "✓ TextCraft服务器正常运行" | tee -a "$LOG_FILE"
 else
-    echo "警告: TextCraft服务器 ($TEXTCRAFT_SERVER) 未运行！" | tee -a "$LOG_FILE"
-    echo "请先启动服务器：" | tee -a "$LOG_FILE"
-    echo "  cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-textcraft" | tee -a "$LOG_FILE"
-    echo "  textcraft --host 0.0.0.0 --port 36001" | tee -a "$LOG_FILE"
+    echo "警告: TextCraft服务器未运行！" | tee -a "$LOG_FILE"
     exit 1
 fi
 echo "" | tee -a "$LOG_FILE"
@@ -155,26 +126,19 @@ echo "" | tee -a "$LOG_FILE"
 cd /Data/wyh/verl
 source ~/miniconda3/bin/activate verl
 
-echo "激活verl环境" | tee -a "$LOG_FILE"
-echo "Python版本: $(python --version)" | tee -a "$LOG_FILE"
-echo "" | tee -a "$LOG_FILE"
-
 # ==================== 启动训练 ====================
-echo "开始GRPO训练..." | tee -a "$LOG_FILE"
+echo "开始GRPO+MIS训练..." | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
 
-# Ray配置
 export RAY_DEDUP_LOGS=0
 export CUDA_VISIBLE_DEVICES=$GPU_IDS
 
-# ==================== 日志级别控制 ====================
-# 关闭冗余的 DEBUG 日志，只保留重要信息
-export VLLM_LOGGING_LEVEL=WARNING        # vLLM日志级别: WARNING(警告)/ERROR(错误)/INFO(信息)
-export VLLM_CONFIGURE_LOGGING=0          # 禁用vLLM默认日志配置
-export PYTHONWARNINGS=ignore             # 忽略Python警告信息
-export RAY_DEDUP_LOGS=1                  # Ray日志去重(改为1以减少重复)
+export VLLM_LOGGING_LEVEL=WARNING
+export VLLM_CONFIGURE_LOGGING=0
+export PYTHONWARNINGS=ignore
+export RAY_DEDUP_LOGS=1
 
-# ==================== 构建 Rollout Correction 参数 ====================
+# Rollout Correction 参数（条件构建，与基础脚本保持一致）
 ROLLOUT_CORR_ARGS=""
 if [ "$ROLLOUT_IS" != "none" ] || [ "$ROLLOUT_RS" != "none" ]; then
     ROLLOUT_CORR_ARGS="algorithm.rollout_correction.bypass_mode=true \
@@ -234,16 +198,11 @@ python3 -m verl.trainer.main_ppo \
     trainer.save_freq=$SAVE_FREQ \
     trainer.test_freq=$TEST_FREQ \
     trainer.default_local_dir=$OUTPUT_DIR \
-    trainer.project_name=textcraft_grpo \
+    trainer.project_name=textcraft_grpo_mis \
     trainer.experiment_name=$EXPERIMENT_NAME \
     trainer.resume_mode=disable \
     $ROLLOUT_CORR_ARGS \
     2>&1 | tee -a "$LOG_FILE"
 
 echo "" | tee -a "$LOG_FILE"
-echo "============================================" | tee -a "$LOG_FILE"
-echo "训练完成！" | tee -a "$LOG_FILE"
-echo "日志文件: $LOG_FILE" | tee -a "$LOG_FILE"
-echo "检查点目录: $OUTPUT_DIR" | tee -a "$LOG_FILE"
-echo "============================================" | tee -a "$LOG_FILE"
-
+echo "训练完成！日志: $LOG_FILE" | tee -a "$LOG_FILE"
