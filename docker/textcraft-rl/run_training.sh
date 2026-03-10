@@ -104,19 +104,19 @@ fi
 # ============================================================
 # 3. 检查训练脚本
 # ============================================================
-# 根据 EXPERIMENT 类型选择对应的训练脚本
+# 根据 EXPERIMENT 类型选择对应的训练脚本（Docker 容器内版本）
 case "$EXPERIMENT" in
     grpo_baseline)
-        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/run_textcraft_grpo_train.sh"
+        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/for_docker/run_textcraft_grpo_train.docker.sh"
         ;;
     grpo_mis)
-        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/run_textcraft_grpo_mis.sh"
+        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/for_docker/run_textcraft_grpo_mis.docker.sh"
         ;;
     grpo_tis)
-        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/run_textcraft_grpo_tis.sh"
+        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/for_docker/run_textcraft_grpo_tis.docker.sh"
         ;;
     drpo)
-        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/run_textcraft_drpo_train.sh"
+        TRAIN_SCRIPT="/workspace/verl/examples/sglang_multiturn/my_exp/rl/for_docker/run_textcraft_drpo.docker.sh"
         ;;
     prefix_full|prefix_guided|prefix_guided_dr)
         TRAIN_SCRIPT="/workspace/verl/recipe/wyh_exp/scripts/run_test_train.sh"

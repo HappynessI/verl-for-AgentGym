@@ -100,13 +100,16 @@ class TextCraftInteraction(AgentGymBaseInteraction):
     def extract_action(self, text: str) -> Optional[str]:
         """从模型输出中提取TextCraft action
         
-        新版格式：只提取 [[ ... ]] 中的内容
+        支持两种格式：
+        1. [[ ... ]] 格式（评估脚本要求）: Action: [[ inventory ]]
+        2. Action: 格式（训练数据格式）: Action: \n inventory
+        
         格式示例：
         - Action: [[ inventory ]]
         - Action: [[ get 3 logs ]]
         - Action: [[ craft 4 stick using 2 oak planks ]]
-        
-        括号外的任何内容（包括Think:、幻觉等）都会被丢弃
+        - Action: \n inventory
+        - Action: \n get 3 logs
         """
         text = text.strip()
         
@@ -114,20 +117,32 @@ class TextCraftInteraction(AgentGymBaseInteraction):
         text = re.sub(r'<\|im_start\|>assistant\s*\n?', '', text, flags=re.IGNORECASE)
         text = re.sub(r'<\|im_end\|>', '', text)
         
-        # 使用正则提取 [[ ... ]] 中的内容（最后一个匹配）
-        # 匹配模式：[[ 后面跟任意字符（非贪婪），直到 ]]
+        # 方法1: 提取 [[ ... ]] 格式
         action_matches = re.findall(r'\[\[\s*(.*?)\s*\]\]', text, re.DOTALL)
         
         if action_matches:
-            # 取最后一个匹配（模型可能生成多个action，取最新的）
             action = action_matches[-1].strip()
-            # 清理多余的空白字符
             action = " ".join(action.split())
             if action:
-                # logger.debug(f"Extracted action from [[ ]]: {action}")
                 return action
         
-        # logger.warning(f"No [[ ]] format found in text: {text[:100]}...")
+        # 方法2: 提取 Action:\nxxx 格式（训练数据格式）
+        # 匹配 "Action:" 后面跟换行符和实际action内容
+        action_match = re.search(r'Action:\s*\n\s*(.+?)(?:\n|$)', text, re.DOTALL)
+        if action_match:
+            action = action_match.group(1).strip()
+            action = " ".join(action.split())
+            if action:
+                return action
+        
+        # 方法3: 尝试匹配 "Action:" 后紧跟内容（无换行）
+        action_match = re.search(r'Action:\s*(.+?)(?:\n|$)', text, re.DOTALL)
+        if action_match:
+            action = action_match.group(1).strip()
+            action = " ".join(action.split())
+            if action:
+                return action
+        
         return None
     
     def get_invalid_action_prompt(self) -> str:
