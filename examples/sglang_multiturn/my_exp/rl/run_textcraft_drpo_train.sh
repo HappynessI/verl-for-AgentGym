@@ -12,9 +12,6 @@ MODEL_PATH="/Data/public/Qwen3-1.7B"
 # 数据路径
 DATA_PATH="/Data/wyh/datasets/Verl-Data/train/textcraft/train.parquet"
 
-# 输出目录
-OUTPUT_DIR=${OUTPUT_DIR:-"/Data/wyh/datasets/Verl-Data/outputs/textcraft_drpo"}
-
 # GPU配置 (8卡144GB)
 GPU_IDS=${GPU_IDS:-"0,1,2,3,4,5,6,7"}
 NUM_GPUS=${NUM_GPUS:-8}
@@ -42,11 +39,18 @@ GPU_MEMORY_UTIL=${GPU_MEMORY_UTIL:-0.85}      # 144GB可用更高
 MAX_NUM_SEQS=${MAX_NUM_SEQS:-1024}
 MAX_NUM_BATCHED_TOKENS=${MAX_NUM_BATCHED_TOKENS:-16384}
 
-# 实验名称
+# 实验名称 (带时间戳，每次运行创建新目录)
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 EXPERIMENT_NAME="drpo-qwen3-1.7b-textcraft-${TIMESTAMP}"
 
-# 日志目录
+# 基础输出目录
+BASE_OUTPUT_DIR=${BASE_OUTPUT_DIR:-"/Data/wyh/datasets/Verl-Data/outputs"}
+
+# 自动创建带时间戳的实验子目录
+OUTPUT_DIR="${BASE_OUTPUT_DIR}/textcraft_drpo_${TIMESTAMP}"
+mkdir -p "$OUTPUT_DIR"
+
+# 日志目录 (在实验子目录内)
 LOG_DIR="$OUTPUT_DIR/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/train_${TIMESTAMP}.log"

@@ -33,6 +33,7 @@ nohup vllm serve "$MODEL_PATH" \
   --gpu-memory-utilization $GPU_MEM_UTIL \
   --host $HOST \
   --port $PORT \
+  --max-logprobs 128 \
   --disable-log-requests \
   --max-num-seqs 128 \
   --enable-chunked-prefill \

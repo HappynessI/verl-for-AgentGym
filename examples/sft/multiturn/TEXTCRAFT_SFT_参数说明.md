@@ -3,7 +3,7 @@
 ## 📍 参数位置总览
 
 ### 训练脚本中的参数
-**位置**: `/Data/wyh/verl/examples/sft/multiturn/run_textcraft_qwen3_17b_sft.sh`
+**位置**: `/Data/wyh/verl/examples/sft/multiturn/run_textcraft_qwen3_sft.sh`
 这些是SFT训练的超参数，控制模型如何学习。
 
 ### 评估脚本中的参数  
@@ -12,7 +12,7 @@
 
 ---
 
-## 🔧 训练参数详解（在 run_textcraft_qwen3_17b_sft.sh 中）
+## 🔧 训练参数详解（在 run_textcraft_qwen3_sft.sh 中）
 
 ### 1. 数据参数
 | 参数 | 值 | 说明 |
@@ -100,19 +100,19 @@
 
 ### 调整学习率
 ```bash
-bash run_textcraft_qwen3_17b_sft.sh 2 /output optim.lr=5e-6
+bash run_textcraft_qwen3_sft.sh 2 /output optim.lr=5e-6
 ```
 
 ### 调整batch size
 ```bash
-bash run_textcraft_qwen3_17b_sft.sh 2 /output \
+bash run_textcraft_qwen3_sft.sh 2 /output \
   data.train_batch_size=128 \
   data.micro_batch_size=1
 ```
 
 ### 修改保存频率
 ```bash
-bash run_textcraft_qwen3_17b_sft.sh 2 /output \
+bash run_textcraft_qwen3_sft.sh 2 /output \
   trainer.save_freq=20 \
   trainer.test_freq=20
 ```

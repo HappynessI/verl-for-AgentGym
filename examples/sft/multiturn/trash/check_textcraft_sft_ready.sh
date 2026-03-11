@@ -19,13 +19,13 @@ fi
 # 检查训练脚本
 echo ""
 echo "2. 检查训练脚本..."
-if [ -f "/Data/wyh/verl/examples/sft/multiturn/run_textcraft_qwen3_17b_sft.sh" ]; then
-    echo "   ✅ 训练脚本存在: run_textcraft_qwen3_17b_sft.sh"
-    if [ -x "/Data/wyh/verl/examples/sft/multiturn/run_textcraft_qwen3_17b_sft.sh" ]; then
+if [ -f "/Data/wyh/verl/examples/sft/multiturn/run_textcraft_qwen3_sft.sh" ]; then
+    echo "   ✅ 训练脚本存在: run_textcraft_qwen3_sft.sh"
+    if [ -x "/Data/wyh/verl/examples/sft/multiturn/run_textcraft_qwen3_sft.sh" ]; then
         echo "   ✅ 训练脚本可执行"
     else
         echo "   ⚠️  训练脚本不可执行，添加执行权限..."
-        chmod +x /Data/wyh/verl/examples/sft/multiturn/run_textcraft_qwen3_17b_sft.sh
+        chmod +x /Data/wyh/verl/examples/sft/multiturn/run_textcraft_qwen3_sft.sh
     fi
 else
     echo "   ❌ 训练脚本不存在"
@@ -90,7 +90,7 @@ echo ""
 echo "启动训练命令:"
 echo "  cd /Data/wyh/verl"
 echo "  source ~/miniconda3/bin/activate verl"
-echo "  CUDA_VISIBLE_DEVICES=0,1 bash examples/sft/multiturn/run_textcraft_qwen3_17b_sft.sh 2 \\"
+echo "  CUDA_VISIBLE_DEVICES=0,1 bash examples/sft/multiturn/run_textcraft_qwen3_sft.sh 2 \\"
 echo "    /Data/wyh/datasets/Verl-Data/outputs/textcraft_sft"
 echo ""
 echo "================================================================================"

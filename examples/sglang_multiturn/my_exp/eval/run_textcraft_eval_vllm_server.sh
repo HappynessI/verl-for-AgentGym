@@ -11,7 +11,7 @@ OUTPUT_DIR="/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval"
 MAX_SAMPLES=${MAX_SAMPLES:--1}          # -1 means all samples
 NUM_SAMPLES_PER_TASK=${NUM_SAMPLES_PER_TASK:-8}  # Number of samples per task
 CONCURRENCY=${CONCURRENCY:-256}         # Concurrent requests to vLLM
-MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-2000}  # Max tokens per generation
+MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-512}  # Max tokens per generation (注意：输入很长，需要留出足够空间)
 TEMPERATURE=${TEMPERATURE:-1.0}         # Sampling temperature
 TOP_P=${TOP_P:-1.0}                     # Top-p sampling
 
