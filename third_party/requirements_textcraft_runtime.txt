@@ -1,0 +1,25 @@
+# TextCraft 环境服务运行时依赖（离线安装用）
+# 不包含训练框架依赖，仅供 Pod 内 textcraft 服务使用。
+# 使用 pip download 打包后，通过 pip install --no-index --find-links= 安装。
+
+# Gymnasium：TextCraft 环境基类
+gymnasium
+
+# FastAPI + uvicorn：环境服务 HTTP API
+fastapi
+uvicorn[standard]
+
+# wandb：推荐镜像可能未预装，但 TextCraft 环境可能用到
+wandb
+
+# fastapi 的传递依赖（明确列出，避免版本歧义）
+starlette
+pydantic>=2.0
+pydantic-settings>=2.0
+
+# numpy：crafting_tree.py 使用，镜像不一定有
+numpy
+
+# httptools / h11：uvicorn[standard] 的依赖，明确列出
+httptools
+h11

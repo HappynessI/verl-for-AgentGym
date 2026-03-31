@@ -57,7 +57,14 @@ class TextCraftInteraction(AgentGymBaseInteraction):
                             break
 
         # 提取 data_idx（数据集索引，用于确定性任务分配）
+        # 兼容 h200 侧旧数据链路：若未显式传 data_idx，则回退到 session_id。
+        session_id = kwargs.get('session_id')
         data_idx = kwargs.pop('data_idx', None)
+        if data_idx is None and session_id is not None:
+            try:
+                data_idx = int(session_id)
+            except (TypeError, ValueError):
+                data_idx = None
 
         # 创建环境实例：显式传入 goal 和 data_idx
         create_body = {}

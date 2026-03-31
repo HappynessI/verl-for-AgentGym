@@ -85,6 +85,7 @@ class AgentData:
         self.tool_rewards: list[float] = []
         self.user_turns = 0
         self.assistant_turns = 0
+        self.completed_interaction_rounds = 0
 
         # Temporary state for tool calls
         self.tool_calls: list[FunctionCall] = []
@@ -107,6 +108,8 @@ class ToolAgentLoop(AgentLoopBase):
         cls.processor = processor
         cls.max_user_turns = config.actor_rollout_ref.rollout.multi_turn.max_user_turns
         cls.max_assistant_turns = config.actor_rollout_ref.rollout.multi_turn.max_assistant_turns
+        round_caps = [cap for cap in (cls.max_assistant_turns, cls.max_user_turns) if cap is not None]
+        cls.max_interaction_rounds = min(round_caps) if round_caps else None
         cls.max_parallel_calls = config.actor_rollout_ref.rollout.multi_turn.max_parallel_calls
         cls.max_tool_response_length = config.actor_rollout_ref.rollout.multi_turn.max_tool_response_length
         cls.tool_response_truncate_side = config.actor_rollout_ref.rollout.multi_turn.tool_response_truncate_side
@@ -309,9 +312,9 @@ class ToolAgentLoop(AgentLoopBase):
         # Check termination conditions
         if not ignore_termination and len(agent_data.response_mask) >= self.response_length:
             return AgentState.TERMINATED
-        if self.max_assistant_turns and agent_data.assistant_turns >= self.max_assistant_turns:
+        if not self.interaction_config_file and self.max_assistant_turns and agent_data.assistant_turns >= self.max_assistant_turns:
             return AgentState.TERMINATED
-        if self.max_user_turns and agent_data.user_turns >= self.max_user_turns:
+        if not self.interaction_config_file and self.max_user_turns and agent_data.user_turns >= self.max_user_turns:
             return AgentState.TERMINATED
 
         # ==================== DEBUG: Student 生成结果 ====================
@@ -468,6 +471,7 @@ class ToolAgentLoop(AgentLoopBase):
         if agent_data.response_logprobs:
             agent_data.response_logprobs += [0.0] * len(response_ids)
         agent_data.user_turns += 1
+        agent_data.completed_interaction_rounds += 1
         return AgentState.GENERATING
 
     async def _handle_interacting_state(self, agent_data: AgentData) -> AgentState:
@@ -511,6 +515,7 @@ class ToolAgentLoop(AgentLoopBase):
                 raise ValueError(f"Student continuation failed - no response from environment!")
 
         agent_data.user_turns += 1
+        agent_data.completed_interaction_rounds += 1
 
         add_messages: list[dict[str, Any]] = [{"role": "user", "content": interaction_responses}]
         agent_data.messages.extend(add_messages)
@@ -553,6 +558,12 @@ class ToolAgentLoop(AgentLoopBase):
 
         # Check termination condition
         if should_terminate_sequence:
+            return AgentState.TERMINATED
+        if (
+            self.interaction_config_file
+            and self.max_interaction_rounds is not None
+            and agent_data.completed_interaction_rounds >= self.max_interaction_rounds
+        ):
             return AgentState.TERMINATED
         else:
             return AgentState.GENERATING
