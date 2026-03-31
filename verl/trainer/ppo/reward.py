@@ -206,14 +206,47 @@ def compute_reward(data: DataProto, reward_fn: AbstractRewardManager) -> tuple[t
     Returns:
         Tuple of reward tensor and extra info dictionary.
     """
+    # ===== HARD EVIDENCE: reward manager identity =====
+    reward_fn_cls = type(reward_fn).__name__
+    reward_fn_mod = type(reward_fn).__module__
+    print(f"[REWARD_DEBUG] reward_fn class={reward_fn_cls}, module={reward_fn_mod}", flush=True)
+
+    # ===== HARD EVIDENCE: non_tensor_batch keys =====
+    ntb_keys = list(data.non_tensor_batch.keys())
+    print(f"[REWARD_DEBUG] non_tensor_batch keys={ntb_keys}", flush=True)
+
+    # ===== HARD EVIDENCE: turn_scores actual value =====
+    has_turn_scores = "turn_scores" in data.non_tensor_batch
+    print(f"[REWARD_DEBUG] has turn_scores={has_turn_scores}", flush=True)
+    if has_turn_scores:
+        ts_val = data.non_tensor_batch["turn_scores"]
+        ts_type = type(ts_val).__name__
+        ts_dtype = getattr(ts_val, "dtype", "N/A")
+        ts_shape = getattr(ts_val, "shape", "N/A")
+        print(f"[REWARD_DEBUG] turn_scores type={ts_type}, dtype={ts_dtype}, shape={ts_shape}", flush=True)
+        if hasattr(ts_val, "dtype") and ts_val.dtype == object:
+            for _ii in range(min(len(ts_val), 10)):
+                elem = ts_val[_ii]
+                print(f"[REWARD_DEBUG]   turn_scores[{_ii}] type={type(elem).__name__}, value={elem}", flush=True)
+        else:
+            print(f"[REWARD_DEBUG] turn_scores value={ts_val}", flush=True)
+
     try:
         reward_result = reward_fn(data, return_dict=True)
         reward_tensor = reward_result["reward_tensor"]
         reward_extra_infos_dict = reward_result.get("reward_extra_info", {})
     except Exception as e:
+        print(f"[REWARD_DEBUG] reward_fn raised: {e}")
+        import traceback; traceback.print_exc()
         print(f"Error in reward_fn: {e}")
         reward_tensor = reward_fn(data)
         reward_extra_infos_dict = {}
+
+    # ===== HARD EVIDENCE: reward result =====
+    print(f"[REWARD_DEBUG] reward_tensor shape={reward_tensor.shape}, values={reward_tensor.sum(-1).tolist()}", flush=True)
+    print(f"[REWARD_DEBUG] reward_extra_infos_dict keys={list(reward_extra_infos_dict.keys())}", flush=True)
+    for k, v in reward_extra_infos_dict.items():
+        print(f"[REWARD_DEBUG]   reward_extra_infos_dict['{k}'] = {v}", flush=True)
 
     return reward_tensor, reward_extra_infos_dict
 

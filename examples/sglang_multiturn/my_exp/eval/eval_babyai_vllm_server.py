@@ -171,99 +171,121 @@ async def evaluate_one_episode(
     done = False
     total_reward = 0.0
     
-    # --- Initialization ---
-    if initial_prompt is None:
-        try:
-            await interaction.start_interaction(instance_id, session_id=session_id)
-            done, initial_obs, reward, extra = await interaction.generate_response(instance_id, messages)
-            total_reward += reward
-            messages.append({"role": "user", "content": initial_obs})
-            conversations.append({"role": "user", "content": initial_obs})
-            initial_prompt = initial_obs
-        except Exception as e:
-            logger.error(f"Start interaction failed for session {session_id}: {e}")
-            return {
-                "session_id": session_id,
-                "reward": 0.0,
-                "success": False,
-                "num_turns": 0,
-                "initial_prompt": None,
-                "conversations": [],
-                "error": str(e)
-            }
-    else:
-        try:
-            await interaction.start_interaction(instance_id, session_id=session_id)
-            messages.append({"role": "user", "content": initial_prompt})
-            conversations.append({"role": "user", "content": initial_prompt})
-        except Exception as e:
-            logger.error(f"Failed to start interaction for session {session_id}: {e}")
-            return {
-                "session_id": session_id,
-                "reward": 0.0,
-                "success": False,
-                "num_turns": 0,
-                "initial_prompt": initial_prompt,
-                "conversations": [],
-                "error": str(e)
-            }
-
-    # --- Interaction Loop ---
-    consecutive_empty = 0
-    max_consecutive_empty = 3  # 连续空响应超过此数则放弃
-    
-    for turn in range(max_rounds):
-        if done:
-            break
-        
-        try:
-            response = await agent.generate(messages, http_session)
-            
-            # 处理空响应（超时/错误导致）：不加入对话，避免雪崩循环
-            if not response.strip():
-                consecutive_empty += 1
-                logger.warning(f"Session {session_id} turn {turn}: empty response ({consecutive_empty}/{max_consecutive_empty})")
-                if consecutive_empty >= max_consecutive_empty:
-                    logger.warning(f"Session {session_id}: too many consecutive empty responses, giving up")
-                    break
-                continue  # 跳过本轮，不污染对话历史
-            
-            consecutive_empty = 0  # 收到有效响应，重置计数
-            
-            response_lower = response.lower()
-            if 'task completed' in response_lower or 'task failed' in response_lower:
-                done = True
-            messages.append({"role": "assistant", "content": response})
-            conversations.append({"role": "assistant", "content": response})
-        except Exception as e:
-            logger.error(f"Generation error session {session_id} turn {turn}: {e}")
-            break
-        
-        try:
-            done, observation, step_reward, extra = await interaction.generate_response(instance_id, messages)
-            total_reward += step_reward
-            messages.append({"role": "user", "content": observation})
-            conversations.append({"role": "user", "content": observation})
-        except Exception as e:
-            logger.error(f"Environment error session {session_id} turn {turn}: {e}")
-            break
-    
     try:
-        await interaction.finalize_interaction(instance_id)
-    except Exception as e:
-        logger.warning(f"Finalization failed for session {session_id}: {e}")
-    
-    success = total_reward > 0.0
-    num_turns = len([m for m in messages if m["role"] == "assistant"])
-    
-    return {
-        "session_id": session_id,
-        "reward": total_reward,
-        "success": success,
-        "num_turns": num_turns,
-        "conversations": conversations,
-        "initial_prompt": initial_prompt
-    }
+        # --- Initialization ---
+        if initial_prompt is None:
+            try:
+                await interaction.start_interaction(instance_id, session_id=session_id)
+                done, initial_obs, reward, extra = await interaction.generate_response(instance_id, messages)
+                total_reward += reward
+                messages.append({"role": "user", "content": initial_obs})
+                conversations.append({"role": "user", "content": initial_obs})
+                initial_prompt = initial_obs
+            except Exception as e:
+                logger.error(f"Start interaction failed for session {session_id}: {e}")
+                return {
+                    "session_id": session_id,
+                    "reward": 0.0,
+                    "success": False,
+                    "num_turns": 0,
+                    "initial_prompt": None,
+                    "conversations": [],
+                    "error": str(e),
+                    "error_type": "start_interaction",
+                }
+        else:
+            try:
+                await interaction.start_interaction(instance_id, session_id=session_id)
+                messages.append({"role": "user", "content": initial_prompt})
+                conversations.append({"role": "user", "content": initial_prompt})
+            except Exception as e:
+                logger.error(f"Failed to start interaction for session {session_id}: {e}")
+                return {
+                    "session_id": session_id,
+                    "reward": 0.0,
+                    "success": False,
+                    "num_turns": 0,
+                    "initial_prompt": initial_prompt,
+                    "conversations": [],
+                    "error": str(e),
+                    "error_type": "start_interaction",
+                }
+
+        # --- Interaction Loop ---
+        consecutive_empty = 0
+        max_consecutive_empty = 3  # 连续空响应超过此数则放弃
+        
+        for turn in range(max_rounds):
+            if done:
+                break
+            
+            try:
+                response = await agent.generate(messages, http_session)
+                
+                # 处理空响应（超时/错误导致）：不加入对话，避免雪崩循环
+                if not response.strip():
+                    consecutive_empty += 1
+                    logger.warning(f"Session {session_id} turn {turn}: empty response ({consecutive_empty}/{max_consecutive_empty})")
+                    if consecutive_empty >= max_consecutive_empty:
+                        logger.warning(f"Session {session_id}: too many consecutive empty responses, giving up")
+                        break
+                    continue  # 跳过本轮，不污染对话历史
+                
+                consecutive_empty = 0  # 收到有效响应，重置计数
+                
+                response_lower = response.lower()
+                if 'task completed' in response_lower or 'task failed' in response_lower:
+                    done = True
+                messages.append({"role": "assistant", "content": response})
+                conversations.append({"role": "assistant", "content": response})
+            except Exception as e:
+                logger.error(f"Generation error session {session_id} turn {turn}: {e}")
+                return {
+                    "session_id": session_id,
+                    "reward": total_reward,
+                    "success": total_reward > 0.0,
+                    "num_turns": len([m for m in messages if m["role"] == "assistant"]),
+                    "conversations": conversations,
+                    "initial_prompt": initial_prompt,
+                    "error": str(e),
+                    "error_type": "generation",
+                }
+            
+            try:
+                done, observation, step_reward, extra = await interaction.generate_response(instance_id, messages)
+                total_reward += step_reward
+                messages.append({"role": "user", "content": observation})
+                conversations.append({"role": "user", "content": observation})
+            except Exception as e:
+                logger.error(f"Environment error session {session_id} turn {turn}: {e}")
+                return {
+                    "session_id": session_id,
+                    "reward": total_reward,
+                    "success": total_reward > 0.0,
+                    "num_turns": len([m for m in messages if m["role"] == "assistant"]),
+                    "conversations": conversations,
+                    "initial_prompt": initial_prompt,
+                    "error": str(e),
+                    "error_type": "environment",
+                }
+        
+        success = total_reward > 0.0
+        num_turns = len([m for m in messages if m["role"] == "assistant"])
+        
+        return {
+            "session_id": session_id,
+            "reward": total_reward,
+            "success": success,
+            "num_turns": num_turns,
+            "conversations": conversations,
+            "initial_prompt": initial_prompt
+        }
+    finally:
+        if instance_id in interaction.instance_sessions:
+            try:
+                await interaction.finalize_interaction(instance_id)
+            except Exception as e:
+                logger.warning(f"Finalization failed for session {session_id}: {e}")
 
 
 def estimate_pass_at_k(num_samples: int, num_correct: int, k: int) -> float:
@@ -376,13 +398,27 @@ async def run_evaluation(args: argparse.Namespace):
                 if not args.no_save_trajectories:
                     record["conversations"] = result['conversations']
                     record["initial_prompt"] = result['initial_prompt']
+                if 'error' in result:
+                    record["error"] = result['error']
+                    record["error_type"] = result.get('error_type', 'unknown')
                 
                 # Write to file
                 await asyncio.to_thread(safe_write_record, output_file, record)
                 return result
             except Exception as e:
-                logger.error(f"Worker failed for session {session_id}: {str(e)}")
-                return None
+                logger.error(f"[CRITICAL] Worker exception for session {session_id}, sample {sample_idx}: {str(e)}")
+                error_record = {
+                    "item_id": f"babyai_{session_id}",
+                    "session_id": session_id,
+                    "sample_idx": sample_idx,
+                    "reward": 0.0,
+                    "success": False,
+                    "num_turns": 0,
+                    "error": str(e),
+                    "error_type": "worker_exception",
+                }
+                await asyncio.to_thread(safe_write_record, output_file, error_record)
+                return error_record
     
     # Run evaluation
     results = []
@@ -405,6 +441,7 @@ async def run_evaluation(args: argparse.Namespace):
         pbar.close()
     
     # Generate summary
+    args._df_rows = len(df)
     await generate_summary(output_file, summary_file, args)
     
     logger.info(f"✅ Evaluation completed! Results saved to:\n- {output_file}\n- {summary_file}")
@@ -437,7 +474,7 @@ async def fetch_model_name(server_url: str) -> str:
 
 
 async def generate_summary(results_file: str, summary_file: str, args: argparse.Namespace):
-    """Generates evaluation summary from results file"""
+    """Generates evaluation summary from results file with categorized statistics."""
     # Load all results
     results = []
     try:
@@ -464,13 +501,36 @@ async def generate_summary(results_file: str, summary_file: str, args: argparse.
     for res in results:
         grouped_results[res['session_id']].append(res)
     
-    total_tasks = len(grouped_results)
-    total_samples = len(results)
-    
-    # Define k values for pass@k
+    expected_total_tasks = args.num_samples_per_task * args._df_rows if hasattr(args, '_df_rows') else None
+    if expected_total_tasks is None:
+        try:
+            table = pq.read_table(args.data_path)
+            df_summary = table.to_pandas()
+            if args.max_samples > 0 and args.max_samples < len(df_summary):
+                expected_total_tasks = args.num_samples_per_task * args.max_samples
+            else:
+                expected_total_tasks = args.num_samples_per_task * len(df_summary)
+        except Exception:
+            expected_total_tasks = len(grouped_results)
+
+    total_expected_samples = expected_total_tasks
+    total_finished_samples = len(results)
+    total_missing_samples = total_expected_samples - total_finished_samples
+
+    goal_mismatch_samples = []
+    error_samples = []
+    normal_samples = []
+
+    for res in results:
+        if res.get('error_type') == 'start_interaction' and 'Goal mismatch' in str(res.get('error', '')):
+            goal_mismatch_samples.append(res)
+        elif 'error' in res:
+            error_samples.append(res)
+        else:
+            normal_samples.append(res)
+
     k_values = [1, 2, 4, 8]
-    
-    # Calculate metrics
+
     sum_avg_reward = 0.0
     sum_avg_success = 0.0
     pass_at_k_values = {k: [] for k in k_values}
@@ -491,8 +551,10 @@ async def generate_summary(results_file: str, summary_file: str, args: argparse.
                 pass_k = estimate_pass_at_k(n, c, k)
                 pass_at_k_values[k].append(pass_k)
     
-    global_avg_reward = sum_avg_reward / total_tasks if total_tasks > 0 else 0.0
-    global_avg_success = sum_avg_success / total_tasks if total_tasks > 0 else 0.0
+    num_metric_tasks = len(grouped_results)
+    num_normal_tasks = len({res['session_id'] for res in normal_samples})
+    global_avg_reward = sum_avg_reward / num_metric_tasks if num_metric_tasks > 0 else 0.0
+    global_avg_success = sum_avg_success / num_metric_tasks if num_metric_tasks > 0 else 0.0
     
     # Prepare summary text
     metrics = [
@@ -503,12 +565,28 @@ async def generate_summary(results_file: str, summary_file: str, args: argparse.
         f"Model: {model_name}",
         f"Server: {args.vllm_server_url}",
         f"Dataset: {args.data_path}",
-        f"Total Tasks: {total_tasks}",
-        f"Total Samples: {total_samples}",
-        f"Samples Per Task: {args.num_samples_per_task}",
         "-" * 60,
-        f"Average Reward: {global_avg_reward:.4f}",
-        f"Average Success (Avg@1): {global_avg_success:.4f}",
+        "TASK STATISTICS:",
+        f"  Expected Samples:    {total_expected_samples}",
+        f"  Finished Samples:    {total_finished_samples}",
+        f"  Missing Samples:     {total_missing_samples} {'(ok)' if total_missing_samples == 0 else 'WARNING'}",
+        f"  Expected Tasks:      {expected_total_tasks // args.num_samples_per_task}",
+        f"  Finished Tasks:      {len(grouped_results)}",
+        "-" * 60,
+        "SAMPLE BREAKDOWN:",
+        f"  Normal samples:      {len(normal_samples)}",
+        f"  Error samples:       {len(error_samples)} {'(ok)' if not error_samples else 'WARNING'}",
+        f"    - start_interaction errors: {sum(1 for r in error_samples if r.get('error_type') == 'start_interaction')}",
+        f"    - generation errors:         {sum(1 for r in error_samples if r.get('error_type') == 'generation')}",
+        f"    - environment errors:        {sum(1 for r in error_samples if r.get('error_type') == 'environment')}",
+        f"    - worker exceptions:         {sum(1 for r in error_samples if r.get('error_type') == 'worker_exception')}",
+        f"  Goal mismatch:       {len(goal_mismatch_samples)} {'(ok)' if not goal_mismatch_samples else 'WARNING'}",
+        "-" * 60,
+        "METRICS (all finished samples; errors count as failures):",
+        f"  Tasks Evaluated:     {num_metric_tasks}",
+        f"  Tasks With Normal Samples: {num_normal_tasks}",
+        f"  Average Reward:      {global_avg_reward:.4f}",
+        f"  Average Success (Avg@1): {global_avg_success:.4f}",
         "-" * 60,
     ]
     
@@ -516,7 +594,7 @@ async def generate_summary(results_file: str, summary_file: str, args: argparse.
         values = pass_at_k_values[k]
         if values:
             avg_pass_k = sum(values) / len(values)
-            metrics.append(f"Pass@{k:<2}: {avg_pass_k:.4f} (tasks: {len(values)}/{total_tasks})")
+            metrics.append(f"Pass@{k:<2}: {avg_pass_k:.4f} (tasks: {len(values)}/{num_metric_tasks})")
         else:
             metrics.append(f"Pass@{k:<2}: N/A    (insufficient samples)")
     
@@ -607,4 +685,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

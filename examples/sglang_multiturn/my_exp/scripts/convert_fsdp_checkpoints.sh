@@ -6,7 +6,7 @@
 
 set -e
 
-CKPT_BASE_DIR="/Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/new_ckp"
+CKPT_BASE_DIR="/Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/qwen3-1.7b-sft"
 
 echo "============================================================================"
 echo "批量转换FSDP Checkpoints为HuggingFace格式"

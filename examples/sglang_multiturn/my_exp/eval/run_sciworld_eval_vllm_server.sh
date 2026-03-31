@@ -2,19 +2,19 @@
 set -e
 
 # 配置参数
-VLLM_SERVER_URL="http://localhost:8000"
-ENV_SERVER="http://127.0.0.1:36002"
+VLLM_SERVER_URL="http://localhost:8001"
+ENV_SERVER="http://127.0.0.1:36003"
 DATA_PATH="/Data/wyh/datasets/Verl-Data/eval/sciworld/test.parquet"
 OUTPUT_DIR="/Data/wyh/datasets/Verl-Data/outputs/sciworld_eval"
 
 # 环境变量覆盖
 MAX_SAMPLES=${MAX_SAMPLES:--1}
 NUM_SAMPLES_PER_TASK=${NUM_SAMPLES_PER_TASK:-1}
-CONCURRENCY=${CONCURRENCY:-16}
-MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-200}
+CONCURRENCY=${CONCURRENCY:-8}
+MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-2048} # 来源：采样平均assitant长度为 507，留有部分余量
 TEMPERATURE=${TEMPERATURE:-1.0}
 TOP_P=${TOP_P:-1.0}
-MAX_ROUNDS=${MAX_ROUNDS:-50}
+MAX_ROUNDS=${MAX_ROUNDS:-30}
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 LOG_DIR="$OUTPUT_DIR/logs"

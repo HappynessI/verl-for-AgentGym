@@ -2,20 +2,20 @@
 set -e
 
 # 配置参数
-VLLM_SERVER_URL="http://localhost:8000"
+VLLM_SERVER_URL="http://localhost:8001"
 MODEL_NAME=${MODEL_NAME:-"qwen3"}          # vLLM中注册的模型名称
-BABYAI_SERVER="http://127.0.0.1:36005"
+BABYAI_SERVER="http://127.0.0.1:36002"
 DATA_PATH="/Data/wyh/datasets/Verl-Data/eval/babyai/test.parquet"
 OUTPUT_DIR="/Data/wyh/datasets/Verl-Data/outputs/babyai_eval"
 
 # 环境变量覆盖
 MAX_SAMPLES=${MAX_SAMPLES:--1}          # -1 means all samples
-NUM_SAMPLES_PER_TASK=${NUM_SAMPLES_PER_TASK:-8}  # Number of samples per task
-CONCURRENCY=${CONCURRENCY:-64}          # Concurrent requests to vLLM (降低避免超时)
-MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-2048}   # Max tokens per generation
+NUM_SAMPLES_PER_TASK=${NUM_SAMPLES_PER_TASK:-2}  # Number of samples per task
+CONCURRENCY=${CONCURRENCY:-8}          # Concurrent requests to vLLM (降低避免超时)
+MAX_NEW_TOKENS=${MAX_NEW_TOKENS:-1920}   # Max tokens per generation
 TEMPERATURE=${TEMPERATURE:-1.0}         # Sampling temperature
 TOP_P=${TOP_P:-1.0}                     # Top-p sampling
-MAX_ROUNDS=${MAX_ROUNDS:-30}            # Max interaction rounds
+MAX_ROUNDS=${MAX_ROUNDS:-25}            # Max interaction rounds
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 LOG_DIR="$OUTPUT_DIR/logs"

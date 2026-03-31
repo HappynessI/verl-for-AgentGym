@@ -19,6 +19,7 @@ This trainer supports model-agonistic model initialization with huggingface
 """
 
 import json
+import logging
 import os
 import uuid
 from collections import defaultdict
@@ -26,6 +27,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from pprint import pprint
 from typing import Optional
+
 
 import numpy as np
 import ray
@@ -178,6 +180,340 @@ def compute_response_mask(data: DataProto):
     return attention_mask[:, -response_length:]
 
 
+def _find_subsequence_positions(full_ids: list[int], subseq: list[int], max_search_start: int = None) -> list[int]:
+    """Find all positions where subseq occurs in full_ids.
+
+    Returns the list of starting positions of each occurrence.
+    """
+    if not subseq or not full_ids:
+        return []
+    n, m = len(full_ids), len(subseq)
+    if m > n:
+        return []
+    if max_search_start is None:
+        max_search_start = n - m + 1
+    positions = []
+    for i in range(min(max_search_start, n - m + 1)):
+        if full_ids[i:i + m] == subseq:
+            positions.append(i)
+    return positions
+
+
+def _normalize_single_prompt(raw_prompt):
+    """Normalize a single prompt entry from parquet to a list of message dicts.
+
+    Handles the common storage patterns for a single prompt:
+    - np.array([[{'role': ..., 'content': ...}]])  -> shape (1, 1)
+    - np.array([{'role': ..., 'content': ...}])   -> shape (1,)
+    - [{'role': ..., 'content': ...}]             -> already a list
+    - string literal JSON                           -> str
+
+    Returns:
+        list[dict]: list of message dicts
+    """
+    import ast
+    import json
+
+    if raw_prompt is None:
+        return []
+
+    if hasattr(raw_prompt, "tolist"):
+        # numpy array case
+        inner = raw_prompt.tolist()
+        if isinstance(inner, list) and len(inner) > 0:
+            first = inner[0]
+            if isinstance(first, dict):
+                return inner
+            elif isinstance(first, list):
+                return first
+    elif isinstance(raw_prompt, str):
+        for parser in [ast.literal_eval, json.loads]:
+            try:
+                parsed = parser(raw_prompt)
+                if isinstance(parsed, list) and len(parsed) > 0:
+                    first = parsed[0]
+                    if isinstance(first, dict):
+                        return parsed
+                    elif isinstance(first, list):
+                        return first
+            except Exception:
+                pass
+    elif isinstance(raw_prompt, list):
+        if len(raw_prompt) > 0 and isinstance(raw_prompt[0], dict):
+            return raw_prompt
+
+    return []
+
+
+def compute_prefix_mask(data: DataProto, tokenizer=None):
+    """Compute the mask for assistant prefix tokens in the prompt.
+
+    This function identifies which tokens in the prompt correspond to assistant messages
+    (teacher history from the prompt). Used when optimize_prefix_tokens=True.
+
+    IMPORTANT: Only assistant role tokens are included in the prefix mask.
+    System and user tokens are NOT included in prefix optimization.
+
+    This function prefers the pre-computed `prefix_mask` from the parquet (authoritative)
+    over runtime computation. If the pre-computed mask is not available, it falls back
+    to computing from raw_prompt.
+
+    Args:
+        data (DataProto): The data containing batched model outputs and inputs.
+        tokenizer: Tokenizer for processing chat format prompts. REQUIRED when
+                   optimize_prefix_tokens=True and pre-computed mask is not available.
+
+    Returns:
+        torch.Tensor: The mask for assistant prefix tokens (shape: batch_size, seq_len).
+                      1 for assistant prefix tokens, 0 for others (including system/user).
+
+    Raises:
+        ValueError: If tokenizer is None or cannot parse assistant token spans.
+    """
+    batch_size, response_len = data.batch["responses"].shape
+    attention_mask = data.batch["attention_mask"]
+    total_length = attention_mask.size(1)
+    prompt_length = total_length - response_len
+
+    # === DEBUG: 精确报告 runtime prompt_length 来源 ===
+    attn_sum = int(attention_mask.sum().item())
+    print(f"[DEBUG_PROMPT_LEN] responses.shape={data.batch['responses'].shape}, attn_mask.shape={attention_mask.shape}, attn_mask.sum()={attn_sum}, total_length={total_length}, response_len={response_len}, prompt_length={prompt_length}, attn_mask.sum()==prompt_length: {attn_sum==prompt_length}", flush=True)
+    if "prefix_mask" in data.non_tensor_batch:
+        raw_mask_arr = data.non_tensor_batch["prefix_mask"]
+        print(f"[DEBUG_PROMPT_LEN] raw_mask_arr.shape={raw_mask_arr.shape}, dtype={raw_mask_arr.dtype}", flush=True)
+        for i in range(min(2, batch_size)):
+            raw_mask_i = raw_mask_arr[i]
+            mask_len = int(np.array(raw_mask_i).reshape(-1).shape[0]) if hasattr(raw_mask_i,'reshape') else len(raw_mask_i)
+            mask_sum = int(np.array(raw_mask_i).sum())
+            print(f"[DEBUG_PROMPT_LEN]   sample {i}: raw_mask_len={mask_len}, mask_sum={mask_sum}", flush=True)
+    # === end DEBUG ===
+
+    # Check if we have pre-computed prefix_masks from the parquet.
+    # The parquet stores per-sample 1D arrays: np.array([list_of_0_or_1]).
+    # After collate_fn, non_tensor_batch["prefix_mask"] is dtype=object array of shape (batch_size,)
+    # where each element is the per-sample 1D mask.
+    if "prefix_mask" in data.non_tensor_batch:
+        raw_mask_arr = data.non_tensor_batch["prefix_mask"]
+
+        # Validate structure: must be object-array of shape (batch_size,) containing per-sample 1D arrays
+        if not isinstance(raw_mask_arr, np.ndarray):
+            raise ValueError(f"[PREFIX_MASK] prefix_mask in non_tensor_batch must be np.ndarray, got {type(raw_mask_arr)}")
+        if raw_mask_arr.dtype != object:
+            raise ValueError(
+                f"[PREFIX_MASK] prefix_mask dtype must be object (from collate_fn), got {raw_mask_arr.dtype}. "
+                f"This function reads from non_tensor_batch which should have the collated object-array, "
+                f"not raw parquet data. Use the trainer-side batch-processing path instead."
+            )
+        if raw_mask_arr.shape[0] != batch_size:
+            raise ValueError(
+                f"[PREFIX_MASK] prefix_mask array length {raw_mask_arr.shape[0]} != batch_size {batch_size}"
+            )
+
+        # Process each sample individually: per-sample mask must match its prompt_length
+        mask_rows = []
+        for i in range(batch_size):
+            raw_mask_i = raw_mask_arr[i]
+
+            # Convert per-sample mask to 1D tensor
+            if isinstance(raw_mask_i, list):
+                mask_i = torch.tensor(raw_mask_i, dtype=torch.float32)
+            else:
+                mask_i = torch.as_tensor(raw_mask_i, dtype=torch.float32)
+
+            # Flatten to 1D
+            mask_i = mask_i.reshape(-1)
+            if mask_i.dim() != 1:
+                raise ValueError(
+                    f"[PREFIX_MASK] per-sample mask for sample {i} must be 1D after flatten, got shape={mask_i.shape}"
+                )
+
+            # STRICT: per-sample mask length must equal runtime prompt_length
+            if mask_i.shape[0] != prompt_length:
+                raise ValueError(
+                    f"[PREFIX_MASK] Per-sample mismatch at index {i}: "
+                    f"mask length {mask_i.shape[0]} != runtime prompt_length {prompt_length}. "
+                    f"This means parquet generation and runtime tokenization are inconsistent for this sample. "
+                    f"REGENERATE the parquet with matching tokenizer/settings."
+                )
+
+            # Validate: sum must equal assistant_prefix_old_log_probs length for this sample
+            if "assistant_prefix_old_log_probs" in data.non_tensor_batch:
+                lp_arr = data.non_tensor_batch["assistant_prefix_old_log_probs"]
+                lp_i = lp_arr[i]
+                lp_len = lp_i.shape[-1] if hasattr(lp_i, 'shape') else len(lp_i)
+                mask_sum = int(mask_i.sum().item())
+                if mask_sum != lp_len:
+                    raise ValueError(
+                        f"[PREFIX_MASK] Per-sample mismatch at index {i}: "
+                        f"mask.sum()={mask_sum} != assistant_prefix_old_log_probs length={lp_len}. "
+                        f"Pre-computed old_logprobs were generated on a different tokenization. "
+                        f"REGENERATE the parquet."
+                    )
+
+            mask_rows.append(mask_i)
+
+        # Stack into (batch_size, prompt_length)
+        return torch.stack(mask_rows, dim=0)
+
+    # Fallback: compute from raw_prompt
+    # WARNING: this may diverge from the parquet generation logic!
+    if tokenizer is None:
+        raise ValueError(
+            "tokenizer is required for computing assistant prefix mask when "
+            "pre-computed 'prefix_mask' is not in the parquet. "
+            "Please ensure compute_prefix_mask() is called with a valid tokenizer, "
+            "or regenerate the parquet with build_prefix_old_logprob_dataset.py."
+        )
+
+    raw_prompts = data.non_tensor_batch.get(
+        "prompt",
+        data.non_tensor_batch.get("raw_prompt", None)
+    )
+
+    available_keys = list(data.non_tensor_batch.keys()) if hasattr(data.non_tensor_batch, 'keys') else []
+    logging.getLogger(__name__).info(f"[PREFIX_MASK] No pre-computed prefix_mask found. Computing from raw_prompt. keys={available_keys}")
+
+    if raw_prompts is not None and not isinstance(raw_prompts, list):
+        if isinstance(raw_prompts, np.ndarray):
+            # Handle the parquet storage format: np.array([[{...}]]) or np.array([{...}])
+            # Convert each to the list of message dicts
+            raw_prompts = [
+                _normalize_single_prompt(p) for p in raw_prompts
+            ]
+        else:
+            raw_prompts = list(raw_prompts)
+
+    if raw_prompts is None or len(raw_prompts) == 0:
+        has_raw_prompt = "raw_prompt" in data.non_tensor_batch if hasattr(data.non_tensor_batch, '__contains__') else False
+        raise ValueError(
+            f"prompt field is missing or empty in batch.non_tensor_batch. "
+            f"Cannot compute assistant prefix mask without prompt data.\n"
+            f"  - Available keys: {available_keys}\n"
+            f"  - Has 'raw_prompt': {has_raw_prompt}\n"
+            f"  - Batch size: {attention_mask.shape[0] if attention_mask is not None else 'unknown'}\n"
+            f"  - Attempted to find: 'prompt' or 'raw_prompt'"
+        )
+
+    device = attention_mask.device
+    assistant_mask = compute_assistant_token_mask_from_prompt(
+        raw_prompts=raw_prompts,
+        tokenizer=tokenizer,
+        prompt_length=prompt_length,
+        batch_size=batch_size,
+        device=device
+    )
+
+    # Validate: warn if mask sum is suspiciously different from parquet expectations
+    if "assistant_prefix_old_log_probs" in data.non_tensor_batch or "assistant_prefix_old_logprobs" in data.non_tensor_batch:
+        key = data.non_tensor_batch.get("assistant_prefix_old_log_probs") or data.non_tensor_batch.get("assistant_prefix_old_logprobs")
+        if isinstance(key, list):
+            expected_count = len(key)
+        else:
+            expected_count = key.shape[-1] if hasattr(key, 'shape') else 0
+        mask_sum = int(assistant_mask.sum().item())
+        if mask_sum != expected_count:
+            logging.getLogger(__name__).warning(
+                f"[PREFIX_MASK] Runtime mask.sum()={mask_sum} != "
+                f"cached old_logprobs length={expected_count}. "
+                f"Consider regenerating the parquet with build_prefix_old_logprob_dataset.py."
+            )
+
+    return assistant_mask
+
+
+def compute_assistant_token_mask_from_prompt(raw_prompts, tokenizer, prompt_length, batch_size, device):
+    """Compute mask for assistant role tokens - EXACTLY matching build_prefix_old_logprob_dataset.py.
+
+    This function replicates the tokenization logic from build_prefix_old_logprob_dataset.py:
+    1. For each assistant message: role_text + content_text (without add_generation_prompt)
+    2. role_text = f"<|im_start|>{role}\n" tokenized WITHOUT special tokens
+    3. content_text = f"{content}<|im_end|>\n" tokenized WITHOUT special tokens
+    4. Search for [role_ids + content_ids] sequence in the full tokenization
+    5. Mark ALL matched positions (including the trailing <|im_end|> token) as assistant
+
+    Args:
+        raw_prompts: List of prompts (each is a list of chat messages with 'role' and 'content')
+        tokenizer: Tokenizer for processing
+        prompt_length: Expected prompt length
+        batch_size: Batch size
+        device: Device to place the mask tensor
+
+    Returns:
+        torch.Tensor: Mask with 1 for assistant tokens, 0 for others
+    """
+    mask = torch.zeros((batch_size, prompt_length), dtype=torch.float32, device=device)
+
+    for i, raw_prompt in enumerate(raw_prompts):
+        if i >= batch_size:
+            break
+
+        try:
+            # Normalize raw_prompt to a list of message dicts
+            if hasattr(raw_prompt, 'tolist'):
+                chat_messages = raw_prompt.tolist()
+            else:
+                chat_messages = list(raw_prompt)
+
+            if not isinstance(chat_messages, (list, tuple)) or len(chat_messages) == 0:
+                continue
+
+            # Tokenize the FULL prompt (no generation prompt, matching build script)
+            full_text = tokenizer.apply_chat_template(
+                chat_messages,
+                add_generation_prompt=False,
+                tokenize=False
+            )
+            tokens = tokenizer(full_text, add_special_tokens=True, return_tensors="pt")
+            full_ids = tokens.input_ids[0].tolist()
+
+            # For each assistant message, find its position in full_ids and mark as assistant
+            for msg in chat_messages:
+                role = msg.get('role', '')
+                content = msg.get('content', '')
+
+                if role != 'assistant':
+                    continue
+
+                # EXACTLY matching build_prefix_old_logprob_dataset.py:
+                # role_text = "<|im_start|>{role}\n"
+                role_text = f"<|im_start|>{role}\n"
+                role_ids = tokenizer(role_text, add_special_tokens=False).input_ids
+
+                # content_text = "{content}<|im_end|>\n" (note: content is NOT prefixed with \n)
+                content_text = f"{content}<|im_end|>\n"
+                content_ids = tokenizer(content_text, add_special_tokens=False).input_ids
+
+                msg_ids = list(role_ids) + list(content_ids)
+
+                # Find the subsequence position
+                positions = _find_subsequence_positions(full_ids, msg_ids)
+                if not positions:
+                    # Fallback search with limited range
+                    positions = _find_subsequence_positions(
+                        full_ids, msg_ids, max_search_start=max(1, len(full_ids) - len(msg_ids) - 500)
+                    )
+
+                if not positions:
+                    continue
+
+                # Mark ALL positions in the matched sequence (including trailing <|im_end|>)
+                start_pos = positions[0]
+                end_pos = start_pos + len(msg_ids)
+
+                # Clip to prompt_length
+                end_pos = min(end_pos, prompt_length)
+                start_pos = min(start_pos, prompt_length)
+
+                if start_pos < end_pos:
+                    mask[i, start_pos:end_pos] = 1.0
+
+        except Exception as e:
+            # Skip this sample on error
+            continue
+
+    return mask
+
+
 def compute_advantage(
     data: DataProto,
     adv_estimator: AdvantageEstimator,
@@ -327,7 +663,7 @@ class RayPPOTrainer:
         self.use_critic = need_critic(self.config)
         self.ray_worker_group_cls = ray_worker_group_cls
         self.device_name = device_name if device_name else self.config.trainer.device
-        self.validation_generations_logger = ValidationGenerationsLogger(
+        self.validation_generations_module_logger = ValidationGenerationsLogger(
             project_name=self.config.trainer.project_name,
             experiment_name=self.config.trainer.experiment_name,
         )
@@ -488,7 +824,7 @@ class RayPPOTrainer:
             )
 
     def _maybe_log_val_generations(self, inputs, outputs, scores):
-        """Log a table of validation samples to the configured logger (wandb or swanlab)"""
+        """Log a table of validation samples to the configured module_logger (wandb or swanlab)"""
 
         generations_to_log = self.config.trainer.log_val_generations
 
@@ -508,11 +844,22 @@ class RayPPOTrainer:
         # Take first N samples after shuffling
         samples = samples[:generations_to_log]
 
-        # Log to each configured logger
-        self.validation_generations_logger.log(self.config.trainer.logger, samples, self.global_steps)
+        # Log to each configured module_logger
+        self.validation_generations_module_logger.log(self.config.trainer.module_logger, samples, self.global_steps)
 
     def _get_gen_batch(self, batch: DataProto) -> DataProto:
-        reward_model_keys = set({"data_source", "reward_model", "extra_info", "uid"}) & batch.non_tensor_batch.keys()
+        reward_model_keys = set({"data_source", "reward_model", "extra_info", "uid", "turn_scores"}) & batch.non_tensor_batch.keys()
+        print(f"[DEBUG_GEN_BATCH] batch.non_tensor_batch keys = {list(batch.non_tensor_batch.keys())}", flush=True)
+        print(f"[DEBUG_GEN_BATCH] reward_model_keys = {reward_model_keys}", flush=True)
+        if "turn_scores" in batch.non_tensor_batch:
+            ts = batch.non_tensor_batch["turn_scores"]
+            print(f"[DEBUG_GEN_BATCH] turn_scores IN reward_model_keys: {'turn_scores' in reward_model_keys}", flush=True)
+            print(f"[DEBUG_GEN_BATCH] turn_scores value = {ts}", flush=True)
+        if "prefix_mask" in batch.non_tensor_batch:
+            v = batch.non_tensor_batch["prefix_mask"]
+            print(f"[DEBUG_GEN_BATCH] prefix_mask in batch.non_tensor_batch: type={type(v).__name__}, dtype={getattr(v,'dtype','N/A')}, shape={getattr(v,'shape','N/A')}", flush=True)
+            if hasattr(v, 'dtype') and v.dtype == object and len(v) > 0:
+                print(f"[DEBUG_GEN_BATCH]   prefix_mask[0] type={type(v[0]).__name__}", flush=True)
 
         # pop those keys for generation
         batch_keys_to_pop = ["input_ids", "attention_mask", "position_ids"]
@@ -526,6 +873,11 @@ class RayPPOTrainer:
         if self.async_rollout_mode:
             gen_batch.non_tensor_batch.update(batch.non_tensor_batch)
 
+        if "prefix_mask" in gen_batch.non_tensor_batch:
+            v = gen_batch.non_tensor_batch["prefix_mask"]
+            print(f"[DEBUG_GEN_BATCH] prefix_mask in gen_batch.non_tensor_batch: type={type(v).__name__}, dtype={getattr(v,'dtype','N/A')}, shape={getattr(v,'shape','N/A')}", flush=True)
+            if hasattr(v, 'dtype') and v.dtype == object and len(v) > 0:
+                print(f"[DEBUG_GEN_BATCH]   prefix_mask[0] type={type(v[0]).__name__}, len={len(v[0]) if hasattr(v[0],'__len__') else 'N/A'}", flush=True)
         return gen_batch
 
     def _validate(self):
@@ -985,7 +1337,7 @@ class RayPPOTrainer:
 
         from verl.utils.tracking import Tracking
 
-        logger = Tracking(
+        self.tracking_logger = Tracking(
             project_name=self.config.trainer.project_name,
             experiment_name=self.config.trainer.experiment_name,
             default_backend=self.config.trainer.logger,
@@ -1005,7 +1357,7 @@ class RayPPOTrainer:
             val_metrics = self._validate()
             assert val_metrics, f"{val_metrics=}"
             pprint(f"Initial validation metrics: {val_metrics}")
-            logger.log(data=val_metrics, step=self.global_steps)
+            self.tracking_logger.log(data=val_metrics, step=self.global_steps)
             if self.config.trainer.get("val_only", False):
                 return
 
@@ -1044,6 +1396,7 @@ class RayPPOTrainer:
                     )
                 batch: DataProto = DataProto.from_single_dict(batch_dict)
                 batch.meta_info["temperature"] = self.config.actor_rollout_ref.rollout.temperature
+                batch.meta_info["logprob_temperature"] = 1.0
 
                 # add uid to batch
                 batch.non_tensor_batch["uid"] = np.array(
@@ -1052,10 +1405,16 @@ class RayPPOTrainer:
 
                 gen_batch = self._get_gen_batch(batch)
 
+                # NOTE:
+                # DataProto.repeat() already repeats non_tensor_batch, including ragged object arrays.
+                # Expanding prefix sidecars here causes a second repeat inside gen_batch.repeat(),
+                # which breaks batch-size consistency when rollout.n > 1.
+                n_rollouts = self.config.actor_rollout_ref.rollout.n
+
                 # pass global_steps to trace
                 gen_batch.meta_info["global_steps"] = self.global_steps
                 gen_batch_output = gen_batch.repeat(
-                    repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True
+                    repeat_times=n_rollouts, interleave=True
                 )
 
                 is_last_step = self.global_steps >= self.total_training_steps
@@ -1098,12 +1457,236 @@ class RayPPOTrainer:
                             batch.batch["reward_baselines"] = reward_baseline_tensor
 
                             del rm_scores, gen_baseline_batch, gen_baseline_output
-                    # repeat to align with repeated responses in rollout
+                    # repeat batch (which has basic keys) and union with rollout output
+                    # NOTE: gen_batch has prefix keys in non_tensor_batch but also tensor fields like input_ids.
+                    # We start from batch, repeat it, union with gen_batch_output,
+                    # then copy prefix keys from gen_batch non_tensor_batch.
                     batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+
+                    # === DEBUG: Check repeated prefix keys in batch.non_tensor_batch ===
+                    for _pk in ["assistant_prefix_old_log_probs", "prefix_mask"]:
+                        if _pk in batch.non_tensor_batch:
+                            _v = batch.non_tensor_batch[_pk]
+                            if isinstance(_v, np.ndarray) and _v.dtype == object:
+                                def _safe_shape(x):
+                                    return getattr(x, 'shape', f"no_shape({type(x).__name__})")
+                                print(f"[DEBUG_EXPAND] batch.non_tensor_batch[{_pk}] shape={_v.shape}, first_elem_type={type(_v[0]).__name__}, first_elem={_safe_shape(_v[0])}", flush=True)
+                            else:
+                                print(f"[DEBUG_EXPAND] batch.non_tensor_batch[{_pk}] type={type(_v)}, len={len(_v) if hasattr(_v,'__len__') else 'N/A'}", flush=True)
+                    # === end DEBUG ===
+
+                    # CRITICAL: Restore prefix keys to batch.batch BEFORE union with gen_batch_output.
+                    # gen_batch_output only contains rollout tensor keys (responses, etc.) and has its OWN
+                    # non_tensor_batch from the reward computation. It does NOT contain assistant_prefix_old_log_probs.
+                    # The union only merges keys FROM gen_batch_output INTO batch, not the other way around.
+                    # So we must copy already-repeated prefix keys from batch.non_tensor_batch to batch.batch NOW.
+                    print(f"[DEBUG_BATCH] gen_batch_output.batch.keys() = {list(gen_batch_output.batch.keys())}", flush=True)
+                    print(f"[DEBUG_BATCH] gen_batch_output.non_tensor_batch.keys() = {list(gen_batch_output.non_tensor_batch.keys())}", flush=True)
+
+                    prefix_keys_to_restore = [
+                        "assistant_prefix_old_log_probs",
+                        "assistant_prefix_old_logprobs",
+                        "prefix_token_count",
+                        "prefix_mask",
+                        "assistant_prefix_span",
+                        "prompt",
+                        "raw_prompt",
+                    ]
+                    restoredKeys = []
+                    for key in prefix_keys_to_restore:
+                        if key in batch.non_tensor_batch:
+                            val = batch.non_tensor_batch[key]
+                            print(f"[DEBUG_RESTORE] Copying key={key} from batch.non_tensor_batch to batch.batch", flush=True)
+                            if isinstance(val, np.ndarray) and val.dtype == object:
+                                per_sample_lens = []
+                                for _i in range(min(5, val.shape[0])):
+                                    elem = val[_i]
+                                    l = len(elem) if hasattr(elem, '__len__') else 'N/A'
+                                    per_sample_lens.append(l)
+                                print(f"[DEBUG_RESTORE]   value is ragged object array: shape={val.shape}, first_5_lens={per_sample_lens}{'...' if val.shape[0] > 5 else ''}", flush=True)
+                            batch.batch[key] = val
+                            # Immediately verify shape after assignment
+                            if key in batch.batch:
+                                bv = batch.batch[key]
+                                print(f"[DEBUG_RESTORE]   AFTER assignment: batch.batch['{key}'] type={type(bv).__name__}, is_Tensor={isinstance(bv,torch.Tensor)}, is_ndarray={isinstance(bv,np.ndarray)}, dtype={getattr(bv,'dtype','N/A')}, shape={bv.shape if hasattr(bv,'shape') else getattr(bv,'shape','N/A')}", flush=True)
+                            restoredKeys.append(key)
+
+                    # === DEBUG_PREFIX_TOKEN_COUNT at restore ===
+                    for key in ["prefix_token_count"]:
+                        if key in batch.non_tensor_batch:
+                            val = batch.non_tensor_batch[key]
+                            print(f"[DEBUG_PREFIX_TOKEN_COUNT] batch.non_tensor_batch['{key}']: type={type(val).__name__}, dtype={getattr(val,'dtype','N/A')}, shape={getattr(val,'shape','N/A') if hasattr(val,'shape') else len(val)}", flush=True)
+                            if hasattr(val, '__len__') and not isinstance(val, np.ndarray):
+                                print(f"[DEBUG_PREFIX_TOKEN_COUNT]   first 5 values: {list(val[:5])}", flush=True)
+                            elif isinstance(val, np.ndarray) and val.dtype == object:
+                                print(f"[DEBUG_PREFIX_TOKEN_COUNT]   first 5 values: {[val[i] for i in range(min(5,len(val)))]}", flush=True)
+                            elif isinstance(val, np.ndarray):
+                                print(f"[DEBUG_PREFIX_TOKEN_COUNT]   first 5 values: {val[:5].tolist()}", flush=True)
+                        if key in batch.batch:
+                            bv = batch.batch[key]
+                            print(f"[DEBUG_PREFIX_TOKEN_COUNT] batch.batch['{key}']: type={type(bv).__name__}, dtype={getattr(bv,'dtype','N/A')}, shape={getattr(bv,'shape','N/A') if hasattr(bv,'shape') else len(bv)}", flush=True)
+                            if isinstance(bv, np.ndarray):
+                                print(f"[DEBUG_PREFIX_TOKEN_COUNT]   first 5 values: {bv[:5].tolist() if bv.dtype!=object else [bv[i] for i in range(min(5,len(bv)))]}", flush=True)
+                            elif isinstance(bv, torch.Tensor):
+                                print(f"[DEBUG_PREFIX_TOKEN_COUNT]   first 5 values: {bv[:5].tolist()}", flush=True)
+                    print(f"[DEBUG_BATCH] Restored prefix keys to batch.batch: {restoredKeys}", flush=True)
+
                     batch = batch.union(gen_batch_output)
+
+                    print(f"[DEBUG_BATCH] batch.batch.keys() after union = {list(batch.batch.keys())}", flush=True)
+                    # === Check if union overwrote prefix keys ===
+                    for rk in restoredKeys:
+                        if rk in batch.batch:
+                            bv = batch.batch[rk]
+                            print(f"[DEBUG_AFTER_UNION] batch.batch['{rk}'] type={type(bv)}, is_Tensor={isinstance(bv,torch.Tensor)}, shape={bv.shape if hasattr(bv,'shape') else getattr(bv,'shape','N/A')}", flush=True)
+                    # === DEBUG: Check restored value type and content ===
+                    for _pk in restoredKeys:
+                        if _pk in batch.batch:
+                            _v = batch.batch[_pk]
+                            if isinstance(_v, np.ndarray):
+                                print(f"[DEBUG_AFTER] batch.batch[{_pk}] is np.ndarray, shape={_v.shape}, dtype={_v.dtype}", flush=True)
+                            elif isinstance(_v, torch.Tensor):
+                                print(f"[DEBUG_AFTER] batch.batch[{_pk}] is Tensor, shape={_v.shape}", flush=True)
+                            else:
+                                print(f"[DEBUG_AFTER] batch.batch[{_pk}] type={type(_v)}", flush=True)
+                    # === end DEBUG ===
+
+                    if restoredKeys and self.config.algorithm.get("optimize_prefix_tokens", False):
+                        logging.getLogger(__name__).info(f"[PREFIX_OPT] Restored prefix keys from gen_batch.non_tensor_batch (n={n_rollouts}): {restoredKeys}")
 
                     if "response_mask" not in batch.batch.keys():
                         batch.batch["response_mask"] = compute_response_mask(batch)
+                    
+                    # Compute prefix_mask when optimize_prefix_tokens is enabled
+                    # This is used to include prefix tokens in the GRPO loss
+                    if self.config.algorithm.get("optimize_prefix_tokens", False):
+                        # CRITICAL: Fail fast if cached prefix old_logprobs are missing
+                        # prefix optimization REQUIRES pre-cached SFT old_logprobs
+                        # NOTE: After restore, prefix keys are in batch.batch (restored from gen_batch.non_tensor_batch)
+                        prefix_logprobs_key = None
+                        for key in ["assistant_prefix_old_log_probs", "assistant_prefix_old_logprobs"]:
+                            if key in batch.batch:
+                                prefix_logprobs_key = key
+                                break
+
+                        if prefix_logprobs_key is None:
+                            batch_keys = list(batch.batch.keys())
+                            raise ValueError(
+                                f"[PREFIX_OPT] Missing 'assistant_prefix_old_log_probs' in batch.batch. "
+                                f"batch.batch keys: {batch_keys}."
+                            )
+
+                        device = batch.batch["attention_mask"].device
+                        batch_size, response_len = batch.batch["responses"].shape
+                        total_length = batch.batch["attention_mask"].shape[1]
+                        prompt_len = total_length - response_len
+
+                        # === Load cached prefix old_log_probs from batch.batch ===
+                        # Reconstruct into a dense [B, max_prefix_len] tensor.
+                        # Per-sample lengths come from prefix_token_count (may be Tensor or ndarray).
+                        cached_olp = batch.batch[prefix_logprobs_key]
+
+                        # Get prefix_lens in numpy format regardless of source type
+                        ptc = batch.batch["prefix_token_count"]
+                        if isinstance(ptc, torch.Tensor):
+                            prefix_lens = ptc.cpu().numpy()
+                        else:
+                            # Already a regular numeric array (np.repeat already made it int64)
+                            prefix_lens = np.array(ptc, dtype=np.int64)
+                        B = len(prefix_lens)
+
+                        if isinstance(cached_olp, torch.Tensor):
+                            # Already a tensor (edge case)
+                            cached_prefix_logprobs_full_seq = cached_olp.float()
+                        else:
+                            # cached_olp is a ragged np.ndarray dtype=object of lists
+                            assert isinstance(cached_olp, np.ndarray) and cached_olp.dtype == object, \
+                                (f"Expected ragged object array, got {type(cached_olp)} "
+                                 f"dtype={getattr(cached_olp, 'dtype', 'N/A')}")
+                            max_len = int(prefix_lens.max())
+                            dense = np.full((B, max_len), 0.0, dtype=np.float32)
+                            for b in range(B):
+                                sample_lp = cached_olp[b]  # list of floats
+                                actual_len = int(prefix_lens[b])
+                                dense[b, :actual_len] = np.array(sample_lp, dtype=np.float32)
+                            cached_prefix_logprobs_full_seq = torch.from_numpy(dense).float()
+
+                        # === CHECK 1: per-sample cached old_logprobs length vs prefix_token_count ===
+                        for b in range(B):
+                            cached_len = len(cached_olp[b])
+                            expected_len = int(prefix_lens[b])
+                            assert cached_len == expected_len, (
+                                f"[CHECK_1 FAIL] sample {b}: cached old_logprobs len={cached_len} "
+                                f"!= prefix_token_count[{b}]={expected_len}. "
+                                f"Will be silently truncated/padded — aborting."
+                            )
+                        print(f"[CHECK_1 PASS] All {B} samples: len(cached_olp[b]) == prefix_token_count[b]", flush=True)
+
+                        print(f"[DEBUG_1592] cached_prefix_logprobs_full_seq: type={type(cached_prefix_logprobs_full_seq).__name__}, dtype={cached_prefix_logprobs_full_seq.dtype}, shape={cached_prefix_logprobs_full_seq.shape}", flush=True)
+
+                        # === Materialize prefix_mask from ragged object array ===
+                        # prefix_mask is a ragged list of 0/1 ints per sample.
+                        # Convert to dense [B, max_prompt_len] float tensor.
+                        raw_prefix_mask = batch.batch["prefix_mask"]
+                        if isinstance(raw_prefix_mask, torch.Tensor):
+                            mk_tensor = raw_prefix_mask.float()
+                        else:
+                            # raw_prefix_mask is ragged np.ndarray dtype=object of lists of ints
+                            assert isinstance(raw_prefix_mask, np.ndarray) and raw_prefix_mask.dtype == object, \
+                                f"Expected ragged object array for prefix_mask, got {type(raw_prefix_mask)}"
+                            pm_lens = np.array([len(raw_prefix_mask[b]) for b in range(B)])
+                            max_pm_len = int(pm_lens.max())
+                            dense_pm = np.zeros((B, max_pm_len), dtype=np.float32)
+                            for b in range(B):
+                                dense_pm[b, :pm_lens[b]] = np.array(raw_prefix_mask[b], dtype=np.float32)
+                            mk_tensor = torch.from_numpy(dense_pm).float()
+                        mk_tensor = mk_tensor.to(device)
+
+                        # === CHECK 2: per-sample prefix_mask ones count vs prefix_token_count ===
+                        # Recompute pm_lens from the dense tensor (all rows have same padded length)
+                        for b in range(B):
+                            pm_ones = int(mk_tensor[b].sum().item())
+                            expected_len = int(prefix_lens[b])
+                            assert pm_ones == expected_len, (
+                                f"[CHECK_2 FAIL] sample {b}: prefix_mask ones={pm_ones} "
+                                f"!= prefix_token_count[{b}]={expected_len}. "
+                                f"Discrepancy between prefix_mask and prefix_token_count."
+                            )
+                        print(f"[CHECK_2 PASS] All {B} samples: prefix_mask.sum() == prefix_token_count", flush=True)
+
+                        # === Write dense tensors back to batch.batch for Ray serialization ===
+                        # Replace ragged object arrays with dense tensors so they can be
+                        # serialized and sent to actor workers.
+                        batch.batch["assistant_prefix_old_log_probs"] = cached_prefix_logprobs_full_seq
+                        batch.batch["prefix_mask"] = mk_tensor
+                        # Clean up remaining ragged object arrays that actor doesn't need
+                        for _rag_key in ["raw_prompt"]:
+                            if _rag_key in batch.batch:
+                                batch.batch.pop(_rag_key)
+
+                        # === SUMMARY: trainer → actor prefix tensors ===
+                        olp_final = batch.batch["assistant_prefix_old_log_probs"]
+                        pm_final  = batch.batch["prefix_mask"]
+                        ptc_final = batch.batch["prefix_token_count"]
+                        print(f"[MATERIALIZE_SUMMARY] === TRAINER → ACTOR PREFIX TENSORS ===", flush=True)
+                        print(f"  batch.batch['assistant_prefix_old_log_probs']:", flush=True)
+                        print(f"    type={type(olp_final).__name__}, dtype={olp_final.dtype}, shape={olp_final.shape}", flush=True)
+                        print(f"  batch.batch['prefix_mask']:", flush=True)
+                        print(f"    type={type(pm_final).__name__}, dtype={pm_final.dtype}, shape={pm_final.shape}", flush=True)
+                        print(f"  batch.batch['prefix_token_count']:", flush=True)
+                        print(f"    type={type(ptc_final).__name__}, dtype={getattr(ptc_final, 'dtype', 'N/A')}, shape={ptc_final.shape if hasattr(ptc_final, 'shape') else len(ptc_final)}", flush=True)
+                        if hasattr(ptc_final, 'tolist'):
+                            print(f"    values (first {min(5, B)}): {ptc_final[:min(5,B)].tolist()}", flush=True)
+                        elif isinstance(ptc_final, np.ndarray):
+                            print(f"    values (first {min(5, B)}): {ptc_final[:min(5,B)].tolist()}", flush=True)
+                        print(f"  B={B}, max_prefix_len={olp_final.shape[1]}, max_prefix_mask_len={pm_final.shape[1]}", flush=True)
+                        print(f"[MATERIALIZE_SUMMARY] === END ===", flush=True)
+
+                        # Log alignment info
+                        metrics["actor/use_cached_prefix_old_logprob"] = True
+                        metrics["actor/prefix_token_count"] = int(cached_prefix_logprobs_full_seq.shape[1])
+                        metrics["actor/prefix_mask_sum"] = int(mk_tensor.sum().item())
+                    
                     # Balance the number of valid tokens across DP ranks.
                     # NOTE: This usually changes the order of data in the `batch`,
                     # which won't affect the advantage calculation (since it's based on uid),
@@ -1166,6 +1749,7 @@ class RayPPOTrainer:
                     assert "old_log_probs" in batch.batch, f'"old_log_prob" not in {batch.batch.keys()=}'
 
                     if self.use_reference_policy:
+                        print(f"[REF_POLICY] use_reference_policy=True → will call compute_ref_log_prob", flush=True)
                         # compute reference log_prob
                         with marked_timer(str(Role.RefPolicy), timing_raw, color="olive"):
                             if not self.ref_in_actor:
@@ -1173,6 +1757,8 @@ class RayPPOTrainer:
                             else:
                                 ref_log_prob = self.actor_rollout_wg.compute_ref_log_prob(batch)
                             batch = batch.union(ref_log_prob)
+                    else:
+                        print(f"[REF_POLICY] use_reference_policy=False → ref policy skipped, NO compute_ref_log_prob call", flush=True)
 
                     # compute values
                     if self.use_critic:
@@ -1198,6 +1784,16 @@ class RayPPOTrainer:
                             metrics.update(kl_metrics)
                         else:
                             batch.batch["token_level_rewards"] = batch.batch["token_level_scores"]
+
+                        # Compute seq_level_rewards for DRPO
+                        # DRPO requires uid and seq_level_rewards to compute the loss
+                        # This is safe for GRPO/PPO as they don't use these fields
+                        batch.batch['seq_level_rewards'] = batch.batch['token_level_scores'].sum(dim=-1)
+                        if 'uid' in batch.non_tensor_batch:
+                            # Keep uid as numpy array of strings - GRPO can use it directly for grouping
+                            batch.batch['uid'] = np.array(
+                                [str(u) for u in batch.non_tensor_batch['uid']], dtype=object
+                            )
 
                         # Compute rollout correction: IS weights, rejection sampling, and metrics
                         # Only runs in decoupled mode (computes once per batch using stable π_old)
@@ -1244,6 +1840,13 @@ class RayPPOTrainer:
                             batch.meta_info["multi_turn"] = rollout_config.multi_turn.enable
                             # TODO: Make "temperature" single source of truth from generation.
                             batch.meta_info["temperature"] = rollout_config.temperature
+                            batch.meta_info["logprob_temperature"] = 1.0
+                            
+                            # Pass prefix optimization config to actor update
+                            if self.config.algorithm.get("optimize_prefix_tokens", False):
+                                batch.meta_info["optimize_prefix_tokens"] = True
+                                batch.meta_info["prefix_loss_weight"] = self.config.algorithm.get("prefix_loss_weight", 1.0)
+                            
                             actor_output = self.actor_rollout_wg.update_actor(batch)
                         actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
                         metrics.update(actor_output_metrics)
@@ -1321,8 +1924,7 @@ class RayPPOTrainer:
                 if isinstance(self.train_dataloader.sampler, AbstractCurriculumSampler):
                     self.train_dataloader.sampler.update(batch=batch)
 
-                # TODO: make a canonical logger that supports various backend
-                logger.log(data=metrics, step=self.global_steps)
+                self.tracking_logger.log(data=metrics, step=self.global_steps)
 
                 progress_bar.update(1)
                 self.global_steps += 1

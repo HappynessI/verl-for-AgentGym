@@ -31,6 +31,15 @@ from verl.utils.chat_template import initialize_system_prompt
 from verl.utils.profiler import simple_timer
 from verl.utils.rollout_trace import rollout_trace_op
 
+# Debug mode flag - controlled by environment variable
+DEBUG_MODE = os.getenv("VERL_DEBUG_MODE", "0") == "1" or os.getenv("DEBUG_MODE", "0") == "1"
+_DEBUG_SAMPLE_COUNTER = 0  # Counter for limiting debug output to first few samples
+
+# 模块级别打印，确认模块加载和环境变量
+print(f"\n{'='*60}")
+print(f"DEBUG: tool_agent_loop.py module loaded - VERL_DEBUG_MODE={os.getenv('VERL_DEBUG_MODE', 'not set')}, DEBUG_MODE={DEBUG_MODE}")
+print(f"{'='*60}\n")
+
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
@@ -64,6 +73,9 @@ class AgentData:
         self.interaction = interaction
         self.interaction_kwargs = interaction_kwargs or {}
 
+        # Debug: sample index for logging
+        self.sample_idx: int = -1
+        
         # State variables
         self.prompt_ids: list[int] = []
         self.response_ids: list[int] = []
@@ -118,10 +130,27 @@ class ToolAgentLoop(AgentLoopBase):
 
     @rollout_trace_op
     async def run(self, sampling_params: dict[str, Any], **kwargs) -> AgentLoopOutput:
+        global _DEBUG_SAMPLE_COUNTER
+        
+        # ==================== DEBUG: 入口确认 ====================
+        sample_idx = _DEBUG_SAMPLE_COUNTER
+        _DEBUG_SAMPLE_COUNTER += 1
+        request_id = uuid4().hex  # 先定义 request_id
+        
+        if DEBUG_MODE and sample_idx < 3:
+            extra_info = kwargs.get("extra_info", {})
+            interaction_kwargs = extra_info.get("interaction_kwargs", {})
+            prefix_actions = interaction_kwargs.get("prefix_actions", [])
+            
+            print(f"\n{'='*60}")
+            print(f"DEBUG: Sample #{sample_idx} - ToolAgentLoop.run()")
+            print(f"  - request_id: {request_id}")
+            print(f"  - prefix_actions 数量: {len(prefix_actions) if prefix_actions else 0}")
+            print(f"{'='*60}\n")
+        
         messages = list(kwargs["raw_prompt"])
         image_data = copy.deepcopy(kwargs.get("multi_modal_data", {}).get("image", None))
         metrics = {}
-        request_id = uuid4().hex
         tools_kwargs = kwargs.get("tools_kwargs", {})
 
         # Initialize interaction if needed
@@ -138,7 +167,10 @@ class ToolAgentLoop(AgentLoopBase):
                     f"{list(self.interaction_map.keys())}"
                 )
             interaction = self.interaction_map[interaction_name]
-            await interaction.start_interaction(request_id, **interaction_kwargs)
+            # 注入 raw_prompt：interaction 需要它来从 prompt 里解析 goal 等字段
+            # interaction_kwargs 本身不包含 prompt，prompt 在 kwargs["raw_prompt"]
+            interaction_kwargs_with_prompt = {**interaction_kwargs, "prompt": kwargs.get("raw_prompt")}
+            await interaction.start_interaction(request_id, **interaction_kwargs_with_prompt)
         # Create AgentData instance to encapsulate all state
         agent_data = AgentData(
             messages=messages,
@@ -149,6 +181,8 @@ class ToolAgentLoop(AgentLoopBase):
             interaction=interaction,
             interaction_kwargs=interaction_kwargs,
         )
+        # Store sample_idx for debug logging
+        agent_data.sample_idx = sample_idx
 
         # State machine loop
         state = AgentState.PENDING
@@ -238,6 +272,14 @@ class ToolAgentLoop(AgentLoopBase):
                     **self.apply_chat_template_kwargs,
                 ),
             )
+
+        # Unconditional: print the final prompt text (what model actually sees)
+        prompt_text = await self.loop.run_in_executor(
+            None,
+            lambda: self.tokenizer.decode(agent_data.prompt_ids, skip_special_tokens=True)
+        )
+        print(f"[PROMPT_DUMP] sample={agent_data.sample_idx}, tokens={len(agent_data.prompt_ids)}, last_2000_chars:\n{prompt_text[-2000:]}", flush=True)
+
         return AgentState.GENERATING
 
     async def _handle_generating_state(
@@ -271,6 +313,24 @@ class ToolAgentLoop(AgentLoopBase):
             return AgentState.TERMINATED
         if self.max_user_turns and agent_data.user_turns >= self.max_user_turns:
             return AgentState.TERMINATED
+
+        # ==================== DEBUG: Student 生成结果 ====================
+        if DEBUG_MODE and agent_data.sample_idx < 3:
+            assistant_text = await self.loop.run_in_executor(
+                None, lambda: self.tokenizer.decode(agent_data.response_ids, skip_special_tokens=True)
+            )
+            print(f"\n{'='*60}")
+            print(f"DEBUG: Student 生成 for sample {agent_data.sample_idx}")
+            print(f"  - 原始文本 (前300字符): {assistant_text[:300]}...")
+            
+            # 尝试提取 action
+            if agent_data.interaction and hasattr(agent_data.interaction, 'extract_action'):
+                extracted_action = agent_data.interaction.extract_action(assistant_text)
+                print(f"  - 提取的 action: {extracted_action}")
+                
+                # 注意：不进行 fail-fast，让训练继续
+                # 如果无法提取 action，后续状态机会处理
+            print(f"{'='*60}\n")
 
         # Extract tool calls
         _, agent_data.tool_calls = await self.tool_parser.extract_tool_calls(agent_data.response_ids)
@@ -412,6 +472,20 @@ class ToolAgentLoop(AgentLoopBase):
 
     async def _handle_interacting_state(self, agent_data: AgentData) -> AgentState:
         """Handle the interacting state: get user input from interaction."""
+        
+        # ==================== DEBUG: Student continuation 开始 ====================
+        if DEBUG_MODE and agent_data.sample_idx < 3:
+            print(f"\n{'='*60}")
+            print(f"DEBUG: Student continuation 开始 for request_id={agent_data.request_id}")
+            print(f"  - 当前 messages 数量: {len(agent_data.messages)}")
+            print(f"  - 当前 assistant_turns: {agent_data.assistant_turns}")
+            print(f"{'='*60}\n")
+            
+            # Fail-fast: 检查 student 是否真的进入环境交互
+            if not agent_data.interaction:
+                print(f"❌ FAIL-FAST: No interaction object - student not in environment!")
+                raise ValueError(f"Student failed to enter environment interaction!")
+
         (
             should_terminate_sequence,
             interaction_responses,
@@ -420,6 +494,22 @@ class ToolAgentLoop(AgentLoopBase):
         ) = await agent_data.interaction.generate_response(
             agent_data.request_id, agent_data.messages, **agent_data.interaction_kwargs
         )
+        
+        # ==================== DEBUG: Student continuation 结果 ====================
+        if DEBUG_MODE and agent_data.sample_idx < 3:
+            print(f"\n{'='*60}")
+            print(f"DEBUG: Student continuation 结果 for request_id={agent_data.request_id}")
+            print(f"  - 环境返回的 response (前300字符): {interaction_responses[:300] if interaction_responses else 'None'}...")
+            print(f"  - reward: {reward}")
+            print(f"  - should_terminate: {should_terminate_sequence}")
+            print(f"  - 新的 user message 已添加到 messages" if len(agent_data.messages) > 0 else "  - 无新消息")
+            print(f"{'='*60}\n")
+            
+            # Fail-fast: 检查 student continuation 是否成功
+            if not interaction_responses:
+                print(f"❌ FAIL-FAST: No interaction response - environment replay/continuation failed!")
+                raise ValueError(f"Student continuation failed - no response from environment!")
+
         agent_data.user_turns += 1
 
         add_messages: list[dict[str, Any]] = [{"role": "user", "content": interaction_responses}]
@@ -454,7 +544,13 @@ class ToolAgentLoop(AgentLoopBase):
         if agent_data.response_logprobs:
             agent_data.response_logprobs += [0.0] * len(response_ids)
 
-        # double check prompt
+        # Unconditional: print prompt text after appending user response
+        prompt_text = await self.loop.run_in_executor(
+            None,
+            lambda: self.tokenizer.decode(agent_data.prompt_ids, skip_special_tokens=True)
+        )
+        print(f"[PROMPT_UPDATE] sample={agent_data.sample_idx}, turn={agent_data.assistant_turns}, tokens={len(agent_data.prompt_ids)}, reward_from_env={reward}, last_1500_chars:\n{prompt_text[-1500:]}", flush=True)
+
         # Check termination condition
         if should_terminate_sequence:
             return AgentState.TERMINATED

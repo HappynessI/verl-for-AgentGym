@@ -124,6 +124,13 @@ algorithm:
     enable: False  # We try to avoid forgetting to set enable
     max_num_gen_batches: 0  # Non-positive values mean no upper limit
 
+  # Prefix optimization: whether to include prefix tokens in GRPO loss
+  # When enabled, prefix assistant tokens (from teacher trajectory) will also be optimized
+  optimize_prefix_tokens: False
+
+  # Weight for prefix loss when optimize_prefix_tokens is True
+  prefix_loss_weight: 1.0
+
 # config for the trainer
 trainer:
 

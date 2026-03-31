@@ -39,7 +39,7 @@ ROLLOUT_RS_THRESHOLD_LOWER=${ROLLOUT_RS_THRESHOLD_LOWER:-0.2}
 
 # -------------------- vLLM Rollout配置 --------------------
 ROLLOUT_N=${ROLLOUT_N:-8}
-TEMPERATURE=${TEMPERATURE:-0.8}
+TEMPERATURE=${TEMPERATURE:-1.0}
 TOP_P=${TOP_P:-0.95}
 GPU_MEMORY_UTIL=${GPU_MEMORY_UTIL:-0.8}
 MAX_NUM_SEQS=${MAX_NUM_SEQS:-256}
@@ -166,6 +166,9 @@ python3 -m verl.trainer.main_ppo \
     '+data.apply_chat_template_kwargs.enable_thinking=True' \
     actor_rollout_ref.model.path=$MODEL_PATH \
     actor_rollout_ref.model.enable_gradient_checkpointing=true \
+    actor_rollout_ref.model.enable_activation_offload=true \
+    actor_rollout_ref.actor.fsdp_config.param_offload=true \
+    actor_rollout_ref.ref.fsdp_config.param_offload=true \
     actor_rollout_ref.actor.optim.lr=$LEARNING_RATE \
     actor_rollout_ref.actor.ppo_mini_batch_size=$TRAIN_BATCH_SIZE \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \

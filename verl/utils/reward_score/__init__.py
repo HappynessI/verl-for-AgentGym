@@ -115,10 +115,14 @@ def default_compute_score(
     elif data_source == "textcraft":
         # For textcraft, reward comes from environment interaction
         # Data has been normalized in naive.py to extra_info["turn_scores"]: list[float]
+        print(f"[COMPUTE_SCORE] textcraft: extra_info keys={list(extra_info.keys()) if extra_info else None}", flush=True)
         if extra_info and "turn_scores" in extra_info:
             scores = extra_info["turn_scores"]
+            print(f"[COMPUTE_SCORE] textcraft: turn_scores={scores}, sum={sum(scores) if scores else 0}", flush=True)
             res = float(sum(scores)) if scores else 0.0
         else:
+            print(f"[COMPUTE_SCORE] textcraft: turn_scores NOT in extra_info, res=0.0", flush=True)
+            print(f"[COMPUTE_SCORE] textcraft: extra_info full content={extra_info}", flush=True)
             res = 0.0
 
     else:

@@ -304,14 +304,42 @@ def compute_grpo_outcome_advantage(
     id2mean = {}
     id2std = {}
 
+    # ===============================================================
+    # FIX: grpo_single_sample_adv enables non-zero advantage for single-sample uid groups.
+    #
+    # Problem: Original code sets mean=0, std=1 for single-sample groups.
+    #   adv = (score - 0) / (1 + eps) = score
+    # For score=1.0 → adv=1.0. But the code then multiplies by response_mask
+    # which is zeros at non-last positions, so the effective adv at those positions is 0.
+    #
+    # Root cause: The reward is at response[-1], but response_mask covers ALL response positions.
+    # The adv at ALL response positions = score * 1 = score, but since adv is the same
+    # at all positions (broadcast), the PPO ratio and advantage-weighted loss
+    # effectively scale the loss by score at ALL response tokens.
+    #
+    # With this fix, for single-sample groups:
+    #   - adv at ALL response positions = raw score (not normalized)
+    #   - For score=1.0: adv=1.0 everywhere → positive loss signal
+    # ===============================================================
+    use_raw_adv = (
+        config is not None and getattr(config, "grpo_single_sample_adv", False)
+    )
+
     with torch.no_grad():
         bsz = scores.shape[0]
         for i in range(bsz):
             id2score[index[i]].append(scores[i])
         for idx in id2score:
             if len(id2score[idx]) == 1:
-                id2mean[idx] = torch.tensor(0.0)
-                id2std[idx] = torch.tensor(1.0)
+                if use_raw_adv:
+                    # Use raw score as mean: so (score - score) / 1 = 0
+                    # -> Instead, store the raw score so we use it as the raw advantage
+                    id2mean[idx] = id2score[idx][0]
+                    id2std[idx] = torch.tensor(1.0)
+                else:
+                    # Original: zero advantage for single-sample groups
+                    id2mean[idx] = torch.tensor(0.0)
+                    id2std[idx] = torch.tensor(1.0)
             elif len(id2score[idx]) > 1:
                 scores_tensor = torch.stack(id2score[idx])
                 id2mean[idx] = torch.mean(scores_tensor)
@@ -802,20 +830,36 @@ def agg_loss(
     if loss_agg_mode == "token-mean":
         if batch_num_tokens is None:
             batch_num_tokens = loss_mask.sum()
-        loss = verl_F.masked_sum(loss_mat, loss_mask) / batch_num_tokens * dp_size
+        # Guard against division by zero: if all mask tokens are zero, use 1e-8 to avoid NaN
+        # batch_num_tokens may be a Python float (from dp_actor global_batch_info) or a torch.Tensor
+        if isinstance(batch_num_tokens, torch.Tensor):
+            _denom = max(float(batch_num_tokens.detach().cpu().item()), 1e-8)
+        else:
+            _denom = max(float(batch_num_tokens), 1e-8)
+        loss = verl_F.masked_sum(loss_mat, loss_mask) / _denom * dp_size
     elif loss_agg_mode == "seq-mean-token-sum":
         seq_losses = torch.sum(loss_mat * loss_mask, dim=-1)  # token-sum
         seq_mask = (torch.sum(loss_mask, dim=-1) > 0).float()  # exclude fully masked sequences
         if global_batch_size is None:
             global_batch_size = seq_mask.sum()
-        loss = verl_F.masked_sum(seq_losses, seq_mask) / global_batch_size * dp_size  # seq-mean
+        # Guard against division by zero: if no valid sequences, use 1e-8 to avoid NaN
+        # global_batch_size may be a Python float (from dp_actor global_batch_info) or a torch.Tensor
+        if isinstance(global_batch_size, torch.Tensor):
+            _denom = max(float(global_batch_size.detach().cpu().item()), 1e-8)
+        else:
+            _denom = max(float(global_batch_size), 1e-8)
+        loss = verl_F.masked_sum(seq_losses, seq_mask) / _denom * dp_size  # seq-mean
     elif loss_agg_mode == "seq-mean-token-mean":
         seq_mask = torch.sum(loss_mask, dim=-1)  # per-sequence token count
         seq_losses = torch.sum(loss_mat * loss_mask, dim=-1) / (seq_mask + 1e-8)  # token-mean
         seq_mask = (seq_mask > 0).float()  # exclude fully masked sequences
         if global_batch_size is None:
             global_batch_size = seq_mask.sum()
-        loss = verl_F.masked_sum(seq_losses, seq_mask) / global_batch_size * dp_size  # seq-mean
+        if isinstance(global_batch_size, torch.Tensor):
+            _denom = max(float(global_batch_size.detach().cpu().item()), 1e-8)
+        else:
+            _denom = max(float(global_batch_size), 1e-8)
+        loss = verl_F.masked_sum(seq_losses, seq_mask) / _denom * dp_size  # seq-mean
     elif loss_agg_mode == "seq-mean-token-sum-norm":
         seq_losses = torch.sum(loss_mat * loss_mask, dim=-1)
         if loss_scale_factor is None:
@@ -984,6 +1028,22 @@ def compute_policy_loss_vanilla(
     # Apply rollout correction weights if provided
     if rollout_is_weights is not None:
         pg_losses = pg_losses * rollout_is_weights
+
+    # NaN guard: if pg_losses contains NaN, replace with zeros to avoid poisoning the loss.
+    # This can happen when ratio is Inf (e.g., under bfloat16 autocast overflow) and
+    # multiplied by zero advantages: 0.0 * inf = nan.
+    if pg_losses.isnan().any():
+        _nan_count = pg_losses.isnan().sum().item()
+        _valid_count = pg_losses.numel() - _nan_count
+        pg_losses = torch.where(pg_losses.isnan(), torch.zeros_like(pg_losses), pg_losses)
+        import warnings
+        warnings.warn(
+            f"[compute_policy_loss_vanilla] Detected {_nan_count} NaN values out of "
+            f"{pg_losses.numel()} elements in pg_losses. Replaced with zeros. "
+            f"This may indicate numerical instability in the policy loss computation. "
+            f"advantages stats: min={advantages.min():.4f}, max={advantages.max():.4f}, "
+            f"ratio stats: min={ratio.min():.4f}, max={ratio.max():.4f}."
+        )
 
     pg_loss = agg_loss(
         loss_mat=pg_losses, loss_mask=response_mask, loss_agg_mode=loss_agg_mode, **config.global_batch_info

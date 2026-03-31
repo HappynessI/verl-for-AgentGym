@@ -76,6 +76,28 @@ class RewardLoopWorker:
         )
 
     async def compute_score_batch(self, data: DataProto) -> list[dict]:
+        # ===== HARD EVIDENCE: 模型原始输出 =====
+        for i in range(len(data)):
+            data_item = data[i]
+            response_ids = data_item.batch["responses"]
+            response_length = response_ids.shape[-1]
+            valid_response_length = data_item.batch["attention_mask"][-response_length:].sum()
+            valid_response_ids = response_ids[:valid_response_length]
+            response_str = self.input_tokenizer.decode(valid_response_ids, skip_special_tokens=True)
+            print(f"[MODEL_OUTPUT] sample[{i}] response (前500字符):\n{response_str[:500]}", flush=True)
+            print(f"[MODEL_OUTPUT] sample[{i}] response (后200字符):\n{response_str[-200:]}", flush=True)
+            print(f"[MODEL_OUTPUT] sample[{i}] response length={len(response_str)}, tokens={valid_response_length}", flush=True)
+
+            # extract_action 调试
+            action = self.reward_loop.extract_action(response_str) if hasattr(self.reward_loop, 'extract_action') else None
+            print(f"[MODEL_OUTPUT] sample[{i}] extracted_action={action!r}", flush=True)
+
+            # extra_info 内容
+            extra_info = data_item.non_tensor_batch.get("extra_info", {})
+            print(f"[MODEL_OUTPUT] sample[{i}] extra_info keys={list(extra_info.keys())}", flush=True)
+            if "turn_scores" in extra_info:
+                print(f"[MODEL_OUTPUT] sample[{i}] extra_info['turn_scores']={extra_info['turn_scores']}", flush=True)
+
         tasks = []
         for i in range(len(data)):
             tasks.append(asyncio.create_task(self.compute_score(data[i : i + 1])))

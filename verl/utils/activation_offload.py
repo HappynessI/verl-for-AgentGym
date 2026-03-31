@@ -495,6 +495,8 @@ class ActivationHandler:
             return out
 
         module.forward = wrapped_method.__get__(module, type(module))
+        # Save original forward so it can be called bypassing the offload wrapper
+        module._orig_forward = orig_method
 
 
 def enable_activation_offloading(model, strategy, enable_ckpt=False):

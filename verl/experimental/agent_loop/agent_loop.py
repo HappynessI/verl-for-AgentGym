@@ -603,6 +603,12 @@ class AgentLoopWorkerBase:
 
     def _postprocess(self, inputs: list[_InternalAgentLoopOutput]) -> DataProto:
         """Process the padded outputs from _run_agent_loop and combine them into a batch."""
+        # ===== DEBUG: Print rollout info at the start =====
+        if hasattr(self, 'config') and self.config.actor_rollout_ref.rollout.get('debug_print', False):
+            print(f"[DEBUG _postprocess] Received {len(inputs)} inputs")
+            for i, inp in enumerate(inputs[:3]):
+                print(f"  Sample {i}: num_turns={inp.num_turns}, reward={inp.reward_score}, extra_keys={list(inp.extra_fields.keys())}")
+        
         # Convert lists back to tensors and stack them to create a batch.
         prompt_ids = torch.cat([input.prompt_ids for input in inputs], dim=0)
         response_ids = torch.cat([input.response_ids for input in inputs], dim=0)
@@ -663,6 +669,16 @@ class AgentLoopWorkerBase:
             extra_fields[key] = temp_arr
 
         non_tensor_batch.update(extra_fields)
+        
+        # ===== DEBUG: Print batch summary =====
+        if hasattr(self, 'config') and self.config.actor_rollout_ref.rollout.get('debug_print', False):
+            bsz = len(inputs)
+            prompt_len = prompt_ids.size(1)
+            resp_len = attention_mask[:, prompt_len:].sum(dim=1)
+            reward_mean = sum(s.item() if hasattr(s, 'item') else s for s in scores) / len(scores) if scores and scores[0] is not None else 0
+            print(f"[DEBUG _postprocess] Batch summary: bsz={bsz}, prompt_len={prompt_len}, "
+                  f"resp_mean={resp_len.float().mean().item():.1f}, reward_mean={reward_mean:.3f}")
+        
         return DataProto(
             batch=batch,
             non_tensor_batch=non_tensor_batch,

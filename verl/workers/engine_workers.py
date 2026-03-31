@@ -557,8 +557,11 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
     def init_model(self):
         model_config: HFModelConfig = omega_conf_to_dataclass(self.config.model)
 
-        # 1. build reference model
-        if "ref" in self.role:
+        # 1. build reference model (skip if neither KL loss nor KL reward is enabled)
+        use_kl_loss = self.config.actor.get("use_kl_loss", False)
+        use_kl_in_reward = self.config.get("algorithm", {}).get("use_kl_in_reward", False)
+        should_build_ref = "ref" in self.role and (use_kl_loss or use_kl_in_reward)
+        if should_build_ref:
             # TODO: align ref config with actor config
             with open_dict(self.config.ref):
                 self.config.ref.ppo_mini_batch_size = self.config.actor.ppo_mini_batch_size
@@ -624,6 +627,12 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
     @register(dispatch_mode=make_nd_compute_dataproto_dispatch_fn(mesh_name="ref"))
     @DistProfiler.annotate(color="olive", role="ref_compute_log_prob")
     def compute_ref_log_prob(self, data: DataProto):
+        if self.ref is None:
+            raise RuntimeError(
+                "compute_ref_log_prob() called but self.ref is None. "
+                "Ref model was skipped at init because use_kl_loss=False and use_kl_in_reward=False. "
+                "This should not happen — check that ref policy is not being called when KL is disabled."
+            )
         data.meta_info["calculate_entropy"] = False
         output = self.ref.compute_log_prob(data)
         if output is not None:

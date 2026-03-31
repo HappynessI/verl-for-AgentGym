@@ -15,6 +15,7 @@
 from collections import defaultdict
 from typing import Any
 
+import numpy as np
 import torch
 
 from verl import DataProto
@@ -63,6 +64,13 @@ class NaiveRewardManager(AbstractRewardManager):
         for i in range(len(data)):
             data_item = data[i]  # DataProtoItem
 
+            # Unconditional audit: print reward manager input chain
+            print(f"[REWARD_IN] sample={i}, non_tensor_batch keys={list(data_item.non_tensor_batch.keys())}", flush=True)
+            print(f"[REWARD_IN] data.non_tensor_batch keys={list(data.non_tensor_batch.keys())}", flush=True)
+            if "turn_scores" in data.non_tensor_batch:
+                ts_raw = data.non_tensor_batch["turn_scores"]
+                print(f"[REWARD_IN] turn_scores from non_tensor_batch: type={type(ts_raw)}, dtype={getattr(ts_raw, 'dtype', 'N/A')}, value={ts_raw}", flush=True)
+
             prompt_ids = data_item.batch["prompts"]
 
             prompt_length = prompt_ids.shape[-1]
@@ -85,6 +93,17 @@ class NaiveRewardManager(AbstractRewardManager):
             rollout_reward_scores = data_item.non_tensor_batch.get("reward_scores", {})
             extra_info["num_turns"] = num_turns
             extra_info["rollout_reward_scores"] = rollout_reward_scores
+            # Inject turn_scores from rollout (stored in batch non_tensor_batch by agent_loop _postprocess)
+            if "turn_scores" in data.non_tensor_batch:
+                turn_scores_raw = data.non_tensor_batch["turn_scores"]
+                if isinstance(turn_scores_raw, np.ndarray) and turn_scores_raw.dtype == object:
+                    turn_scores_raw = turn_scores_raw[i]
+                print(f"[DEBUG_TURN_SCORES] i={i}, turn_scores_raw type={type(turn_scores_raw)}, value={turn_scores_raw}", flush=True)
+                if isinstance(turn_scores_raw, (list, np.ndarray)):
+                    extra_info["turn_scores"] = [float(s) for s in turn_scores_raw]
+                elif isinstance(turn_scores_raw, (int, float)):
+                    extra_info["turn_scores"] = [float(turn_scores_raw)]
+                print(f"[DEBUG_TURN_SCORES] extra_info['turn_scores']={extra_info.get('turn_scores')}", flush=True)
 
             score = self.compute_score(
                 data_source=data_source,

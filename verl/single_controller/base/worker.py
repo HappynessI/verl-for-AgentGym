@@ -191,12 +191,31 @@ class Worker(WorkerHelper):
             cuda_visible_devices (str, optional):
                 CUDA visible devices configuration. Defaults to None.
         """
-        # construct a meta from environment variable. Note that the import must be inside the class because
-        # it is executed remotely
         import os
 
+        # Step 1: always needed (CUDA device visibility must be set even in skip mode)
         self._setup_env_cuda_visible_devices()
 
+        # When DISABLE_WORKER_INIT is set, skip distributed init entirely.
+        # The outer Worker base class already exists (created by the parent Ray
+        # actor), so we only need to avoid overwriting env vars / store that
+        # were set up by the parent's init.  This is safe because the
+        # FusedWorker / colocated subclasses that wrap this path only use it as
+        # a no-op pass-through during class dict construction -- the actual
+        # model init happens later in init_model().
+        if os.environ.get("DISABLE_WORKER_INIT") == "1":
+            # Even when skipping full init, we must set the rank / world_size
+            # attributes that are accessed by subclasses immediately after
+            # calling super().__init__().  We only skip the side-effects that
+            # touch the process group / env vars / store.
+            self._rank = int(os.getenv("RANK", "0"))
+            self._world_size = int(os.getenv("WORLD_SIZE", "1"))
+            self.fused_worker_dict = {}
+            self.__dispatch_dp_rank = {}
+            self.__collect_dp_rank = {}
+            return
+
+        # Step 2: distributed environment
         world_size = int(os.environ["WORLD_SIZE"])
         rank = int(os.environ["RANK"])
         self._rank = rank
@@ -219,8 +238,10 @@ class Worker(WorkerHelper):
         if cuda_visible_devices is not None:
             store[f"_{get_visible_devices_keyword()}".lower()] = cuda_visible_devices
 
+        # Step 3: configure with store
         self._configure_with_store(store=store)
 
+        # Step 4: init dispatch structures
         self.fused_worker_dict = {}
         self.__dispatch_dp_rank = {}
         self.__collect_dp_rank = {}

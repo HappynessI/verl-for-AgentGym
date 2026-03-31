@@ -129,3 +129,10 @@ logs
 log
 outputs
 .history*.whl
+
+# reviewed prefix-grpo artifacts kept inside repo for code review
+!data/
+!data/**/
+!data/**/*.md
+!data/**/*.parquet
+!data/**/*.log

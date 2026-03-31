@@ -18,7 +18,17 @@ class SciWorldInteraction(AgentGymBaseInteraction):
     - "use thermometer on water"
     - "read thermometer"
     - "pour water from beaker to container"
+    
+    与 AgentGym 官方采样脚本保持一致:
+    - 使用 'score' 字段作为 reward (累积完成度分数，非 step 级惩罚)
+    - 使用 BaseAdapter.parse_react 解析 ReAct 格式的 action
     """
+    
+    # SciWorld 环境使用 'score' 字段作为 reward (累积完成度分数)
+    reward_field = "score"
+    
+    # 使用与 AgentGym 官方相同的 action_format
+    action_format = "react"
     
     def __init__(self, config):
         super().__init__(config)
@@ -88,52 +98,54 @@ class SciWorldInteraction(AgentGymBaseInteraction):
     def extract_action(self, text: str) -> Optional[str]:
         """从模型输出中提取SciWorld action
         
-        支持的格式：
-        1. [[ action ]] 格式（推荐）
-        2. Action: action 格式
-        3. 直接action
+        支持两种格式：
+        1. ReAct格式: Thought:\n...\nAction:\naction
+        2. [[ ]] 格式: Action: [[ action ]]
         """
-        text = text.strip()
+        # 移除 </s> 后缀
+        action = text
+        if action.endswith("</s>"):
+            action = action[:-5]
         
-        # 移除chat template标记
-        text = re.sub(r'<\|im_start\|>assistant\s*\n?', '', text, flags=re.IGNORECASE)
-        text = re.sub(r'<\|im_end\|>', '', text)
+        # 先移除思考标签，避免干扰 action 提取
+        action = re.sub(r'<think>.*?</think>', '', action, flags=re.DOTALL)
         
-        # 移除思考标签
-        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        # 优先尝试解析 [[ ]] 格式（你的prompt使用的格式）
+        bracket_match = re.search(r'\[\[\s*(.+?)\s*\]\]', action, re.IGNORECASE | re.DOTALL)
+        if bracket_match:
+            extracted = bracket_match.group(1).strip()
+            if extracted:
+                logger.debug(f"Extracted action from [[ ]]: {extracted}")
+                return extracted.lower()
         
-        # 格式1: [[ action ]]
-        action_matches = re.findall(r'\[\[\s*(.*?)\s*\]\]', text, re.DOTALL)
-        if action_matches:
-            action = action_matches[-1].strip()
-            action = " ".join(action.split())
-            if action:
-                return action.lower()
+        # 尝试使用 BaseAdapter.parse_react 解析 ReAct 格式
+        try:
+            from agentenv.controller.utils import BaseAdapter
+            parsed = BaseAdapter.parse_react(action)
+            action_str = parsed.action.strip()
+            if action_str:
+                return action_str.lower()
+        except Exception as e:
+            logger.debug(f"Failed to parse action with BaseAdapter.parse_react: {e}")
         
-        # 格式2: Action: action
-        action_match = re.search(r'Action:\s*(.+?)(?:\n|$)', text, re.IGNORECASE)
+        # Fallback: 尝试直接提取 Action: 后面的内容（不带 [[ ]]）
+        action_match = re.search(r'Action:\s*\n?\s*(.+)', action, re.IGNORECASE | re.DOTALL)
         if action_match:
-            action = action_match.group(1).strip()
-            action = re.sub(r'^\[\[\s*|\s*\]\]$', '', action)
-            if action:
-                return action.lower()
+            extracted = action_match.group(1).strip()
+            # 移除 [[ ]] 括号
+            extracted = re.sub(r'^\[\[\s*', '', extracted)
+            extracted = re.sub(r'\s*\]\]$', '', extracted)
+            if extracted:
+                logger.debug(f"Extracted action from Action: {extracted}")
+                return extracted.lower()
         
-        # 格式3: 提取最后一行非空文本
-        lines = text.strip().split('\n')
-        for line in reversed(lines):
-            line = line.strip().lower()
-            if line and len(line) < 150:
-                # 排除思考内容
-                if not line.startswith('think:') and not line.startswith('thought:'):
-                    return line
-        
+        # Fallback: 如果都失败，返回None
+        logger.warning(f"Failed to extract action from: {action[:100]}...")
         return None
     
     def get_invalid_action_prompt(self) -> str:
-        return ("Please provide a valid action wrapped in [[ ]].\n"
-                "Example actions:\n"
-                "- [[ move to kitchen ]]\n"
-                "- [[ take thermometer from table ]]\n"
-                "- [[ use thermometer on water ]]\n"
-                "- [[ read thermometer ]]\n"
-                "- [[ look around ]]")
+        return ("Your response should use the following format:\n"
+                "Thought:\nyour thoughts.\n\n"
+                "Action:\n[[ your next action ]]\n\n"
+                "IMPORTANT: Always wrap your action in [[ ]] brackets.\n"
+                "Example: Action: [[ open door to kitchen ]]")

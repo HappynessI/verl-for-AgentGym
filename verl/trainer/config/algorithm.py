@@ -461,3 +461,9 @@ class AlgoConfig(BaseConfig):
     # Rollout Correction: corrects off-policy issues (policy mismatch, model staleness, distribution shifts)
     # Set to None to disable, use RolloutCorrectionConfig presets (e.g., .tis(), .mis()), or pass dict
     rollout_correction: Optional[RolloutCorrectionConfig] = None
+    
+    # Prefix optimization: whether to include prefix tokens in GRPO loss
+    # When enabled, prefix assistant tokens (from teacher trajectory) will also be optimized
+    optimize_prefix_tokens: bool = False
+    # Weight for prefix loss when optimize_prefix_tokens is True
+    prefix_loss_weight: float = 1.0

@@ -61,7 +61,22 @@ def collate_fn(data_list: list[dict]) -> dict:
         tensors[key] = torch.stack(val, dim=0)
 
     for key, val in non_tensors.items():
-        non_tensors[key] = np.fromiter(val, dtype=object, count=len(val))
+        # raw_prompt: the parquet prompt column stores each element as np.array(shape=(1,))
+        # of message lists. We must convert to a 1D object array of lists to avoid a
+        # spurious extra dimension (batch, 1) which breaks DataProto.repeat().
+        if key == "raw_prompt":
+            result = np.empty(len(val), dtype=object)
+            for i, v in enumerate(val):
+                # v is np.array(shape=(1,)) containing a list of message dicts from parquet.
+                # v[0] is the list of message dicts (the actual prompt for this sample).
+                # We must unwrap the extra nesting to get a 1D array of lists.
+                if isinstance(v, np.ndarray) and v.ndim == 1 and v.shape[0] == 1:
+                    result[i] = list(v[0])
+                else:
+                    result[i] = v
+            non_tensors[key] = result
+        else:
+            non_tensors[key] = np.fromiter(val, dtype=object, count=len(val))
 
     return {**tensors, **non_tensors}
 
@@ -431,8 +446,10 @@ class RLHFDataset(Dataset):
 
         row_dict["raw_prompt_ids"] = raw_prompt_ids
         # encode prompts without chat template
+        # IMPORTANT: explicitly convert to plain Python list to prevent HuggingFace datasets
+        # from wrapping it in an extra numpy dimension, which breaks DataProto.repeat()
         if self.return_raw_chat:
-            row_dict["raw_prompt"] = messages
+            row_dict["raw_prompt"] = list(messages)
 
         # get prompts with chat template
         if self.return_full_prompt:

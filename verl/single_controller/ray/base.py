@@ -86,10 +86,16 @@ def sort_placement_group_by_node_ip(pgs: list[PlacementGroup]) -> list[Placement
 
 @ray.remote
 def get_master_addr_port() -> tuple[str, str]:
-    addr = ray.util.get_node_ip_address().strip("[]")
-    with socket.socket() as sock:
-        sock.bind(("", 0))
-        port = sock.getsockname()[1]
+    # Prefer environment variables so that smoke test / single-node runs
+    # can pin the port (e.g. MASTER_PORT=29501) and avoid the 10-minute
+    # TCPStore timeout when the server uses a random ephemeral port.
+    # Only fall back to 127.0.0.1 + random port when env vars are absent.
+    addr = os.environ.get("MASTER_ADDR", "127.0.0.1")
+    port = os.environ.get("MASTER_PORT", None)
+    if port is None:
+        with socket.socket() as sock:
+            sock.bind(("", 0))
+            port = sock.getsockname()[1]
     return addr, str(port)
 
 
@@ -907,6 +913,11 @@ def create_colocated_worker_cls(class_dict: dict[str, RayClassWithInitArgs]):
     # TODO: create a class with customizable name
     class WorkerDict(worker_cls):
         def __init__(self):
+            import os
+            skip_init = os.environ.get("DISABLE_WORKER_INIT") == "1"
+            if skip_init:
+                self.worker_dict = {}
+                return
             super().__init__()
             self.worker_dict = {}
             for key, user_defined_cls in cls_dict.items():
@@ -960,6 +971,19 @@ def create_colocated_worker_raw_cls(class_dict: dict[str, RayClassWithInitArgs])
 
     class FusedWorker(Worker):
         def __init__(self, *args, **kwargs):
+            import os
+            if os.environ.get("DISABLE_WORKER_INIT") == "1":
+                # Worker.__init__ already returned early; skip sub-class init too.
+                # Still need to set _rank/_world_size so that subclasses that
+                # access self.rank immediately after super().__init__() don't crash.
+                self._rank = int(os.getenv("RANK", "0"))
+                self._world_size = int(os.getenv("WORLD_SIZE", "1"))
+                self.cls_names = cls_names
+                self.raw_cls_dict = raw_cls_dict
+                self.init_args_dict = init_args_dict
+                self.init_kwargs_dict = init_kwargs_dict
+                self.fused_worker_dict = {}
+                return
             super().__init__(*args, **kwargs)
             self.cls_names = cls_names
             self.raw_cls_dict = raw_cls_dict

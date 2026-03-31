@@ -38,8 +38,12 @@ from vllm.usage.usage_lib import UsageContext
 from vllm.utils import FlexibleArgumentParser, get_tcp_uri
 from vllm.v1.engine.async_llm import AsyncLLM
 from vllm.v1.engine.core import EngineCoreProc
-from vllm.v1.engine.utils import CoreEngineProcManager
 from vllm.v1.executor.abstract import Executor
+
+try:
+    from vllm.v1.engine.utils import CoreEngineProcManager
+except ImportError:
+    from vllm.v1.utils import CoreEngineProcManager
 
 from verl.single_controller.ray import RayClassWithInitArgs
 from verl.utils.config import omega_conf_to_dataclass
@@ -403,10 +407,18 @@ class vLLMHttpServerBase:
         # 支持validation时使用自定义max_tokens（参考AgentGym-RL）
         if "max_tokens" in sampling_params:
             max_tokens = min(sampling_params.pop("max_tokens"), self.config.max_model_len - len(prompt_ids))
-            # print(f"[DEBUG vLLM] Using max_tokens from sampling_params: {max_tokens}")  # 注释: 冗余DEBUG日志(每次推理都打印)
+            if max_tokens < 1:
+                import os
+                if os.getenv("VERL_DEBUG_MODE", "0") == "1":
+                    print(f"[vLLM generate] WARNING: max_tokens={max_tokens} (max_model_len={self.config.max_model_len}, prompt_len={len(prompt_ids)}). Setting to 1.")
+                max_tokens = max(1, max_tokens)
         else:
             max_tokens = self.config.max_model_len - len(prompt_ids)
-            # print(f"[DEBUG vLLM] Using default max_tokens: {max_tokens}")  # 注释: 冗余DEBUG日志(每次推理都打印)
+            if max_tokens < 1:
+                import os
+                if os.getenv("VERL_DEBUG_MODE", "0") == "1":
+                    print(f"[vLLM generate] WARNING: default max_tokens={max_tokens} (max_model_len={self.config.max_model_len}, prompt_len={len(prompt_ids)}). Setting to 1.")
+                max_tokens = max(1, max_tokens)
         
         # 清理vLLM不支持的参数（max_new_tokens是SGLang的参数）
         sampling_params.pop("max_new_tokens", None)

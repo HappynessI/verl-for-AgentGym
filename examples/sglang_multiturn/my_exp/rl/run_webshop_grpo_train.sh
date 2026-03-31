@@ -80,10 +80,13 @@ python3 -m verl.trainer.main_ppo \
     data.train_batch_size=$TRAIN_BATCH_SIZE \
     data.val_batch_size=8 \
     actor_rollout_ref.model.path=$MODEL_PATH \
+    actor_rollout_ref.model.enable_gradient_checkpointing=true \
+    actor_rollout_ref.model.enable_activation_offload=true \
     actor_rollout_ref.actor.optim.lr=$LEARNING_RATE \
     actor_rollout_ref.actor.ppo_mini_batch_size=$TRAIN_BATCH_SIZE \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
-    actor_rollout_ref.actor.fsdp_config.param_offload=False \
+    actor_rollout_ref.actor.fsdp_config.param_offload=true \
+    actor_rollout_ref.ref.fsdp_config.param_offload=true \
     actor_rollout_ref.actor.fsdp_config.optimizer_offload=False \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
     actor_rollout_ref.rollout.tensor_model_parallel_size=1 \

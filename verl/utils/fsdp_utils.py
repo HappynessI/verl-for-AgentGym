@@ -210,6 +210,7 @@ def offload_fsdp_optimizer(optimizer):
             for key, value in state.items():
                 if isinstance(value, torch.Tensor):
                     state[key] = value.to("cpu", non_blocking=True)
+    get_torch_device().empty_cache()
 
 
 @torch.no_grad()
@@ -222,6 +223,7 @@ def load_fsdp_optimizer(optimizer, device_id):
             for key, value in state.items():
                 if isinstance(value, torch.Tensor):
                     state[key] = value.to(device_id, non_blocking=True)
+    get_torch_device().empty_cache()
 
 
 @contextmanager

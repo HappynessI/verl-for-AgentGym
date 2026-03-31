@@ -9,6 +9,7 @@ TextCraft Evaluation Client - vLLM Service Mode
 import os
 import sys
 import json
+import math
 import logging
 import argparse
 import uuid
@@ -28,7 +29,7 @@ import fcntl
 # Add verl to path
 # 文件路径: /Data/wyh/verl/examples/sglang_multiturn/my_exp/eval/eval_textcraft_vllm_server.py
 # 需要向上5级到达项目根目录: /Data/wyh/verl
-project_root = Path(__file__).parent.parent.parent.parent.parent
+project_root = Path(__file__).resolve().parent.parent.parent
 if not (project_root / "verl").exists():
     raise RuntimeError(f"verl not found in {project_root}")
 sys.path.insert(0, str(project_root))
@@ -51,6 +52,85 @@ logging.basicConfig(
 )
 logger = logging.getLogger("TextCraftEval")
 
+OFFICIAL_TEXTCRAFT_DEPTH_BANDS = {
+    1: range(0, 31),
+    2: range(140, 181),
+    3: range(420, 445),
+    4: range(533, 536),
+}
+
+
+def _safe_int(value: Any) -> Optional[int]:
+    """Best-effort int conversion for task binding metadata."""
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def extract_textcraft_binding(row: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract the stable TextCraft task binding from a parquet row.
+
+    Priority:
+    1. top-level `item_id`
+    2. `extra_info.interaction_kwargs.item_id`
+    3. `extra_info.interaction_kwargs.session_id`
+    4. top-level `original_index`
+    5. `extra_info.index`
+    """
+    item_id = None
+    goal = None
+    data_idx = None
+    session_id = None
+
+    if hasattr(row, 'get') and callable(row.get):
+        item_id = row.get('item_id')
+        extra_info = row.get('extra_info', {}) or {}
+        interaction_kwargs = extra_info.get('interaction_kwargs', {}) or {}
+
+        if item_id is None:
+            item_id = interaction_kwargs.get('item_id')
+        goal = interaction_kwargs.get('goal')
+        data_idx = _safe_int(interaction_kwargs.get('data_idx'))
+
+        if isinstance(item_id, str) and item_id.startswith("textcraft_"):
+            session_id = _safe_int(item_id.split("_")[-1])
+
+        if session_id is None:
+            session_id = _safe_int(interaction_kwargs.get('session_id'))
+
+        if session_id is None:
+            session_id = _safe_int(row.get('original_index'))
+
+        if session_id is None:
+            session_id = _safe_int(extra_info.get('index'))
+
+    if session_id is None:
+        raise ValueError(f"Could not determine stable TextCraft task id from row: {row}")
+
+    if data_idx is None:
+        data_idx = session_id
+
+    if item_id is None:
+        item_id = f"textcraft_{session_id}"
+
+    return {
+        "item_id": item_id,
+        "session_id": session_id,
+        "data_idx": data_idx,
+        "goal": goal,
+    }
+
+
+def session_id_to_textcraft_depth(session_id: int) -> Optional[int]:
+    for depth, band in OFFICIAL_TEXTCRAFT_DEPTH_BANDS.items():
+        if session_id in band:
+            return depth
+    return None
+
 # =============================================================================
 # Async Agent Class (HTTP Client)
 # =============================================================================
@@ -58,13 +138,132 @@ logger = logging.getLogger("TextCraftEval")
 class AsyncTextCraftAgent:
     """TextCraft Agent - Uses HTTP calls to vLLM service"""
     
-    def __init__(self, server_url: str, model_name: str = "qwen3", max_new_tokens: int = 150, temperature: float = 0.0, top_p: float = 1.0):
+    def __init__(
+        self,
+        server_url: str,
+        model_name: str = "qwen3",
+        max_new_tokens: int = 150,
+        temperature: float = 0.0,
+        top_p: float = 1.0,
+        request_retries: int = 2,
+        retry_backoff_seconds: float = 1.0,
+        max_context_tokens: int = 8192,
+        context_safety_margin: int = 256,
+        preserve_recent_messages: int = 6,
+    ):
         self.server_url = server_url.rstrip('/')
         self.model_name = model_name
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.top_p = top_p
+        self.request_retries = request_retries
+        self.retry_backoff_seconds = retry_backoff_seconds
+        self.max_context_tokens = max_context_tokens
+        self.context_safety_margin = context_safety_margin
+        self.preserve_recent_messages = preserve_recent_messages
         self.system_prompt = self._build_adapt_prompt()
+        self.trim_event_count = 0
+        self.trimmed_messages_total = 0
+        self.truncated_messages_total = 0
+        self.max_removed_messages = 0
+        self.max_truncated_messages = 0
+        self.max_estimated_input_tokens = 0
+
+    def _retry_delay(self, attempt: int) -> float:
+        return self.retry_backoff_seconds * (2 ** attempt)
+
+    @staticmethod
+    def _is_retryable_status(status: int) -> bool:
+        return status in {408, 409, 429, 500, 502, 503, 504}
+
+    @staticmethod
+    def _estimate_text_tokens(text: str) -> int:
+        """Conservative token estimate for context trimming."""
+        if not text:
+            return 0
+        return max(1, math.ceil(len(text) / 3.0))
+
+    def _estimate_messages_tokens(self, messages: List[Dict[str, str]]) -> int:
+        total = self._estimate_text_tokens(self.system_prompt) + 16
+        for message in messages:
+            total += self._estimate_text_tokens(message.get("content", "")) + 12
+        return total
+
+    def _truncate_text_middle(self, text: str, max_tokens: int) -> str:
+        if self._estimate_text_tokens(text) <= max_tokens:
+            return text
+        max_chars = max(64, max_tokens * 3)
+        if len(text) <= max_chars:
+            return text
+        marker = "\n...[TRUNCATED HISTORY]...\n"
+        keep = max_chars - len(marker)
+        head = max(16, keep // 2)
+        tail = max(16, keep - head)
+        return text[:head] + marker + text[-tail:]
+
+    def _trim_messages_for_context(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """
+        Keep the initial task prompt plus the most recent turns, and drop stale
+        middle history when the estimated context would exceed the model budget.
+        """
+        input_budget = self.max_context_tokens - self.max_new_tokens - self.context_safety_margin
+        if input_budget <= 0:
+            return messages
+
+        trimmed = [{"role": m["role"], "content": m["content"]} for m in messages]
+        removed_messages = 0
+        truncated_messages = 0
+
+        while (
+            self._estimate_messages_tokens(trimmed) > input_budget
+            and len(trimmed) > 1 + self.preserve_recent_messages
+        ):
+            removable_end = len(trimmed) - self.preserve_recent_messages
+            drop_count = min(2, max(0, removable_end - 1))
+            if drop_count <= 0:
+                break
+            del trimmed[1:1 + drop_count]
+            removed_messages += drop_count
+
+        while self._estimate_messages_tokens(trimmed) > input_budget:
+            candidate_indices = [idx for idx in range(1, len(trimmed)) if trimmed[idx].get("content")]
+            if not candidate_indices:
+                candidate_indices = [0] if trimmed else []
+            if not candidate_indices:
+                break
+            longest_idx = max(
+                candidate_indices,
+                key=lambda idx: self._estimate_text_tokens(trimmed[idx].get("content", "")),
+            )
+            current_text = trimmed[longest_idx].get("content", "")
+            current_tokens = self._estimate_text_tokens(current_text)
+            new_budget = max(32, current_tokens // 2)
+            new_text = self._truncate_text_middle(current_text, new_budget)
+            if new_text == current_text:
+                break
+            trimmed[longest_idx]["content"] = new_text
+            truncated_messages += 1
+
+        estimated_tokens = self._estimate_messages_tokens(trimmed)
+        if removed_messages or truncated_messages:
+            self.trim_event_count += 1
+            self.trimmed_messages_total += removed_messages
+            self.truncated_messages_total += truncated_messages
+            self.max_removed_messages = max(self.max_removed_messages, removed_messages)
+            self.max_truncated_messages = max(self.max_truncated_messages, truncated_messages)
+            self.max_estimated_input_tokens = max(self.max_estimated_input_tokens, estimated_tokens)
+
+        return trimmed
+
+    def get_trim_stats(self) -> Dict[str, int]:
+        return {
+            "trim_event_count": self.trim_event_count,
+            "trimmed_messages_total": self.trimmed_messages_total,
+            "truncated_messages_total": self.truncated_messages_total,
+            "max_removed_messages": self.max_removed_messages,
+            "max_truncated_messages": self.max_truncated_messages,
+            "max_estimated_input_tokens": self.max_estimated_input_tokens,
+        }
     
     def _build_adapt_prompt(self) -> str:
         return '''You are a Minecraft Assistant. Your goal is to craft items by managing resources and recipes.
@@ -152,44 +351,66 @@ Action: [[ Task Completed! ]]
     
     async def generate(self, messages: List[Dict[str, str]], session: aiohttp.ClientSession) -> str:
         """Generates response by calling vLLM service via HTTP"""
+        trimmed_messages = self._trim_messages_for_context(messages)
         headers = {"Content-Type": "application/json"}
         payload = {
             "model": self.model_name,
             "messages": [
                 {"role": "system", "content": self.system_prompt},
-                *messages
+                *trimmed_messages
             ],
             "max_tokens": self.max_new_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "stream": False
         }
-        
-        try:
-            async with session.post(
-                f"{self.server_url}/v1/chat/completions",
-                json=payload,
-                headers=headers,
-                timeout=aiohttp.ClientTimeout(total=120)
-            ) as response:
-                if response.status != 200:
-                    error_text = await response.text()
-                    logger.error(f"HTTP {response.status} from vLLM: {error_text}")
-                    return ""
-                
-                result = await response.json()
-                if "choices" not in result or len(result["choices"]) == 0:
-                    logger.error(f"Invalid response format: {result}")
-                    return ""
-                
-                return result["choices"][0]["message"]["content"].strip()
-                
-        except asyncio.TimeoutError:
-            logger.error("Request timed out after 120s")
-            return ""
-        except Exception as e:
-            logger.error(f"HTTP request failed: {str(e)}")
-            return ""
+
+        for attempt in range(self.request_retries + 1):
+            try:
+                async with session.post(
+                    f"{self.server_url}/v1/chat/completions",
+                    json=payload,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=120)
+                ) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        if attempt < self.request_retries and self._is_retryable_status(response.status):
+                            delay = self._retry_delay(attempt)
+                            logger.warning(
+                                f"Transient HTTP {response.status} from vLLM on attempt "
+                                f"{attempt + 1}/{self.request_retries + 1}; retrying in {delay:.1f}s"
+                            )
+                            await asyncio.sleep(delay)
+                            continue
+                        logger.error(f"HTTP {response.status} from vLLM: {error_text}")
+                        return ""
+                    
+                    result = await response.json()
+                    if "choices" not in result or len(result["choices"]) == 0:
+                        logger.error(f"Invalid response format: {result}")
+                        return ""
+                    
+                    return result["choices"][0]["message"]["content"].strip()
+            except (asyncio.TimeoutError, aiohttp.ServerDisconnectedError, aiohttp.ClientConnectionError, aiohttp.ClientOSError) as e:
+                if attempt < self.request_retries:
+                    delay = self._retry_delay(attempt)
+                    logger.warning(
+                        f"Transient vLLM request failure on attempt {attempt + 1}/"
+                        f"{self.request_retries + 1}: {e}. Retrying in {delay:.1f}s"
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                if isinstance(e, asyncio.TimeoutError):
+                    logger.error("Request timed out after 120s")
+                else:
+                    logger.error(f"HTTP request failed after retries: {str(e)}")
+                return ""
+            except Exception as e:
+                logger.error(f"HTTP request failed: {str(e)}")
+                return ""
+
+        return ""
 
 
 # =============================================================================
@@ -201,95 +422,128 @@ async def evaluate_one_episode(
     interaction: TextCraftInteraction,
     session_id: int,
     http_session: aiohttp.ClientSession,
-    max_rounds: int = 50,
-    initial_prompt: Optional[str] = None
+    max_rounds: int = 25,
+    initial_prompt: Optional[str] = None,
+    goal: Optional[str] = None,
+    data_idx: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Evaluates a single episode asynchronously."""
-    
+
     instance_id = f"eval_{session_id}_{uuid.uuid4().hex[:8]}"
     messages = []
     conversations = []
     done = False
     total_reward = 0.0
-    
-    # --- Initialization ---
-    if initial_prompt is None:
-        try:
-            await interaction.start_interaction(instance_id, session_id=session_id)
-            done, initial_obs, reward, extra = await interaction.generate_response(instance_id, messages)
-            total_reward += reward
-            messages.append({"role": "user", "content": initial_obs})
-            conversations.append({"role": "user", "content": initial_obs})
-            initial_prompt = initial_obs
-        except Exception as e:
-            logger.error(f"Start interaction failed for session {session_id}: {e}")
-            return {
-                "session_id": session_id,
-                "reward": 0.0,
-                "success": False,
-                "num_turns": 0,
-                "initial_prompt": None,
-                "conversations": [],
-                "error": str(e)
-            }
-    else:
-        try:
-            await interaction.start_interaction(instance_id, session_id=session_id)
-            messages.append({"role": "user", "content": initial_prompt})
-            conversations.append({"role": "user", "content": initial_prompt})
-        except Exception as e:
-            logger.error(f"Failed to start interaction for session {session_id}: {e}")
-            return {
-                "session_id": session_id,
-                "reward": 0.0,
-                "success": False,
-                "num_turns": 0,
-                "initial_prompt": initial_prompt,
-                "conversations": [],
-                "error": str(e)
-            }
-
-    # --- Interaction Loop ---
-    for turn in range(max_rounds):
-        if done:
-            break
-        
-        try:
-            response = await agent.generate(messages, http_session)
-            response_lower = response.lower()
-            if 'task completed' in response_lower or 'task failed' in response_lower:
-                done = True
-            messages.append({"role": "assistant", "content": response})
-            conversations.append({"role": "assistant", "content": response})
-        except Exception as e:
-            logger.error(f"Generation error session {session_id} turn {turn}: {e}")
-            break
-        
-        try:
-            done, observation, step_reward, extra = await interaction.generate_response(instance_id, messages)
-            total_reward += step_reward
-            messages.append({"role": "user", "content": observation})
-            conversations.append({"role": "user", "content": observation})
-        except Exception as e:
-            logger.error(f"Environment error session {session_id} turn {turn}: {e}")
-            break
-    
     try:
-        await interaction.finalize_interaction(instance_id)
-    except Exception as e:
-        logger.warning(f"Finalization failed for session {session_id}: {e}")
-    
-    success = total_reward > 0.0
-    num_turns = len([m for m in messages if m["role"] == "assistant"])
-    
-    return {
-        "session_id": session_id,
-        "reward": total_reward,
-        "success": success,
-        "num_turns": num_turns,
-        "conversations": conversations,
-        "initial_prompt": initial_prompt
-    }
+        # --- Initialization ---
+        if initial_prompt is None:
+            try:
+                await interaction.start_interaction(instance_id, session_id=session_id, goal=goal, data_idx=data_idx)
+                done, initial_obs, reward, extra = await interaction.generate_response(instance_id, messages)
+                total_reward += reward
+                messages.append({"role": "user", "content": initial_obs})
+                conversations.append({"role": "user", "content": initial_obs})
+                initial_prompt = initial_obs
+            except Exception as e:
+                logger.error(f"Start interaction failed for session {session_id}: {e}")
+                return {
+                    "session_id": session_id,
+                    "reward": 0.0,
+                    "success": False,
+                    "num_turns": 0,
+                    "initial_prompt": None,
+                    "conversations": [],
+                    "error": str(e),
+                    "error_type": "start_interaction",
+                    "goal": goal,
+                    "data_idx": data_idx,
+                }
+        else:
+            try:
+                await interaction.start_interaction(instance_id, session_id=session_id, goal=goal, data_idx=data_idx)
+                messages.append({"role": "user", "content": initial_prompt})
+                conversations.append({"role": "user", "content": initial_prompt})
+            except Exception as e:
+                logger.error(f"Failed to start interaction for session {session_id}: {e}")
+                return {
+                    "session_id": session_id,
+                    "reward": 0.0,
+                    "success": False,
+                    "num_turns": 0,
+                    "initial_prompt": initial_prompt,
+                    "conversations": [],
+                    "error": str(e),
+                    "error_type": "start_interaction",
+                    "goal": goal,
+                    "data_idx": data_idx,
+                }
+
+        # --- Interaction Loop ---
+        for turn in range(max_rounds):
+            if done:
+                break
+
+            try:
+                response = await agent.generate(messages, http_session)
+                response_lower = response.lower()
+                if 'task completed' in response_lower or 'task failed' in response_lower:
+                    done = True
+                messages.append({"role": "assistant", "content": response})
+                conversations.append({"role": "assistant", "content": response})
+            except Exception as e:
+                logger.error(f"Generation error session {session_id} turn {turn}: {e}")
+                return {
+                    "session_id": session_id,
+                    "reward": total_reward,
+                    "success": total_reward > 0.0,
+                    "num_turns": len([m for m in messages if m["role"] == "assistant"]),
+                    "conversations": conversations,
+                    "initial_prompt": initial_prompt,
+                    "error": str(e),
+                    "error_type": "generation",
+                    "goal": goal,
+                    "data_idx": data_idx,
+                }
+
+            try:
+                done, observation, step_reward, extra = await interaction.generate_response(instance_id, messages)
+                total_reward += step_reward
+                messages.append({"role": "user", "content": observation})
+                conversations.append({"role": "user", "content": observation})
+            except Exception as e:
+                logger.error(f"Environment error session {session_id} turn {turn}: {e}")
+                return {
+                    "session_id": session_id,
+                    "reward": total_reward,
+                    "success": total_reward > 0.0,
+                    "num_turns": len([m for m in messages if m["role"] == "assistant"]),
+                    "conversations": conversations,
+                    "initial_prompt": initial_prompt,
+                    "error": str(e),
+                    "error_type": "environment",
+                    "goal": goal,
+                    "data_idx": data_idx,
+                }
+
+        success = total_reward > 0.0
+        num_turns = len([m for m in messages if m["role"] == "assistant"])
+
+        return {
+            "session_id": session_id,
+            "reward": total_reward,
+            "success": success,
+            "num_turns": num_turns,
+            "conversations": conversations,
+            "initial_prompt": initial_prompt,
+            "goal": goal,
+            "data_idx": data_idx,
+        }
+    finally:
+        if instance_id in interaction.instance_sessions:
+            try:
+                await interaction.finalize_interaction(instance_id)
+            except Exception as e:
+                logger.warning(f"Finalization failed for session {session_id}: {e}")
 
 
 def estimate_pass_at_k(num_samples: int, num_correct: int, k: int) -> float:
@@ -344,14 +598,27 @@ async def run_evaluation(args: argparse.Namespace):
         model_name=args.model_name,
         max_new_tokens=args.max_new_tokens,
         temperature=args.temperature,
-        top_p=args.top_p
+        top_p=args.top_p,
+        request_retries=args.request_retries,
+        retry_backoff_seconds=args.retry_backoff_seconds,
+        max_context_tokens=args.max_context_tokens,
+        context_safety_margin=args.context_safety_margin,
+        preserve_recent_messages=args.preserve_recent_messages,
     )
     
     # Load dataset
     logger.info(f"Loading dataset from: {args.data_path}")
     table = pq.read_table(args.data_path)
     df = table.to_pandas()
-    df['original_index'] = df.index
+    bindings = [extract_textcraft_binding(row) for _, row in df.iterrows()]
+    df['item_id'] = [binding['item_id'] for binding in bindings]
+    df['original_index'] = [binding['session_id'] for binding in bindings]
+    df['task_data_idx'] = [binding['data_idx'] for binding in bindings]
+    df['task_goal'] = [binding['goal'] for binding in bindings]
+    logger.info(
+        "Resolved stable TextCraft task ids from parquet: "
+        f"{sorted(df['original_index'].tolist())[:5]} ... {sorted(df['original_index'].tolist())[-5:]}"
+    )
     
     # Shuffle and sample
     if args.max_samples > 0 and args.max_samples < len(df):
@@ -379,7 +646,7 @@ async def run_evaluation(args: argparse.Namespace):
     # Semaphore for concurrency control
     sem = asyncio.Semaphore(args.concurrency)
     
-    async def worker(session_id: int, row: Dict, sample_idx: int):
+    async def worker(session_id: int, row: Dict, sample_idx: int, goal: Optional[str] = None, data_idx: Optional[int] = None):
         async with sem:
             try:
                 result = await evaluate_one_episode(
@@ -387,10 +654,12 @@ async def run_evaluation(args: argparse.Namespace):
                     interaction=interaction,
                     session_id=session_id,
                     http_session=session,
-                    max_rounds=args.max_rounds
+                    max_rounds=args.max_rounds,
+                    goal=goal,
+                    data_idx=data_idx,
                 )
-                
-                # Prepare record
+
+                # Prepare record (包括成功和失败的 episode)
                 record = {
                     "item_id": f"textcraft_{session_id}",
                     "session_id": session_id,
@@ -398,17 +667,36 @@ async def run_evaluation(args: argparse.Namespace):
                     "reward": result['reward'],
                     "success": result['success'],
                     "num_turns": result['num_turns'],
+                    "goal": result.get('goal', goal),
+                    "data_idx": result.get('data_idx', data_idx),
                 }
                 if not args.no_save_trajectories:
                     record["conversations"] = result['conversations']
                     record["initial_prompt"] = result['initial_prompt']
-                
+                if 'error' in result:
+                    record["error"] = result['error']
+                    record["error_type"] = result.get('error_type', 'unknown')
+
                 # Write to file
                 await asyncio.to_thread(safe_write_record, output_file, record)
                 return result
             except Exception as e:
-                logger.error(f"Worker failed for session {session_id}: {str(e)}")
-                return None
+                # 不再静默返回 None，将失败写入结果文件
+                logger.error(f"[CRITICAL] Worker exception for session {session_id}, sample {sample_idx}: {str(e)}")
+                error_record = {
+                    "item_id": f"textcraft_{session_id}",
+                    "session_id": session_id,
+                    "sample_idx": sample_idx,
+                    "reward": 0.0,
+                    "success": False,
+                    "num_turns": 0,
+                    "goal": goal,
+                    "data_idx": data_idx,
+                    "error": str(e),
+                    "error_type": "worker_exception",
+                }
+                await asyncio.to_thread(safe_write_record, output_file, error_record)
+                return error_record
     
     # Run evaluation
     results = []
@@ -418,8 +706,12 @@ async def run_evaluation(args: argparse.Namespace):
         tasks = []
         for _, row in df.iterrows():
             real_session_id = int(row['original_index'])
+            goal = row.get('task_goal')
+            data_idx = _safe_int(row.get('task_data_idx'))
+            if data_idx is None:
+                data_idx = real_session_id
             for sample_idx in range(args.num_samples_per_task):
-                tasks.append(worker(real_session_id, row, sample_idx))
+                tasks.append(worker(real_session_id, row, sample_idx, goal=goal, data_idx=data_idx))
         
         # Progress bar
         pbar = tqdm(total=total_tasks, desc="Evaluating", unit="sample")
@@ -430,7 +722,9 @@ async def run_evaluation(args: argparse.Namespace):
             pbar.update(1)
         pbar.close()
     
-    # Generate summary
+    # Generate summary (pass df row count for expected task calculation)
+    args._df_rows = len(df)
+    args._history_trim_stats = agent.get_trim_stats()
     await generate_summary(output_file, summary_file, args)
     
     logger.info(f"✅ Evaluation completed! Results saved to:\n- {output_file}\n- {summary_file}")
@@ -463,7 +757,7 @@ async def fetch_model_name(server_url: str) -> str:
 
 
 async def generate_summary(results_file: str, summary_file: str, args: argparse.Namespace):
-    """Generates evaluation summary from results file"""
+    """Generates evaluation summary from results file with categorized statistics."""
     # Load all results
     results = []
     try:
@@ -476,50 +770,90 @@ async def generate_summary(results_file: str, summary_file: str, args: argparse.
     except Exception as e:
         logger.error(f"Failed to read results file: {e}")
         return
-    
+
     if not results:
         logger.error("No valid results found to summarize!")
         return
-    
+
     # Fetch model name from vLLM service
     model_name = await fetch_model_name(args.vllm_server_url)
     logger.info(f"Model name from vLLM: {model_name}")
-    
+
     # Group by session_id
     grouped_results = defaultdict(list)
     for res in results:
         grouped_results[res['session_id']].append(res)
-    
-    total_tasks = len(grouped_results)
-    total_samples = len(results)
-    
+
+    # Categorize results
+    expected_total_tasks = args.num_samples_per_task * args._df_rows if hasattr(args, '_df_rows') else None
+    # Fallback: compute expected from data_path
+    if expected_total_tasks is None:
+        try:
+            table = pq.read_table(args.data_path)
+            df_summary = table.to_pandas()
+            if args.max_samples > 0 and args.max_samples < len(df_summary):
+                expected_total_tasks = args.num_samples_per_task * args.max_samples
+            else:
+                expected_total_tasks = args.num_samples_per_task * len(df_summary)
+        except:
+            expected_total_tasks = len(grouped_results)  # fallback to actual
+
+    total_expected_samples = expected_total_tasks  # = num_tasks * num_samples_per_task
+    total_finished_samples = len(results)
+    total_missing_samples = total_expected_samples - total_finished_samples
+    trim_stats = getattr(args, "_history_trim_stats", {}) or {}
+
+    # Categorize by error type
+    goal_mismatch_samples = []
+    error_samples = []
+    normal_samples = []
+
+    for res in results:
+        if res.get('error_type') == 'start_interaction' and 'Goal mismatch' in str(res.get('error', '')):
+            goal_mismatch_samples.append(res)
+        elif 'error' in res:
+            error_samples.append(res)
+        else:
+            normal_samples.append(res)
+
+    # Categorize by goal_mismatch vs normal (in session-level)
+    sessions_with_goal_mismatch = set(r['session_id'] for r in goal_mismatch_samples)
+    sessions_with_error = set(r['session_id'] for r in error_samples)
+    sessions_normal = set(grouped_results.keys()) - sessions_with_goal_mismatch - sessions_with_error
+
+    # Pass@k calculation using only normal (non-error) samples
+    grouped_normal = defaultdict(list)
+    for res in normal_samples:
+        grouped_normal[res['session_id']].append(res)
+
     # Define k values for pass@k
     k_values = [1, 2, 4, 8]
-    
-    # Calculate metrics
+
+    # Calculate metrics on normal samples
     sum_avg_reward = 0.0
     sum_avg_success = 0.0
     pass_at_k_values = {k: [] for k in k_values}
-    
-    for session_id, task_runs in grouped_results.items():
+
+    for session_id, task_runs in grouped_normal.items():
         n = len(task_runs)
         c = sum(1 for r in task_runs if r.get('success', False))
         total_r = sum(r.get('reward', 0.0) for r in task_runs)
-        
+
         if n > 0:
             avg_reward = total_r / n
             avg_success = c / n
             sum_avg_reward += avg_reward
             sum_avg_success += avg_success
-        
+
         for k in k_values:
             if n >= k:
                 pass_k = estimate_pass_at_k(n, c, k)
                 pass_at_k_values[k].append(pass_k)
-    
-    global_avg_reward = sum_avg_reward / total_tasks if total_tasks > 0 else 0.0
-    global_avg_success = sum_avg_success / total_tasks if total_tasks > 0 else 0.0
-    
+
+    num_normal_tasks = len(grouped_normal)
+    global_avg_reward = sum_avg_reward / num_normal_tasks if num_normal_tasks > 0 else 0.0
+    global_avg_success = sum_avg_success / num_normal_tasks if num_normal_tasks > 0 else 0.0
+
     # Prepare summary text
     metrics = [
         "=" * 60,
@@ -529,28 +863,112 @@ async def generate_summary(results_file: str, summary_file: str, args: argparse.
         f"Model: {model_name}",
         f"Server: {args.vllm_server_url}",
         f"Dataset: {args.data_path}",
-        f"Total Tasks: {total_tasks}",
-        f"Total Samples: {total_samples}",
-        f"Samples Per Task: {args.num_samples_per_task}",
         "-" * 60,
-        f"Average Reward: {global_avg_reward:.4f}",
-        f"Average Success (Avg@1): {global_avg_success:.4f}",
+        "TASK STATISTICS:",
+        f"  Expected Samples:    {total_expected_samples}",
+        f"  Finished Samples:    {total_finished_samples}",
+        f"  Missing Samples:     {total_missing_samples} {'⚠️ (check logs!)' if total_missing_samples > 0 else '(ok)'}",
+        f"  Expected Tasks:      {expected_total_tasks // args.num_samples_per_task}",
+        f"  Finished Tasks:      {len(grouped_results)}",
+        "-" * 60,
+        "SAMPLE BREAKDOWN:",
+        f"  Normal samples:      {len(normal_samples)}",
+        f"  Error samples:       {len(error_samples)} {'⚠️' if error_samples else '(ok)'}",
+        f"    - start_interaction errors: {sum(1 for r in error_samples if r.get('error_type') == 'start_interaction')}",
+        f"    - generation errors:         {sum(1 for r in error_samples if r.get('error_type') == 'generation')}",
+        f"    - environment errors:        {sum(1 for r in error_samples if r.get('error_type') == 'environment')}",
+        f"    - worker exceptions:         {sum(1 for r in error_samples if r.get('error_type') == 'worker_exception')}",
+        f"  Goal mismatch:       {len(goal_mismatch_samples)} {'⚠️ (goal in parquet != server assigned)' if goal_mismatch_samples else '(ok)'}",
+        f"  History trimmed:     {trim_stats.get('trim_event_count', 0)} request(s)",
+        f"    - removed messages total:    {trim_stats.get('trimmed_messages_total', 0)}",
+        f"    - truncated messages total:  {trim_stats.get('truncated_messages_total', 0)}",
+        f"    - max removed in one req:    {trim_stats.get('max_removed_messages', 0)}",
+        f"    - max truncated in one req:  {trim_stats.get('max_truncated_messages', 0)}",
+        f"    - max estimated input toks:  {trim_stats.get('max_estimated_input_tokens', 0)}",
+        "-" * 60,
+        "METRICS (based on normal samples only):",
+        f"  Normal Tasks:        {num_normal_tasks}",
+        f"  Average Reward:      {global_avg_reward:.4f}",
+        f"  Average Success (Avg@1): {global_avg_success:.4f}",
         "-" * 60,
     ]
-    
+
     for k in sorted(k_values):
         values = pass_at_k_values[k]
         if values:
             avg_pass_k = sum(values) / len(values)
-            metrics.append(f"Pass@{k:<2}: {avg_pass_k:.4f} (tasks: {len(values)}/{total_tasks})")
+            metrics.append(f"Pass@{k:<2}: {avg_pass_k:.4f} (tasks: {len(values)}/{num_normal_tasks})")
         else:
             metrics.append(f"Pass@{k:<2}: N/A    (insufficient samples)")
-    
+
+    # Depth breakdown using official aligned sparse task ids
+    depth_grouped_results = defaultdict(list)
+    depth_grouped_normal = defaultdict(lambda: defaultdict(list))
+    for res in results:
+        depth = session_id_to_textcraft_depth(int(res["session_id"]))
+        if depth is not None:
+            depth_grouped_results[depth].append(res)
+    for res in normal_samples:
+        depth = session_id_to_textcraft_depth(int(res["session_id"]))
+        if depth is not None:
+            depth_grouped_normal[depth][res["session_id"]].append(res)
+
+    if depth_grouped_results:
+        metrics.extend([
+            "-" * 60,
+            "DEPTH BREAKDOWN (official aligned sparse ids):",
+        ])
+        for depth in sorted(depth_grouped_results):
+            grouped_depth_results = defaultdict(list)
+            for res in depth_grouped_results[depth]:
+                grouped_depth_results[res["session_id"]].append(res)
+
+            grouped_depth_normal = depth_grouped_normal.get(depth, {})
+            expected_depth_tasks = len(OFFICIAL_TEXTCRAFT_DEPTH_BANDS[depth])
+            expected_depth_samples = expected_depth_tasks * args.num_samples_per_task
+            finished_depth_samples = len(depth_grouped_results[depth])
+            num_depth_normal_tasks = len(grouped_depth_normal)
+
+            depth_avg_reward_sum = 0.0
+            depth_avg_success_sum = 0.0
+            depth_pass_at_k_values = {k: [] for k in k_values}
+
+            for task_runs in grouped_depth_normal.values():
+                n = len(task_runs)
+                c = sum(1 for r in task_runs if r.get("success", False))
+                total_r = sum(r.get("reward", 0.0) for r in task_runs)
+                depth_avg_reward_sum += total_r / n
+                depth_avg_success_sum += c / n
+                for k in k_values:
+                    if n >= k:
+                        depth_pass_at_k_values[k].append(estimate_pass_at_k(n, c, k))
+
+            depth_avg_reward = depth_avg_reward_sum / num_depth_normal_tasks if num_depth_normal_tasks > 0 else 0.0
+            depth_avg_success = depth_avg_success_sum / num_depth_normal_tasks if num_depth_normal_tasks > 0 else 0.0
+
+            metrics.extend([
+                f"  Depth {depth}:",
+                f"    Tasks:               {len(grouped_depth_results)}/{expected_depth_tasks}",
+                f"    Samples:             {finished_depth_samples}/{expected_depth_samples}",
+                f"    Average Reward:      {depth_avg_reward:.4f}",
+                f"    Average Success:     {depth_avg_success:.4f}",
+            ])
+            for k in sorted(k_values):
+                values = depth_pass_at_k_values[k]
+                if values:
+                    avg_pass_k = sum(values) / len(values)
+                    metrics.append(
+                        f"    Pass@{k:<2}:            {avg_pass_k:.4f} "
+                        f"(tasks: {len(values)}/{num_depth_normal_tasks})"
+                    )
+                else:
+                    metrics.append(f"    Pass@{k:<2}:            N/A")
+
     metrics.append("=" * 60)
-    
+
     summary_text = "\n".join(metrics)
     print("\n" + summary_text + "\n")
-    
+
     # Write to summary file
     try:
         with open(summary_file, 'w') as f:
@@ -585,7 +1003,7 @@ def main():
                         help='vLLM service URL (e.g., http://localhost:8000)')
     
     # Evaluation Config
-    parser.add_argument('--max_rounds', type=int, default=40,
+    parser.add_argument('--max_rounds', type=int, default=25,
                         help='Maximum interaction rounds per episode')
     parser.add_argument('--max_samples', type=int, default=-1,
                         help='Maximum samples to evaluate (-1 for all)')
@@ -601,6 +1019,16 @@ def main():
                         help='Sampling temperature (0.0 for greedy)')
     parser.add_argument('--top_p', type=float, default=1.0,
                         help='Top-p sampling parameter')
+    parser.add_argument('--request_retries', type=int, default=2,
+                        help='Number of retries for transient vLLM request failures')
+    parser.add_argument('--retry_backoff_seconds', type=float, default=1.0,
+                        help='Base backoff in seconds for vLLM request retries')
+    parser.add_argument('--max_context_tokens', type=int, default=8192,
+                        help='Maximum total context tokens accepted by the model')
+    parser.add_argument('--context_safety_margin', type=int, default=256,
+                        help='Reserved token margin for chat formatting and estimation error')
+    parser.add_argument('--preserve_recent_messages', type=int, default=6,
+                        help='How many most recent chat messages to keep when trimming history')
     parser.add_argument('--seed', type=int, default=42,
                         help='Random seed for reproducibility')
     parser.add_argument('--no_save_trajectories', action='store_true',

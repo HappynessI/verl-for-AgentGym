@@ -19,6 +19,15 @@ class AgentGymBaseInteraction(BaseInteraction):
     封装了HTTP请求、action提取、错误处理等通用逻辑
     """
     
+    # 子类可覆盖此属性来指定使用哪个字段作为reward
+    # - "reward": step-level reward (可能为负，用于惩罚错误动作)
+    # - "score": cumulative task completion score (正值)
+    reward_field = "reward"
+    
+    # 子类可覆盖此属性来指定action_format
+    # 参见 agentenv.controller.types.ActionFormat
+    action_format = "react"
+    
     def __init__(self, config: Dict[str, Any]):
         """
         Args:
@@ -148,6 +157,7 @@ class AgentGymBaseInteraction(BaseInteraction):
         
         # 如果没有提取到有效action，提示用户
         if not action:
+            print(f"[ENV_STEP_DEBUG] instance={instance_id}, extract_action returned None from msg={last_assistant_msg[:100]!r}...", flush=True)
             return False, self.get_invalid_action_prompt(), 0.0, {}
         
         # 执行action（异步，不阻塞event loop）
@@ -168,13 +178,13 @@ class AgentGymBaseInteraction(BaseInteraction):
         session['done'] = data.get('done', False)
         
         observation = data.get('observation', '')
-        reward = data.get('reward', 0.0)
+        reward = self._get_step_reward(data)
         done = data.get('done', False)
         
-        # DEBUG: 记录环境返回（所有情况）
-        if done or reward < 0:
-            logger.warning(f"[{instance_id}] Step {session['step_count']} - Env response: reward={reward}, done={done}, action='{action[:50] if action else 'None'}...', obs='{observation[:100]}...'")
-        
+        # Unconditional evidence: print raw server response for every step
+        raw_reward = data.get('reward', data.get('score', 0.0))
+        print(f"[ENV_STEP] instance={instance_id}, action={action!r}, reward={raw_reward}, done={done}, obs_len={len(observation)}, obs_preview={observation[:80] if observation else 'None'!r}", flush=True)
+
         return done, observation, reward, {}
     
     async def calculate_score(self, instance_id: str) -> float:
@@ -196,7 +206,7 @@ class AgentGymBaseInteraction(BaseInteraction):
             response = await self._async_get(f"{observe_url}?id={env_id}")
             response.raise_for_status()
             data = response.json()
-            return data.get('reward', 0.0)
+            return data.get(self.reward_field, 0.0)
         except Exception as e:
             logger.error(f"Failed to get final score: {e}")
             return 0.0
@@ -210,6 +220,10 @@ class AgentGymBaseInteraction(BaseInteraction):
     def _build_step_payload(self, env_id: int, action: str) -> dict:
         """构建 /step 请求的 payload，子类可覆盖以适配不同的字段名"""
         return {'id': env_id, 'action': action}
+    
+    def _get_step_reward(self, data: dict) -> float:
+        """从环境响应中提取reward，子类可覆盖以适配不同的字段名"""
+        return data.get(self.reward_field, 0.0)
     
     def extract_action(self, text: str) -> Optional[str]:
         """

@@ -35,7 +35,7 @@ actor_rollout_ref:
     ppo_micro_batch_size_per_gpu: 2
     ppo_max_token_len_per_gpu: 12288  # prompt(2048) + response(4096) + buffer
     clip_ratio: 0.2  # PPO clip范围，默认0.2
-    use_kl_loss: True
+    use_kl_loss: False  # 主实验不使用 KL / reference 约束
     kl_loss_coef: 0.001
     kl_loss_type: low_var_kl
     entropy_coeff: 0
@@ -85,7 +85,7 @@ actor_rollout_ref:
     # Agent configuration
     agent:
       default_agent_loop: tool_agent
-      num_workers: 2  # 减少worker数量，降低并发内存压力
+      num_workers: 1  # smoke test: reduced to 1
 
   # Reference model configuration
   ref:
@@ -99,6 +99,13 @@ actor_rollout_ref:
 algorithm:
   adv_estimator: grpo
   use_kl_in_reward: False
+
+  # Prefix optimization: 主实验开关
+  # - optimize_prefix_tokens: false (baseline) - 只优化 continuation
+  # - optimize_prefix_tokens: true (主实验) - 同时优化 prefix (使用 cached SFT old_logprob)
+  optimize_prefix_tokens: False
+  # Weight for prefix loss when optimize_prefix_tokens is True
+  prefix_loss_weight: 1.0
 
 # Trainer configuration
 trainer:

@@ -208,6 +208,9 @@ class RolloutConfig(BaseConfig):
     quantization: Optional[str] = None
     enable_rollout_routing_replay: bool = False
 
+    # Debug flag for printing rollout information
+    debug_print: bool = False
+
     def __post_init__(self):
         """Validate the rollout config"""
         if self.expert_parallel_size > 1:

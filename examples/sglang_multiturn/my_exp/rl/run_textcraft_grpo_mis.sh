@@ -12,12 +12,12 @@ GPU_IDS=${GPU_IDS:-"0,1,2,3,4,5,6,7"}  # 8卡144GB
 NUM_GPUS=${NUM_GPUS:-8}
 
 # -------------------- 训练超参数 (适配8卡144GB) --------------------
-NUM_EPOCHS=${NUM_EPOCHS:-200}
-TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-128}    # 全局batch size（8卡144GB可设更大）
-MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-8}      # 每张GPU的micro batch（144GB可增大到2）
-LEARNING_RATE=${LEARNING_RATE:-5e-6}
-SAVE_FREQ=${SAVE_FREQ:-100}                   # 每N个epoch保存checkpoint
-TEST_FREQ=${TEST_FREQ:-50}                   # 每N个epoch进行validation
+NUM_EPOCHS=${NUM_EPOCHS:-100}
+TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-16}    # 全局batch size（8卡144GB可设更大）
+MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-32}      # 每张GPU的micro batch（144GB可增大到2）
+LEARNING_RATE=${LEARNING_RATE:-3e-6}
+SAVE_FREQ=${SAVE_FREQ:-500}                   # 每N个epoch保存checkpoint
+TEST_FREQ=${TEST_FREQ:-500}                   # 每N个epoch进行validation
 
 # -------------------- Rollout Correction（MIS开启）--------------------
 # MIS: Masked Importance Sampling（拒绝采样，超阈值的序列直接mask）
@@ -31,10 +31,10 @@ ROLLOUT_RS_THRESHOLD_LOWER=${ROLLOUT_RS_THRESHOLD_LOWER:-0.2} # MIS 下阈值
 
 # -------------------- vLLM Rollout配置（训练采样）--------------------
 ROLLOUT_N=${ROLLOUT_N:-8}                   # 每个prompt采样数量（8卡可用更大）
-TEMPERATURE=${TEMPERATURE:-0.8}
+TEMPERATURE=${TEMPERATURE:-1.0}
 TOP_P=${TOP_P:-0.95}
 GPU_MEMORY_UTIL=${GPU_MEMORY_UTIL:-0.8}     # 144GB显存可用更高利用率
-MAX_NUM_SEQS=${MAX_NUM_SEQS:-128}           # 更大并发
+MAX_NUM_SEQS=${MAX_NUM_SEQS:-64}           # 更大并发
 ENFORCE_EAGER=${ENFORCE_EAGER:-false}       # 144GB可用PagedAttention
 FREE_CACHE_ENGINE=${FREE_CACHE_ENGINE:-true}
 CALCULATE_LOG_PROBS=${CALCULATE_LOG_PROBS:-true}
@@ -47,10 +47,10 @@ VAL_N=${VAL_N:-1}
 
 # -------------------- Token长度限制 --------------------
 MAX_PROMPT_LENGTH=${MAX_PROMPT_LENGTH:-2048}
-MAX_RESPONSE_LENGTH=${MAX_RESPONSE_LENGTH:-16384}
-ROLLOUT_PROMPT_LENGTH=${ROLLOUT_PROMPT_LENGTH:-16384}
-MAX_MODEL_LEN=${MAX_MODEL_LEN:-20480}
-PPO_MAX_TOKEN_LEN=${PPO_MAX_TOKEN_LEN:-24576}
+MAX_RESPONSE_LENGTH=${MAX_RESPONSE_LENGTH:-4096}
+ROLLOUT_PROMPT_LENGTH=${ROLLOUT_PROMPT_LENGTH:-4096}
+MAX_MODEL_LEN=${MAX_MODEL_LEN:-8192}
+PPO_MAX_TOKEN_LEN=${PPO_MAX_TOKEN_LEN:-8192}
 MAX_NUM_BATCHED_TOKENS=${MAX_NUM_BATCHED_TOKENS:-16384}
 
 # -------------------- 环境服务器 --------------------
@@ -169,6 +169,9 @@ python3 -m verl.trainer.main_ppo \
     '+data.apply_chat_template_kwargs.enable_thinking=True' \
     actor_rollout_ref.model.path=$MODEL_PATH \
     actor_rollout_ref.model.enable_gradient_checkpointing=true \
+    actor_rollout_ref.model.enable_activation_offload=true \
+    actor_rollout_ref.actor.fsdp_config.param_offload=true \
+    actor_rollout_ref.ref.fsdp_config.param_offload=true \
     actor_rollout_ref.actor.optim.lr=$LEARNING_RATE \
     actor_rollout_ref.actor.ppo_mini_batch_size=$TRAIN_BATCH_SIZE \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \

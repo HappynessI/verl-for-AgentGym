@@ -16,6 +16,7 @@ The main entry point to run the PPO algorithm
 """
 
 import datetime
+import gc
 import json
 import logging
 import os
@@ -381,6 +382,12 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
                 trust_remote_code=trust_remote_code,
                 attn_implementation=attn_implementation,
             )
+
+            # ===== DEBUG: dtype audit =====
+            if self.rank == 0:
+                first_param_dtype = next(actor_module.parameters()).dtype
+                print(f"[DEBUG_DTYPE] role={self.role}, torch_dtype_passed={torch_dtype}, "
+                      f"first_param.dtype={first_param_dtype}", flush=True)
 
             # Apply Liger kernel to the model if use_liger is set to True
             if use_liger:
@@ -815,30 +822,37 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
             self._build_rollout(trust_remote_code=self.config.model.get("trust_remote_code", False))
 
         if self._is_ref:
-            ref_model_path = self.config.model.path
-            ref_model = self.config.ref.get("model", None)
-            if ref_model is not None:
-                ref_model_path = ref_model.get("path", self.config.model.path)
+            # Skip ref model init if neither KL loss nor KL reward is enabled
+            use_kl_loss = self.config.actor.get("use_kl_loss", False)
+            use_kl_in_reward = self.config.get("algorithm", {}).get("use_kl_in_reward", False)
+            if not (use_kl_loss or use_kl_in_reward):
+                print("[FSDP_REF] Skipping ref model init: use_kl_loss=False and use_kl_in_reward=False. "
+                      "Ref logprob will NOT be computed.", flush=True)
+            else:
+                ref_model_path = self.config.model.path
+                ref_model = self.config.ref.get("model", None)
+                if ref_model is not None:
+                    ref_model_path = ref_model.get("path", self.config.model.path)
 
-            if self.rank == 0:
-                print("reference model:", ref_model_path)
-            local_path = copy_to_local(ref_model_path, use_shm=use_shm)
-            self.ref_module_fsdp = self._build_model_optimizer(
-                model_path=local_path,
-                fsdp_config=omega_conf_to_dataclass(self.config.ref.fsdp_config),
-                optim_config=None,
-                override_model_config=override_model_config,
-                use_remove_padding=use_remove_padding,
-                use_fused_kernels=use_fused_kernels,
-                trust_remote_code=self.config.model.get("trust_remote_code", False),
-                use_liger=self.config.model.get("use_liger", False),
-                role="ref",
-            )[0]
-            OmegaConf.set_struct(self.config.ref, True)
-            with open_dict(self.config.ref):
-                self.config.ref.use_remove_padding = use_remove_padding
-                self.config.ref.use_fused_kernels = use_fused_kernels
-            self.ref_policy = DataParallelPPOActor(config=self.config.ref, actor_module=self.ref_module_fsdp)
+                if self.rank == 0:
+                    print("reference model:", ref_model_path)
+                local_path = copy_to_local(ref_model_path, use_shm=use_shm)
+                self.ref_module_fsdp = self._build_model_optimizer(
+                    model_path=local_path,
+                    fsdp_config=omega_conf_to_dataclass(self.config.ref.fsdp_config),
+                    optim_config=None,
+                    override_model_config=override_model_config,
+                    use_remove_padding=use_remove_padding,
+                    use_fused_kernels=use_fused_kernels,
+                    trust_remote_code=self.config.model.get("trust_remote_code", False),
+                    use_liger=self.config.model.get("use_liger", False),
+                    role="ref",
+                )[0]
+                OmegaConf.set_struct(self.config.ref, True)
+                with open_dict(self.config.ref):
+                    self.config.ref.use_remove_padding = use_remove_padding
+                    self.config.ref.use_fused_kernels = use_fused_kernels
+                self.ref_policy = DataParallelPPOActor(config=self.config.ref, actor_module=self.ref_module_fsdp)
 
         if self._is_actor:
             self.flops_counter = FlopsCounter(self.actor_model_config)
@@ -871,6 +885,8 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
             load_fsdp_model_to_gpu(self.actor_module_fsdp)
         if self._is_offload_optimizer:
             load_fsdp_optimizer(optimizer=self.actor_optimizer, device_id=get_device_id())
+            gc.collect()
+            torch.cuda.empty_cache()
 
         with self.ulysses_sharding_manager:
             data = data.to("cpu")  # data will to device with each micro batch on actor.update_policy
@@ -975,6 +991,7 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
         data.meta_info["max_token_len"] = self.config.rollout.log_prob_max_token_len_per_gpu
         data.meta_info["use_dynamic_bsz"] = self.config.rollout.log_prob_use_dynamic_bsz
         data.meta_info["temperature"] = self.config.rollout.temperature
+        data.meta_info["logprob_temperature"] = 1.0
         # perform recompute log_prob
         with self.ulysses_sharding_manager:
             with adapter_ctx:
@@ -1000,6 +1017,12 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
     @register(dispatch_mode=make_nd_compute_dataproto_dispatch_fn(mesh_name="actor"))
     @DistProfiler.annotate(color="olive", role="ref_compute_log_prob")
     def compute_ref_log_prob(self, data: DataProto):
+        if self.ref_policy is None and not self._is_lora:
+            raise RuntimeError(
+                "compute_ref_log_prob() called but ref_policy is None. "
+                "Ref model was skipped at init because use_kl_loss=False and use_kl_in_reward=False. "
+                "This should not happen — check that ref policy is not being called when KL is disabled."
+            )
         if self._is_lora:
             # if _is_lora, actor without lora applied is the ref
             data.meta_info["is_lora"] = True
@@ -1014,6 +1037,7 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
         micro_batch_size = self.config.ref.log_prob_micro_batch_size_per_gpu
         data.meta_info["micro_batch_size"] = micro_batch_size
         data.meta_info["temperature"] = self.config.rollout.temperature
+        data.meta_info["logprob_temperature"] = 1.0
         data.meta_info["max_token_len"] = self.config.ref.log_prob_max_token_len_per_gpu
         data.meta_info["use_dynamic_bsz"] = self.config.ref.log_prob_use_dynamic_bsz
         with self.ulysses_sharding_manager:

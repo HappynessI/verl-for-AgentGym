@@ -86,9 +86,23 @@ class NaiveRewardLoopManager(RewardLoopManagerBase):
                 extra_info["turn_scores"] = []
                 # print(f"[DEBUG] Cannot parse turn_scores, set to empty: {turn_scores}")  # 注释: 冗余DEBUG日志
 
+        # ===== HARD EVIDENCE: interaction.generate_response 返回的 reward =====
+        if "turn_scores" in extra_info:
+            print(f"[NAIVE_DEBUG] sample extra_info['turn_scores']={extra_info['turn_scores']}", flush=True)
+        elif "turn_scores" in data_item.non_tensor_batch:
+            print(f"[NAIVE_DEBUG] sample non_tensor_batch['turn_scores']={data_item.non_tensor_batch['turn_scores']}", flush=True)
+        else:
+            print(f"[NAIVE_DEBUG] sample: turn_scores NOT in extra_info or non_tensor_batch", flush=True)
+        print(f"[NAIVE_DEBUG] sample: extra_info before normalization={extra_info.get('turn_scores', 'MISSING')}", flush=True)
+
+        if turn_scores_raw is not None:
+            print(f"[NAIVE_DEBUG] sample: turn_scores_raw={turn_scores_raw}", flush=True)
+
         response_str = await self.loop.run_in_executor(
             None, lambda: self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
         )
+        print(f"[NAIVE_DEBUG] sample: response_str (前200)={response_str[:200]!r}", flush=True)
+        print(f"[NAIVE_DEBUG] sample: response_str (后200)={response_str[-200:]!r}", flush=True)
 
         extra_reward_kwargs = (
             {

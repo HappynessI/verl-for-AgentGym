@@ -21,6 +21,7 @@ import logging
 import os
 
 import torch
+import numpy as np
 from torch import nn
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.tensor import DTensor
@@ -92,13 +93,14 @@ class DataParallelPPOActor(BasePPOActor):
             self.scaler = None
 
     def _forward_micro_batch(
-        self, micro_batch, temperature, calculate_entropy=False
+        self, micro_batch, temperature, calculate_entropy=False, return_full_seq=False
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Returns:
             entropy: # (bs, response_len)
-            log_probs: # (bs, response_len)
+            log_probs: # (bs, response_len) or (bs, seqlen) if return_full_seq=True
         """
+        assert temperature > 0, f"temperature must be > 0 for logprob computation, got {temperature}"
         response_length = micro_batch["responses"].size(-1)
         multi_modal_inputs = {}
         if "multi_modal_inputs" in micro_batch.keys():
@@ -212,7 +214,6 @@ class DataParallelPPOActor(BasePPOActor):
                     logits_rmpad = output.logits.squeeze(0)  # (total_nnz, vocab_size)
                     logits_rmpad.div_(temperature)
 
-                    # if use_sp: ((total_nnz / sp) + pad) ; if not use_sp: (batch, seqlen)
                     inplace_backward = True
                     if calculate_entropy:
                         inplace_backward = False
@@ -267,11 +268,18 @@ class DataParallelPPOActor(BasePPOActor):
                     batch=batch_size,
                     seqlen=seqlen,
                 )
-
-                # only return response part:
-                if calculate_entropy:
-                    entropy = full_entropy.squeeze(-1)[:, -response_length - 1 : -1]  # (bsz, response_length)
-                log_probs = full_log_probs.squeeze(-1)[:, -response_length - 1 : -1]  # (bsz, response_length)
+                # return full sequence or response-only part:
+                if return_full_seq:
+                    # Truncate to prompt_length = seqlen - response_length
+                    prompt_length = seqlen - response_length
+                    if calculate_entropy:
+                        entropy = full_entropy.squeeze(-1)[:, :prompt_length]  # (bsz, prompt_len)
+                    log_probs = full_log_probs.squeeze(-1)[:, :prompt_length]  # (bsz, prompt_len)
+                else:
+                    if calculate_entropy:
+                        entropy = full_entropy.squeeze(-1)[:, -response_length - 1 : -1]  # (bsz, response_length)
+                    log_probs = full_log_probs.squeeze(-1)[:, -response_length - 1 : -1]  # (bsz, response_length)
+                return entropy, log_probs
 
             else:  # not using rmpad and no ulysses sp
                 extra_args = {}
@@ -289,20 +297,46 @@ class DataParallelPPOActor(BasePPOActor):
                 )  # prevent model thinks we are generating
 
                 if self.use_fused_kernels:
-                    log_probs = output.log_probs[:, -response_length - 1 : -1]
-                    entropy = output.entropy[:, -response_length - 1 : -1]  # (bsz, response_length)
+                    if return_full_seq:
+                        # fused kernels pre-slices output.log_probs to (bsz, response_length)
+                        # compute full-sequence log probs from output.logits
+                        logits = output.logits  # (bsz, seqlen+1, vocab)
+                        logits.div_(temperature)
+                        # seqlen = prompt_len + response_len; truncate to first prompt_len
+                        prompt_length = seqlen - response_length
+                        logits_prompt = logits[:, :prompt_length, :]  # (bsz, prompt_len, vocab)
+                        log_probs = logprobs_from_logits(logits=logits_prompt, labels=input_ids[:, 1:1+prompt_length])  # (bsz, prompt_len)
+                        if calculate_entropy:
+                            if not self.config.entropy_checkpointing:
+                                entropy = verl_F.entropy_from_logits(logits_prompt)
+                            else:
+                                entropy = torch.utils.checkpoint.checkpoint(verl_F.entropy_from_logits, logits_prompt)
+                    else:
+                        log_probs = output.log_probs[:, -response_length - 1 : -1]
+                        entropy = output.entropy[:, -response_length - 1 : -1] if calculate_entropy else None
 
                 else:
                     logits = output.logits
 
                     logits.div_(temperature)
-                    logits = logits[:, -response_length - 1 : -1, :]  # (bsz, response_length, vocab_size)
-                    log_probs = logprobs_from_logits(logits, micro_batch["responses"])
-                    if calculate_entropy:
-                        if not self.config.entropy_checkpointing:
-                            entropy = verl_F.entropy_from_logits(logits)  # (bsz, response_length)
-                        else:
-                            entropy = torch.utils.checkpoint.checkpoint(verl_F.entropy_from_logits, logits)
+                    if return_full_seq:
+                        # seqlen = prompt_len + response_len; truncate to first prompt_len
+                        prompt_length = seqlen - response_length
+                        logits_prompt = logits[:, :prompt_length, :]  # (bsz, prompt_len, vocab)
+                        log_probs = logprobs_from_logits(logits=logits_prompt, labels=input_ids[:, 1:1+prompt_length])  # (bsz, prompt_len)
+                        if calculate_entropy:
+                            if not self.config.entropy_checkpointing:
+                                entropy = verl_F.entropy_from_logits(logits_prompt)
+                            else:
+                                entropy = torch.utils.checkpoint.checkpoint(verl_F.entropy_from_logits, logits_prompt)
+                    else:
+                        logits = logits[:, -response_length - 1 : -1, :]  # (bsz, response_length, vocab_size)
+                        log_probs = logprobs_from_logits(logits, micro_batch["responses"])
+                        if calculate_entropy:
+                            if not self.config.entropy_checkpointing:
+                                entropy = verl_F.entropy_from_logits(logits)
+                            else:
+                                entropy = torch.utils.checkpoint.checkpoint(verl_F.entropy_from_logits, logits)
 
             return entropy, log_probs
 
@@ -355,7 +389,8 @@ class DataParallelPPOActor(BasePPOActor):
         self.actor_module.eval()
 
         micro_batch_size = data.meta_info["micro_batch_size"]
-        temperature = data.meta_info["temperature"]  # temperature must be in the data.meta_info to avoid silent error
+        logprob_temperature = data.meta_info.get("logprob_temperature", 1.0)
+        assert logprob_temperature > 0, f"logprob_temperature must be > 0, got {logprob_temperature}"
         use_dynamic_bsz = data.meta_info["use_dynamic_bsz"]
         has_multi_modal_inputs = "multi_modal_inputs" in data.non_tensor_batch.keys()
         select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
@@ -376,7 +411,7 @@ class DataParallelPPOActor(BasePPOActor):
             model_inputs = {**micro_batch.batch, **micro_batch.non_tensor_batch}
             with torch.no_grad():
                 entropy, log_probs = self._forward_micro_batch(
-                    model_inputs, temperature=temperature, calculate_entropy=calculate_entropy
+                    model_inputs, temperature=logprob_temperature, calculate_entropy=calculate_entropy
                 )
             log_probs_lst.append(log_probs)
             if calculate_entropy:
@@ -399,7 +434,8 @@ class DataParallelPPOActor(BasePPOActor):
         # make sure we are in training mode
         self.actor_module.train()
 
-        temperature = data.meta_info["temperature"]  # temperature must be in the data.meta_info to avoid silent error
+        logprob_temperature = data.meta_info.get("logprob_temperature", 1.0)
+        assert logprob_temperature > 0, f"logprob_temperature must be > 0, got {logprob_temperature}"
 
         select_keys = [
             "responses",
@@ -410,6 +446,13 @@ class DataParallelPPOActor(BasePPOActor):
             "old_log_probs",
             "advantages",
         ]
+        # Add keys for prefix optimization when optimize_prefix_tokens is enabled
+        if "prefix_mask" in data.batch.keys():
+            select_keys.append("prefix_mask")
+        if "assistant_prefix_old_log_probs" in data.batch.keys():
+            select_keys.append("assistant_prefix_old_log_probs")
+        if "prefix_token_count" in data.batch.keys():
+            select_keys.append("prefix_token_count")
         # Add keys for DRPO support
         if "uid" in data.batch.keys():
             select_keys.append("uid")
@@ -430,11 +473,23 @@ class DataParallelPPOActor(BasePPOActor):
 
         data = data.select(batch_keys=select_keys, non_tensor_batch_keys=non_tensor_select_keys)
 
+        # ===== AUDIT 3: Reward / Advantage Audit (before split) =====
+        _orig_adv = data.batch["advantages"]
+        _orig_seq_rm = data.batch.get("seq_level_rewards", None)
+        print(f"[AUDIT_REWARD] advantages shape={_orig_adv.shape}, mean={_orig_adv.mean().item():.6f}, "
+              f"min={_orig_adv.min().item():.6f}, max={_orig_adv.max().item():.6f}", flush=True)
+        print(f"[AUDIT_REWARD] advantages first5={_orig_adv[0, :5].tolist()}", flush=True)
+        if _orig_seq_rm is not None:
+            print(f"[AUDIT_REWARD] seq_level_rewards={_orig_seq_rm.tolist()}", flush=True)
+
         # Split to make minibatch iterator for updating the actor
         # See PPO paper for details. https://arxiv.org/abs/1707.06347
         mini_batches = data.split(self.config.ppo_mini_batch_size)
 
         on_policy = len(mini_batches) == 1 and self.config.ppo_epochs == 1
+        optimize_prefix_tokens = data.meta_info.get("optimize_prefix_tokens", False)
+        # Capture prefix_loss_weight too so it's available in the loop
+        prefix_loss_weight_value = data.meta_info.get("prefix_loss_weight", 1.0)
 
         metrics = {}
         for _ in range(self.config.ppo_epochs):
@@ -454,6 +509,11 @@ class DataParallelPPOActor(BasePPOActor):
                     micro_batch = micro_batch.to(get_device_id())
                     micro_batch_metrics = {}
                     model_inputs = {**micro_batch.batch, **micro_batch.non_tensor_batch}
+                    # DEBUG: check if prefix_mask is in model_inputs
+                    import sys
+                    _keys_with_prefix = [k for k in model_inputs.keys() if 'prefix' in k.lower()]
+                    if optimize_prefix_tokens:
+                        print(f"[DEBUG_UB] optimize_prefix_tokens={optimize_prefix_tokens}, keys_with_prefix={_keys_with_prefix}", flush=True, file=sys.stderr)
                     response_mask = model_inputs["response_mask"]
                     old_log_prob = model_inputs["old_log_probs"]
                     advantages = model_inputs["advantages"]
@@ -468,93 +528,358 @@ class DataParallelPPOActor(BasePPOActor):
                     else:
                         loss_scale_factor = 1 / self.gradient_accumulation
 
-                    # all return: (bsz, response_length)
-                    entropy, log_prob = self._forward_micro_batch(
-                        model_inputs, temperature=temperature, calculate_entropy=calculate_entropy
-                    )
-
-                    # for fully_async_policy recipe
-                    if hasattr(self.config, "use_rollout_log_probs") and self.config.use_rollout_log_probs:
-                        old_log_prob = model_inputs["old_log_probs"]
-                    else:
-                        if on_policy:
-                            old_log_prob = log_prob.detach()
-                        else:
-                            old_log_prob = model_inputs["old_log_probs"]
-
-                    loss_mode = self.config.policy_loss.get("loss_mode", "vanilla")
-                    # vanilla -> verl.trainer.ppo.core_algos.compute_policy_loss_vanilla
-
-                    # DRPO uses a different architecture - check loss_type from config
-                    # DRPO: Decoupled Reward Policy Optimization
+                    rollout_is_weights = model_inputs.get("rollout_is_weights", None)
                     drpo_loss_type = getattr(self.config, 'loss_type', None)
 
-                    # Extract pre-computed rollout correction weights if present
-                    # Weights are computed centrally in trainer and added when algorithm.rollout_is=True
-                    rollout_is_weights = model_inputs.get("rollout_is_weights", None)
-
-                    # DRPO support: check if loss_type is 'drpo'
-                    if drpo_loss_type == "drpo":
-                        # DRPO requires uid and seq_level_rewards
-                        uid = model_inputs.get("uid", None)
-                        seq_level_rewards = model_inputs.get("seq_level_rewards", None)
-                        delta = getattr(self.config, 'delta', 1e-4)
-                        beta = getattr(self.config, 'beta', 1e3)
-                        tau = getattr(self.config, 'tau', 10.0)
-                        Lambda = getattr(self.config, 'Lambda', 0.1)
-                        kl_type = getattr(self.config, 'ppo_kl_type', 'low_var_kl')
-
-                        from verl.trainer.ppo.core_algos import compute_policy_loss_drpo
-                        pg_loss, pg_clipfrac, ppo_kl = compute_policy_loss_drpo(
-                            old_log_prob=old_log_prob,
-                            log_prob=log_prob,
-                            eos_mask=response_mask,
-                            uid=uid,
-                            seq_level_rewards=seq_level_rewards,
-                            delta=delta,
-                            beta=beta,
-                            tau=tau,
-                            Lambda=Lambda,
-                            kl_type=kl_type
+                    if not optimize_prefix_tokens:
+                        # === BASELINE: Standard GRPO (response-only forward) ===
+                        entropy, log_prob = self._forward_micro_batch(
+                            model_inputs, temperature=logprob_temperature, calculate_entropy=calculate_entropy,
+                            return_full_seq=False
                         )
-                        pg_metrics = {
-                            "actor/pg_loss": pg_loss.detach().item(),
-                            "actor/pg_clipfrac": pg_clipfrac.detach().item(),
-                            "actor/ppo_kl": ppo_kl.detach().item(),
-                        }
-                        micro_batch_metrics.update(pg_metrics)
-                    else:
-                        # gpg -> verl.trainer.ppo.core_algos.compute_policy_loss_gpg
-                        # clip_cov -> verl.trainer.ppo.core_algos.compute_policy_loss_clip_cov
-                        policy_loss_fn = get_policy_loss_fn(loss_mode)
+                        if hasattr(self.config, "use_rollout_log_probs") and self.config.use_rollout_log_probs:
+                            old_log_prob = model_inputs["old_log_probs"]
+                        else:
+                            if on_policy:
+                                old_log_prob = log_prob.detach()
+                            else:
+                                old_log_prob = model_inputs["old_log_probs"]
+                        loss_mode = self.config.policy_loss.get("loss_mode", "vanilla")
 
-                        # Compute policy loss (any function is expected to return 2 values)
-                        pg_loss, pg_metrics = policy_loss_fn(
-                            old_log_prob=old_log_prob,
-                            log_prob=log_prob,
-                            advantages=advantages,
-                            response_mask=response_mask,
+                        if drpo_loss_type == "drpo":
+                            uid = model_inputs.get("uid", None)
+                            seq_level_rewards = model_inputs.get("seq_level_rewards", None)
+                            from verl.trainer.ppo.core_algos import compute_policy_loss_drpo
+                            pg_loss, pg_clipfrac, ppo_kl = compute_policy_loss_drpo(
+                                old_log_prob=old_log_prob, log_prob=log_prob, eos_mask=response_mask,
+                                uid=uid, seq_level_rewards=seq_level_rewards,
+                                delta=getattr(self.config, 'delta', 1e-4), beta=getattr(self.config, 'beta', 1e3),
+                                tau=getattr(self.config, 'tau', 10.0), Lambda=getattr(self.config, 'Lambda', 0.1),
+                                kl_type=getattr(self.config, 'ppo_kl_type', 'low_var_kl'))
+                            micro_batch_metrics.update({"actor/pg_loss": pg_loss.detach().item(),
+                                "actor/pg_clipfrac": pg_clipfrac.detach().item(), "actor/ppo_kl": ppo_kl.detach().item()})
+                            policy_loss = pg_loss
+                        else:
+                            policy_loss_fn = get_policy_loss_fn(loss_mode)
+                            pg_loss, pg_metrics = policy_loss_fn(
+                                old_log_prob=old_log_prob, log_prob=log_prob, advantages=advantages,
+                                response_mask=response_mask, loss_agg_mode=loss_agg_mode, config=self.config,
+                                rollout_is_weights=rollout_is_weights)
+                            micro_batch_metrics.update(pg_metrics)
+                            rollout_log_prob = model_inputs.get("rollout_log_probs", None)
+                            if loss_mode != "rollout_correction" and rollout_log_prob is not None:
+                                from verl.trainer.ppo.rollout_corr_helper import compute_rollout_corr_metrics_from_logprobs
+                                micro_batch_metrics.update(compute_rollout_corr_metrics_from_logprobs(
+                                    log_prob=log_prob, rollout_log_prob=rollout_log_prob, response_mask=response_mask))
+                            policy_loss = pg_loss
+                        micro_batch_metrics["actor/pg_loss"] = policy_loss.detach().item() * loss_scale_factor
+                    else:
+                        # === PREFIX OPTIMIZATION: both continuation AND prefix ===
+                        # This is NOT a smoke test mode. The main experiment requires:
+                        #   total_loss = continuation_loss + prefix_loss_weight * prefix_loss
+                        # - continuation_loss: response-only GRPO using rollout old_log_probs
+                        # - prefix_loss: prefix GRPO using cached SFT old_log_probs
+
+                        # 1. Continuation loss (standard GRPO on response tokens)
+                        entropy_resp, log_prob_resp = self._forward_micro_batch(
+                            model_inputs, temperature=logprob_temperature, calculate_entropy=calculate_entropy,
+                            return_full_seq=False  # response-only: (bsz, response_len)
+                        )
+
+                        # Set old_log_prob for continuation
+                        if hasattr(self.config, "use_rollout_log_probs") and self.config.use_rollout_log_probs:
+                            cont_old_log_prob = model_inputs["old_log_probs"]
+                        else:
+                            if on_policy:
+                                cont_old_log_prob = log_prob_resp.detach()
+                            else:
+                                cont_old_log_prob = model_inputs["old_log_probs"]
+
+                        # 2. Prefix loss: full-sequence forward, truncated to prompt portion
+                        # Single forward pass with return_full_seq=True gives log_prob on prompt sequence
+                        entropy_prefix, log_prob_prefix = self._forward_micro_batch(
+                            model_inputs, temperature=logprob_temperature, calculate_entropy=calculate_entropy,
+                            return_full_seq=True  # prompt-only: (bsz, prompt_len)
+                        )
+
+                        prefix_mask = model_inputs.get("prefix_mask", None)
+                        prefix_loss_weight = data.meta_info.get("prefix_loss_weight", 1.0)
+                        if prefix_mask is None:
+                            raise ValueError("prefix_mask is required when optimize_prefix_tokens=true.")
+
+                        batch_size = log_prob_prefix.shape[0]
+                        actual_prompt_len = log_prob_prefix.shape[1]
+
+                        # =================================================================
+                        # PREFIX GATHER — three spaces unified via per-sample gather
+                        #
+                        # Space A: log_prob_prefix      ∈ [B, actual_prompt_len]
+                        #          dense padded next-token coordinates (left_pad applied)
+                        # Space B: prefix_mask[n]      ∈ [compact_prompt_len] per sample
+                        #          compact valid-prompt token coordinates (no padding)
+                        # Space C: cached_old_logprobs  ∈ [B, num_prefix_tokens]
+                        #          same compact token order as Space B nonzero positions
+                        #
+                        # Mapping: compact_token_pos[n] + pad_offset[n] → dense_next_token_pos
+                        #   where pad_offset[n] = actual_prompt_len - compact_prompt_len
+                        #   (same for all samples since actual_prompt_len is uniform)
+                        #
+                        # Off-by-one check:
+                        #   log_prob_prefix[:, k] = log p(token at input position k+1 | prefix up to k)
+                        #   prefix_mask[n, p] = 1 means token at compact position p is prefix token
+                        #   Token at compact position p → dense position (p + pad_offset)
+                        #   Prediction for that token → at dense position (p + pad_offset - 1)
+                        #   Gather index = (p + pad_offset - 1)  ✓  (current code already correct)
+                        # =================================================================
+
+                        cached_prefix_old_log_probs = model_inputs["assistant_prefix_old_log_probs"]
+
+                        compact_prompt_len = prefix_mask.shape[1]  # = prefix_mask.shape[1]
+                        pad_offset = actual_prompt_len - compact_prompt_len  # same for all samples
+
+                        if pad_offset < 0:
+                            raise ValueError(
+                                f"[GATHER_BUG] pad_offset={pad_offset} < 0: "
+                                f"compact_prompt_len={compact_prompt_len} > actual_prompt_len={actual_prompt_len}. "
+                                f"parquet generation and training must use the same max_prompt_length."
+                            )
+
+                        # --- Per-sample gather (supports batch_size > 1) ---
+                        num_prefix_tokens_per_sample = []
+                        gathered_logprobs_list = []
+
+                        for n in range(batch_size):
+                            compact_ones = (prefix_mask[n] == 1).nonzero(as_tuple=True)[0]  # [num_prefix]
+                            num_prefix = compact_ones.shape[0]
+                            num_prefix_tokens_per_sample.append(num_prefix)
+
+                            # dense_next_token_pos = (compact_pos + pad_offset - 1)
+                            #  -1 converts compact token pos → next-token coordinate in dense space
+                            dense_next_token_pos = compact_ones + pad_offset - 1
+
+                            if dense_next_token_pos.numel() > 0:
+                                if dense_next_token_pos.max().item() >= actual_prompt_len:
+                                    raise ValueError(
+                                        f"[GATHER_BUG] sample {n}: gather index {dense_next_token_pos.max().item()} "
+                                        f">= actual_prompt_len={actual_prompt_len}. "
+                                        f"compact_max={compact_ones.max().item()}, pad_offset={pad_offset}."
+                                    )
+                                if dense_next_token_pos.min().item() < 0:
+                                    raise ValueError(
+                                        f"[GATHER_BUG] sample {n}: gather index {dense_next_token_pos.min().item()} < 0. "
+                                        f"compact_min={compact_ones.min().item()}, pad_offset={pad_offset}."
+                                    )
+
+                            gathered = log_prob_prefix[n].gather(dim=0, index=dense_next_token_pos)  # [num_prefix]
+                            gathered_logprobs_list.append(gathered)
+                            print(f"[DEBUG_GATHER] sample {n}: compact_first5={compact_ones[:5].tolist()}, "
+                                  f"dense_next_first5={dense_next_token_pos[:5].tolist()}, "
+                                  f"num_prefix={num_prefix}, "
+                                  f"gathered_finite={torch.isfinite(gathered).all().item()}", flush=True)
+
+                        # --- Build [B, max_num_prefix] tensor, pad shorter samples with 0 ---
+                        max_num_prefix = max(num_prefix_tokens_per_sample)
+                        current_prefix_logprobs_padded = torch.zeros(
+                            batch_size, max_num_prefix,
+                            dtype=log_prob_prefix.dtype, device=log_prob_prefix.device
+                        )
+                        prefix_mask_gathered = torch.zeros_like(current_prefix_logprobs_padded)
+
+                        for n in range(batch_size):
+                            k = num_prefix_tokens_per_sample[n]
+                            current_prefix_logprobs_padded[n, :k] = gathered_logprobs_list[n]
+                            prefix_mask_gathered[n, :k] = 1.0
+
+                        # --- Align cached_old_logprobs to max_num_prefix ---
+                        if cached_prefix_old_log_probs.shape[1] > max_num_prefix:
+                            cached_aligned = cached_prefix_old_log_probs[:, :max_num_prefix]
+                        elif cached_prefix_old_log_probs.shape[1] < max_num_prefix:
+                            pad_len = max_num_prefix - cached_prefix_old_log_probs.shape[1]
+                            cached_aligned = torch.cat([
+                                cached_prefix_old_log_probs,
+                                torch.zeros(batch_size, pad_len,
+                                           dtype=cached_prefix_old_log_probs.dtype,
+                                           device=cached_prefix_old_log_probs.device)
+                            ], dim=1)
+                        else:
+                            cached_aligned = cached_prefix_old_log_probs
+
+                        # --- Per-sample num_prefix_tokens validation ---
+                        for n in range(batch_size):
+                            if num_prefix_tokens_per_sample[n] != cached_aligned.shape[1]:
+                                raise ValueError(
+                                    f"[GATHER_BUG] sample {n}: num_prefix_tokens={num_prefix_tokens_per_sample[n]} "
+                                    f"!= cached.shape[1]={cached_aligned.shape[1]}. "
+                                    f"parquet generation and training tokenization diverged."
+                                )
+
+                        current_prefix_logprobs = current_prefix_logprobs_padded
+                        cached_prefix_old_log_probs_aligned = cached_aligned
+
+                        # ===== AUDIT 1: Gather Alignment =====
+                        # Space A: log_prob_prefix[n] ∈ [actual_prompt_len], dense padded coords
+                        # Space B: prefix_mask[n] ∈ [compact_prompt_len], compact coords
+                        # Space C: cached (compact coords, same order as Space B nonzero positions)
+                        _n_audit = 0  # audit on first sample
+                        _compact_ones = (prefix_mask[_n_audit] == 1).nonzero(as_tuple=True)[0]
+                        _cp_first10 = _compact_ones[:10].tolist()
+                        _cp_last10 = _compact_ones[-10:].tolist()
+                        _total_prefix = _compact_ones.shape[0]
+                        _dense_next = _compact_ones + pad_offset - 1  # gather indices
+                        _dp_first10 = _dense_next[:10].tolist()
+                        _dp_last10 = _dense_next[-10:].tolist()
+                        print(f"[AUDIT_GATHER] === SAMPLE {_n_audit} ===", flush=True)
+                        print(f"[AUDIT_GATHER] compact_prompt_len={compact_prompt_len}, actual_prompt_len={actual_prompt_len}, pad_offset={pad_offset}", flush=True)
+                        print(f"[AUDIT_GATHER] prefix_mask total_ones={_total_prefix}, first10={_cp_first10}, last10={_cp_last10}", flush=True)
+                        print(f"[AUDIT_GATHER] dense_next (gather idx) first10={_dp_first10}, last10={_dp_last10}", flush=True)
+                        print(f"[AUDIT_GATHER] dense_next min={_dense_next.min().item()}, max={_dense_next.max().item()}, in_range=[0,{actual_prompt_len})= {(0 <= _dense_next.min() and _dense_next.max() < actual_prompt_len)}", flush=True)
+                        # Tokens at gather positions
+                        _input_ids_full = model_inputs["input_ids"][_n_audit]  # [actual_prompt_len + response_len]
+                        _input_ids_at_gather = _input_ids_full[_dense_next].tolist()
+                        print(f"[AUDIT_GATHER] input_ids at gather pos first10={_input_ids_at_gather[:10]}", flush=True)
+                        print(f"[AUDIT_GATHER] input_ids at gather pos last10={_input_ids_at_gather[-10:]}", flush=True)
+                        # Current vs old logprobs
+                        _cur_lp = current_prefix_logprobs[_n_audit, :_total_prefix].detach().cpu().numpy()
+                        _old_lp = cached_prefix_old_log_probs_aligned[_n_audit, :_total_prefix].detach().cpu().numpy()
+                        _diff = _cur_lp - _old_lp
+                        print(f"[AUDIT_GATHER] current_lp first10={_cur_lp[:10].tolist()}", flush=True)
+                        print(f"[AUDIT_GATHER] current_lp last10={_cur_lp[-10:].tolist()}", flush=True)
+                        print(f"[AUDIT_GATHER] old_lp     first10={_old_lp[:10].tolist()}", flush=True)
+                        print(f"[AUDIT_GATHER] old_lp     last10={_old_lp[-10:].tolist()}", flush=True)
+                        print(f"[AUDIT_GATHER] diff      first10={_diff[:10].tolist()}", flush=True)
+                        print(f"[AUDIT_GATHER] diff      last10={_diff[-10:].tolist()}", flush=True)
+                        print(f"[AUDIT_GATHER] diff      mean={_diff.mean():.6f}, min={_diff.min():.6f}, max={_diff.max():.6f}", flush=True)
+                        print(f"[AUDIT_GATHER] diff abs  mean={np.abs(_diff).mean():.6f}, nonzero_count={(np.abs(_diff) > 1e-6).sum()}/{len(_diff)}", flush=True)
+
+                        print(f"[DEBUG_GATHER] current_prefix_logprobs.shape={current_prefix_logprobs.shape}, "
+                              f"cached_aligned.shape={cached_prefix_old_log_probs_aligned.shape}", flush=True)
+                        print(f"[DEBUG_GATHER] finite(current)={torch.isfinite(current_prefix_logprobs).all().item()}, "
+                              f"finite(cached)={torch.isfinite(cached_prefix_old_log_probs_aligned).all().item()}", flush=True)
+
+                        # --- Strict shape / finite checks ---
+                        if not torch.isfinite(current_prefix_logprobs).all():
+                            raise ValueError(
+                                f"[GATHER_BUG] current_prefix_logprobs non-finite: "
+                                f"min={current_prefix_logprobs.min().item():.4f}, "
+                                f"max={current_prefix_logprobs.max().item():.4f}"
+                            )
+                        if not torch.isfinite(cached_prefix_old_log_probs_aligned).all():
+                            raise ValueError(
+                                f"[GATHER_BUG] cached non-finite: "
+                                f"min={cached_prefix_old_log_probs_aligned.min().item():.4f}, "
+                                f"max={cached_prefix_old_log_probs_aligned.max().item():.4f}"
+                            )
+
+                        # --- Prefix PPO/GRPO-style loss (same family as continuation loss) ---
+                        # Prefix advantage: broadcast trajectory reward to all prefix tokens
+                        # trajectory_reward = mean of continuation advantages per sample
+                        trajectory_reward = advantages.mean(dim=1, keepdim=True)  # [B, 1]
+                        prefix_advantages = trajectory_reward.expand(-1, max_num_prefix)  # [B, max_num_prefix]
+
+                        from verl.trainer.ppo.core_algos import compute_policy_loss_vanilla
+                        prefix_loss, prefix_metrics = compute_policy_loss_vanilla(
+                            old_log_prob=cached_prefix_old_log_probs_aligned,
+                            log_prob=current_prefix_logprobs,
+                            advantages=prefix_advantages,
+                            response_mask=prefix_mask_gathered,
                             loss_agg_mode=loss_agg_mode,
                             config=self.config,
-                            rollout_is_weights=rollout_is_weights,
+                            rollout_is_weights=None,
                         )
-                        micro_batch_metrics.update(pg_metrics)
 
-                    # Skip if using pure rollout correction mode (metrics already in pg_metrics)
-                    rollout_log_prob = model_inputs.get("rollout_log_probs", None)
-                    if loss_mode != "rollout_correction" and rollout_log_prob is not None:
-                        # Compute metrics using CURRENT policy π_θ vs π_rollout
-                        # Tracks evolving off-policy gap as π_θ updates during mini-batch training
-                        from verl.trainer.ppo.rollout_corr_helper import compute_rollout_corr_metrics_from_logprobs
+                        print(f"[DEBUG_GATHER] prefix_loss={prefix_loss.item():.6f}, "
+                              f"finite={torch.isfinite(prefix_loss).item()}", flush=True)
 
-                        rollout_corr_metrics = compute_rollout_corr_metrics_from_logprobs(
-                            log_prob=log_prob,
-                            rollout_log_prob=rollout_log_prob,
-                            response_mask=response_mask,
-                        )
-                        micro_batch_metrics.update(rollout_corr_metrics)
+                        if not torch.isfinite(prefix_loss):
+                            raise ValueError(
+                                f"[GATHER_BUG] prefix_loss not finite: {prefix_loss.item()}. "
+                                f"current_lp: {current_prefix_logprobs.abs().max().item():.4f}, "
+                                f"cached_lp: {cached_prefix_old_log_probs_aligned.abs().max().item():.4f}"
+                            )
 
-                    policy_loss = pg_loss
+                        # ===== AUDIT 2: Prefix PPO Loss Liveness =====
+                        _adv_cpu = prefix_advantages[0].detach().cpu().numpy()
+                        _cur_cpu = current_prefix_logprobs[0].detach().cpu().numpy()
+                        _old_cpu = cached_prefix_old_log_probs_aligned[0].detach().cpu().numpy()
+                        _mask_cpu = prefix_mask_gathered[0].detach().cpu().numpy()
+                        _diff_lp = _cur_cpu - _old_cpu
+                        _valid_diff = _diff_lp[_mask_cpu > 0.5]
+                        _adv_val = _adv_cpu[_mask_cpu > 0.5]
+                        print(f"[AUDIT_LOSS] === PREFIX PPO LOSS LIVENESS ===", flush=True)
+                        print(f"[AUDIT_LOSS] prefix_loss_weight={prefix_loss_weight}", flush=True)
+                        print(f"[AUDIT_LOSS] prefix_advantages shape={prefix_advantages.shape}, first5={_adv_cpu[:5].tolist()}", flush=True)
+                        print(f"[AUDIT_LOSS] trajectory_reward (used as adv)={trajectory_reward[0].item():.6f}", flush=True)
+                        print(f"[AUDIT_LOSS] prefix_advantages all_same={np.allclose(_adv_cpu[_mask_cpu>0.5], _adv_cpu[_mask_cpu>0.5].mean())}", flush=True)
+                        print(f"[AUDIT_LOSS] prefix_mask_gathered.sum={_mask_cpu.sum()}", flush=True)
+                        print(f"[AUDIT_LOSS] (current - old) valid mean={_valid_diff.mean():.6f}, "
+                              f"min={_valid_diff.min():.6f}, max={_valid_diff.max():.6f}", flush=True)
+                        print(f"[AUDIT_LOSS] (current - old) nonzero={(np.abs(_valid_diff) > 1e-6).sum()}/{len(_valid_diff)}", flush=True)
+                        print(f"[AUDIT_LOSS] abs(current - old) mean={np.abs(_valid_diff).mean():.6f}", flush=True)
+                        print(f"[AUDIT_LOSS] prefix_loss={prefix_loss.item():.6f}", flush=True)
+                        _ratio = np.exp(_valid_diff)
+                        print(f"[AUDIT_LOSS] ratio mean={_ratio.mean():.6f}, min={_ratio.min():.6f}, max={_ratio.max():.6f}", flush=True)
+
+                        total_prefix_tokens = sum(num_prefix_tokens_per_sample)
+                        print(f"[DEBUG_GATHER] SUCCESS: prefix_loss={prefix_loss.item():.6f}, "
+                              f"total_prefix_tokens={total_prefix_tokens}", flush=True)
+
+                        # 3. Compute continuation loss (standard GRPO on response)
+                        cont_advantages = advantages  # (bsz, response_len)
+                        cont_loss_fn = get_policy_loss_fn(self.config.policy_loss.get("loss_mode", "vanilla"))
+                        cont_pg_loss, cont_metrics = cont_loss_fn(
+                            old_log_prob=cont_old_log_prob, log_prob=log_prob_resp,
+                            advantages=cont_advantages, response_mask=response_mask,
+                            loss_agg_mode=loss_agg_mode, config=self.config,
+                            rollout_is_weights=rollout_is_weights)
+
+                        # 4. TOTAL loss = continuation_loss + prefix_loss_weight * prefix_loss
+                        # (prefix_loss computed above via per-sample gather + PPO objective)
+                        policy_loss = cont_pg_loss + prefix_loss_weight * prefix_loss
+
+                        # ===== AUDIT 2b: Total Loss Participation =====
+                        _policy_loss_val = policy_loss.item()
+                        if _policy_loss_val != 0:
+                            _contrib = prefix_loss_weight * prefix_loss.item() / _policy_loss_val * 100
+                            _contrib_str = f"{_contrib:.2f}%"
+                        else:
+                            _contrib_str = "N/A(policy_loss=0)"
+                        print(f"[AUDIT_LOSS] cont_loss={cont_pg_loss.item():.6f}, "
+                              f"prefix_loss={prefix_loss.item():.6f}, "
+                              f"weight={prefix_loss_weight}, "
+                              f"weighted_prefix={prefix_loss_weight * prefix_loss.item():.6f}, "
+                              f"policy_loss={_policy_loss_val:.6f}, "
+                              f"prefix_contribution={_contrib_str}", flush=True)
+
+                        # Metrics
+                        _cont_kl_val = cont_metrics.get("actor/ppo_kl", 0.0)
+                        cont_ppo_kl = torch.tensor(_cont_kl_val, device=cont_pg_loss.device)
+                        _prefix_kl_val = prefix_metrics.get("actor/ppo_kl", 0.0)
+                        prefix_ppo_kl = torch.tensor(_prefix_kl_val, device=prefix_loss.device)
+
+                        ratio_prefix = torch.exp(current_prefix_logprobs - cached_prefix_old_log_probs_aligned)
+                        valid_ratio = ratio_prefix * prefix_mask_gathered
+                        prefix_ratio_mean = valid_ratio.sum().item() / max(prefix_mask_gathered.sum().item(), 1.0)
+                        prefix_ratio_min = valid_ratio[valid_ratio > 0].min().item() if (valid_ratio > 0).any() else 0.0
+                        prefix_ratio_max = valid_ratio.max().item()
+
+                        micro_batch_metrics.update({
+                            "actor/continuation_loss": cont_pg_loss.detach().item() * loss_scale_factor,
+                            "actor/prefix_loss": prefix_loss.detach().item() * loss_scale_factor,
+                            "actor/prefix_loss_weight": float(prefix_loss_weight),
+                            "actor/pg_loss": policy_loss.detach().item() * loss_scale_factor,
+                            "actor/prefix_ratio_mean": prefix_ratio_mean,
+                            "actor/prefix_ratio_min": prefix_ratio_min,
+                            "actor/prefix_ratio_max": prefix_ratio_max,
+                            "actor/prefix_token_count": float(total_prefix_tokens),
+                            "actor/prefix_old_logprob_source": 1.0,
+                            "actor/prefix_ppo_kl": prefix_ppo_kl.detach().item(),
+                            "actor/cont_ppo_kl": cont_ppo_kl.detach().item(),
+                        })
+
+                        # Use response-only entropy for logging
+                        entropy = entropy_resp
+
+                    # === Entropy regularization ===
                     if calculate_entropy and entropy is not None:
                         entropy_agg = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
                         micro_batch_metrics["actor/entropy"] = entropy_agg.detach().item()
@@ -563,28 +888,22 @@ class DataParallelPPOActor(BasePPOActor):
 
                     if self.config.use_kl_loss:
                         ref_log_prob = model_inputs["ref_log_prob"]
-                        # compute kl loss
-                        kld = kl_penalty(
-                            logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type
-                        )
+                        kld = kl_penalty(logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type)
                         kl_loss = agg_loss(loss_mat=kld, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+                        if not optimize_prefix_tokens:
+                            policy_loss = policy_loss + kl_loss * self.config.kl_loss_coef
+                            micro_batch_metrics["actor/kl_loss"] = kl_loss.detach().item() * loss_scale_factor
+                            micro_batch_metrics["actor/kl_coef"] = self.config.kl_loss_coef
+                        else:
+                            micro_batch_metrics["actor/kl_disabled"] = 1.0
 
-                        policy_loss = policy_loss + kl_loss * self.config.kl_loss_coef
-                        micro_batch_metrics["actor/kl_loss"] = kl_loss.detach().item() * loss_scale_factor
-                        micro_batch_metrics["actor/kl_coef"] = self.config.kl_loss_coef
-
-                    if self.config.use_dynamic_bsz:
-                        # relative to the dynamic bsz
-                        loss = policy_loss * loss_scale_factor
-                    else:
-                        loss = policy_loss * loss_scale_factor
                     if self.scaler is not None:
-                        self.scaler.scale(loss).backward()
+                        self.scaler.scale(policy_loss * loss_scale_factor).backward()
                     else:
-                        loss.backward()
+                        (policy_loss * loss_scale_factor).backward()
 
-                    micro_batch_metrics["actor/pg_loss"] = pg_loss.detach().item() * loss_scale_factor
                     append_to_dict(metrics, micro_batch_metrics)
+
 
                 grad_norm = self._optimizer_step()
                 mini_batch_metrics = {"actor/grad_norm": grad_norm.detach().item()}
