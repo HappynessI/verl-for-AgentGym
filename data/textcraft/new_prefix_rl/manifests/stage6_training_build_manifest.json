@@ -1,0 +1,9 @@
+{
+  "prefix_data_path": "/Data/wyh/datasets/Verl-Data/train/textcraft/new_prefix_rl/stage4_canonicalized/fixed_ratio_0p4_stage4_trainable_canonicalized.parquet",
+  "sidecar_path": "/Data/wyh/datasets/Verl-Data/train/textcraft/new_prefix_rl/stage5_old_logits/teacher_old_logprobs_step200.parquet",
+  "teacher_parquet_path": "/Data/wyh/datasets/Verl-Data/train/textcraft/new_prefix_rl/stage0_teacher/teacher_normalized.parquet",
+  "output_path": "/Data/wyh/datasets/Verl-Data/train/textcraft/new_prefix_rl/stage6_training_build/textcraft_prefix_main_train_step200.parquet",
+  "rows": 1189,
+  "unique_sample_uid": 1189,
+  "empty_prefix_old_logprobs": 0
+}

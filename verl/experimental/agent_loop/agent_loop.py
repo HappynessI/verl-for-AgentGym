@@ -342,6 +342,9 @@ class AgentLoopWorkerBase:
             repetition_penalty=1.0,
             logprobs=config.calculate_log_probs,
         )
+        if getattr(config, "max_tokens", None) is not None:
+            sampling_params["max_tokens"] = config.max_tokens
+            sampling_params["max_new_tokens"] = config.max_tokens
 
         # override sampling params for validation
         if batch.meta_info.get("validate", False):

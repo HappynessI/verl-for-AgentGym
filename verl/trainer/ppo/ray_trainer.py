@@ -1416,6 +1416,9 @@ class RayPPOTrainer:
                 gen_batch_output = gen_batch.repeat(
                     repeat_times=n_rollouts, interleave=True
                 )
+                # Preserve the repeated pre-rollout non-tensor sidecars because the rollout output
+                # replaces non_tensor_batch with reward/interaction fields only.
+                restore_non_tensor_batch = gen_batch_output.non_tensor_batch.copy()
 
                 is_last_step = self.global_steps >= self.total_training_steps
                 with marked_timer("step", timing_raw):
@@ -1458,9 +1461,10 @@ class RayPPOTrainer:
 
                             del rm_scores, gen_baseline_batch, gen_baseline_output
                     # repeat batch (which has basic keys) and union with rollout output
-                    # NOTE: gen_batch has prefix keys in non_tensor_batch but also tensor fields like input_ids.
-                    # We start from batch, repeat it, union with gen_batch_output,
-                    # then copy prefix keys from gen_batch non_tensor_batch.
+                    # NOTE: _get_gen_batch() pops prefix sidecars out of the original batch and places them
+                    # into gen_batch.non_tensor_batch. After rollout, gen_batch_output.non_tensor_batch only
+                    # contains reward/interaction fields, so we must restore prefix keys from the preserved
+                    # pre-rollout repeated non-tensor batch, not from batch.non_tensor_batch.
                     batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
 
                     # === DEBUG: Check repeated prefix keys in batch.non_tensor_batch ===
@@ -1479,7 +1483,7 @@ class RayPPOTrainer:
                     # gen_batch_output only contains rollout tensor keys (responses, etc.) and has its OWN
                     # non_tensor_batch from the reward computation. It does NOT contain assistant_prefix_old_log_probs.
                     # The union only merges keys FROM gen_batch_output INTO batch, not the other way around.
-                    # So we must copy already-repeated prefix keys from batch.non_tensor_batch to batch.batch NOW.
+                    # So we must copy already-repeated prefix keys from the preserved pre-rollout non_tensor_batch NOW.
                     print(f"[DEBUG_BATCH] gen_batch_output.batch.keys() = {list(gen_batch_output.batch.keys())}", flush=True)
                     print(f"[DEBUG_BATCH] gen_batch_output.non_tensor_batch.keys() = {list(gen_batch_output.non_tensor_batch.keys())}", flush=True)
 
@@ -1494,9 +1498,9 @@ class RayPPOTrainer:
                     ]
                     restoredKeys = []
                     for key in prefix_keys_to_restore:
-                        if key in batch.non_tensor_batch:
-                            val = batch.non_tensor_batch[key]
-                            print(f"[DEBUG_RESTORE] Copying key={key} from batch.non_tensor_batch to batch.batch", flush=True)
+                        if key in restore_non_tensor_batch:
+                            val = restore_non_tensor_batch[key]
+                            print(f"[DEBUG_RESTORE] Copying key={key} from restore_non_tensor_batch to batch.batch", flush=True)
                             if isinstance(val, np.ndarray) and val.dtype == object:
                                 per_sample_lens = []
                                 for _i in range(min(5, val.shape[0])):

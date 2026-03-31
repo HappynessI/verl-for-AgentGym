@@ -20,9 +20,13 @@ set -e
 # ==================== 配置参数 ====================
 
 # -------------------- 模型和数据 --------------------
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd "${SCRIPT_DIR}/../../../.." && pwd)
 MODEL_PATH=${MODEL_PATH:-"/Data/public/Qwen3-1.7B"}
-# 使用与 smoke test 一致的 canonicalized + prefix old logprobs 数据
-DATA_PATH=${DATA_PATH:-"/Data/wyh/datasets/Verl-Data/outputs/textcraft_old_logits/active/textcraft_validated_prefix_history_canonicalized_with_prefix_old_logprobs_step200_v2.parquet"}
+ENABLE_GRADIENT_CHECKPOINTING=${ENABLE_GRADIENT_CHECKPOINTING:-true}
+ENABLE_ACTIVATION_OFFLOAD=${ENABLE_ACTIVATION_OFFLOAD:-true}
+# 使用 repo 内重建并审计通过的主实验数据
+DATA_PATH=${DATA_PATH:-"${REPO_ROOT}/data/textcraft/new_prefix_rl/stage7_audit_release/textcraft_prefix_main_train_step200.audited.parquet"}
 
 # ==================== Debug 模��配置 ====================
 DEBUG_MODE=${DEBUG_MODE:-0}
@@ -51,19 +55,21 @@ done
 GPU_IDS=${GPU_IDS:-"0,2"}  # 使用的GPU编号
 NUM_GPUS=${NUM_GPUS:-2}      # GPU数量
 
-# -------------------- 训练超参数（默认主实验配置）--------------------
-NUM_EPOCHS=${NUM_EPOCHS:-10}  # 第一版先跑较少 epochs
-TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-32}    
-MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-16}     
-LEARNING_RATE=${LEARNING_RATE:-5e-6}
-SAVE_FREQ=${SAVE_FREQ:-5}                   
-TEST_FREQ=${TEST_FREQ:-5}
+# -------------------- 训练超参数（与 grpo_train 保持一致）--------------------
+NUM_EPOCHS=${NUM_EPOCHS:-30}
+TRAIN_BATCH_SIZE=${TRAIN_BATCH_SIZE:-16}
+PPO_MINI_BATCH_SIZE=${PPO_MINI_BATCH_SIZE:-16}
+PPO_EPOCHS=${PPO_EPOCHS:-2}
+MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-8}
+LEARNING_RATE=${LEARNING_RATE:-1e-6}
+SAVE_FREQ=${SAVE_FREQ:-200}
+TEST_FREQ=${TEST_FREQ:--1}
 
 # -------------------- Prefix Optimization 配置 --------------------
 # 主实验开关：
-# - optimize_prefix_tokens=false: baseline（只优化 continuation，不优化 prefix）
-# - optimize_prefix_tokens=true: 主实验（prefix 使用 cached SFT old_logprob 优化）
-OPTIMIZE_PREFIX_TOKENS=${OPTIMIZE_PREFIX_TOKENS:-false}
+# - optimize_prefix_tokens=true: 主实验默认开启
+# - 如需 continuation-only baseline，请显式传 OPTIMIZE_PREFIX_TOKENS=false
+OPTIMIZE_PREFIX_TOKENS=${OPTIMIZE_PREFIX_TOKENS:-true}
 # Prefix loss 权重
 PREFIX_LOSS_WEIGHT=${PREFIX_LOSS_WEIGHT:-1.0}
 
@@ -72,28 +78,34 @@ PREFIX_LOSS_WEIGHT=${PREFIX_LOSS_WEIGHT:-1.0}
 USE_KL_LOSS=${USE_KL_LOSS:-false}                   
 
 # -------------------- Rollout配置 --------------------
-ROLLOUT_N=${ROLLOUT_N:-4}                   # 每个prompt采样数量
+ROLLOUT_N=${ROLLOUT_N:-8}                   # 每个prompt采样数量
 TEMPERATURE=${TEMPERATURE:-1.0}
-TOP_P=${TOP_P:-0.95}
-GPU_MEMORY_UTIL=${GPU_MEMORY_UTIL:-0.6}     
-MAX_NUM_SEQS=${MAX_NUM_SEQS:-64}            
+TOP_P=${TOP_P:-1.0}
+GPU_MEMORY_UTIL=${GPU_MEMORY_UTIL:-0.85}
+MAX_NUM_SEQS=${MAX_NUM_SEQS:-1024}
 ENFORCE_EAGER=${ENFORCE_EAGER:-true}        
 FREE_CACHE_ENGINE=${FREE_CACHE_ENGINE:-true}
-CALCULATE_LOG_PROBS=${CALCULATE_LOG_PROBS:-true}
 
 # -------------------- vLLM Validation配置 --------------------
-VAL_TEMPERATURE=${VAL_TEMPERATURE:-0.3}
-VAL_TOP_P=${VAL_TOP_P:-0.9}
-VAL_DO_SAMPLE=${VAL_DO_SAMPLE:-true}
+VAL_TEMPERATURE=${VAL_TEMPERATURE:-1.0}
+VAL_TOP_P=${VAL_TOP_P:-1.0}
+VAL_DO_SAMPLE=${VAL_DO_SAMPLE:-false}
 VAL_N=${VAL_N:-1}
 
 # -------------------- Token长度限制 --------------------
 MAX_PROMPT_LENGTH=${MAX_PROMPT_LENGTH:-2048}          
-MAX_RESPONSE_LENGTH=${MAX_RESPONSE_LENGTH:-4096}     
-ROLLOUT_PROMPT_LENGTH=${ROLLOUT_PROMPT_LENGTH:-4096}  
-MAX_MODEL_LEN=${MAX_MODEL_LEN:-10240}                  
-PPO_MAX_TOKEN_LEN=${PPO_MAX_TOKEN_LEN:-12288}          
-MAX_NUM_BATCHED_TOKENS=${MAX_NUM_BATCHED_TOKENS:-10240}
+MAX_RESPONSE_LENGTH=${MAX_RESPONSE_LENGTH:-10240}
+ROLLOUT_RESPONSE_LENGTH=${ROLLOUT_RESPONSE_LENGTH:-10240}
+ROLLOUT_MAX_TOKENS=${ROLLOUT_MAX_TOKENS:-512}
+ROLLOUT_PROMPT_LENGTH=${ROLLOUT_PROMPT_LENGTH:-2048}
+MAX_MODEL_LEN=${MAX_MODEL_LEN:-32768}
+PPO_MAX_TOKEN_LEN=${PPO_MAX_TOKEN_LEN:-16384}
+MAX_NUM_BATCHED_TOKENS=${MAX_NUM_BATCHED_TOKENS:-8192}
+MAX_ASSISTANT_TURNS=${MAX_ASSISTANT_TURNS:-30}
+MAX_USER_TURNS=${MAX_USER_TURNS:-30}
+RAY_NUM_CPUS=${RAY_NUM_CPUS:-8}
+METRICS_CSV_FREQ=${METRICS_CSV_FREQ:-50}
+METRICS_CSV_FILENAME=${METRICS_CSV_FILENAME:-training_metrics.csv}
 
 # -------------------- 环境服务器 --------------------
 TEXTCRAFT_SERVER=${TEXTCRAFT_SERVER:-"http://127.0.0.1:36001"}
@@ -113,6 +125,7 @@ if [ "$DEBUG_MODE" = "1" ]; then
     # 覆盖为小规模配置
     NUM_EPOCHS=1
     TRAIN_BATCH_SIZE=4
+    PPO_MINI_BATCH_SIZE=4
     MICRO_BATCH_SIZE=2
     ROLLOUT_N=2
     SAVE_FREQ=1
@@ -120,6 +133,7 @@ if [ "$DEBUG_MODE" = "1" ]; then
     GPU_MEMORY_UTIL=0.5
     MAX_NUM_SEQS=16
     MAX_RESPONSE_LENGTH=512
+    ROLLOUT_RESPONSE_LENGTH=512
     MAX_NUM_BATCHED_TOKENS=4096
     
     echo "Debug 配置:"
@@ -198,6 +212,8 @@ fi
 
 echo "【模型和数据】" | tee -a "$LOG_FILE"
 echo "  模型路径: $MODEL_PATH" | tee -a "$LOG_FILE"
+echo "  gradient_checkpointing: $ENABLE_GRADIENT_CHECKPOINTING" | tee -a "$LOG_FILE"
+echo "  activation_offload: $ENABLE_ACTIVATION_OFFLOAD" | tee -a "$LOG_FILE"
 echo "  训练数据: $DATA_PATH" | tee -a "$LOG_FILE"
 echo "  输出目录: $OUTPUT_DIR" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
@@ -350,45 +366,54 @@ python3 -m verl.trainer.main_ppo \
     data.max_response_length=$MAX_RESPONSE_LENGTH \
     '+data.apply_chat_template_kwargs.enable_thinking=True' \
     actor_rollout_ref.model.path=$MODEL_PATH \
-    actor_rollout_ref.model.enable_gradient_checkpointing=true \
-    actor_rollout_ref.model.enable_activation_offload=true \
+    actor_rollout_ref.model.enable_gradient_checkpointing=$ENABLE_GRADIENT_CHECKPOINTING \
+    actor_rollout_ref.model.enable_activation_offload=$ENABLE_ACTIVATION_OFFLOAD \
     actor_rollout_ref.actor.fsdp_config.param_offload=true \
     actor_rollout_ref.ref.fsdp_config.param_offload=true \
     actor_rollout_ref.actor.optim.lr=$LEARNING_RATE \
-    actor_rollout_ref.actor.ppo_mini_batch_size=$TRAIN_BATCH_SIZE \
+    actor_rollout_ref.actor.ppo_epochs=$PPO_EPOCHS \
+    actor_rollout_ref.actor.ppo_mini_batch_size=$PPO_MINI_BATCH_SIZE \
     actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
     actor_rollout_ref.actor.ppo_max_token_len_per_gpu=$PPO_MAX_TOKEN_LEN \
+    actor_rollout_ref.actor.use_kl_loss=$USE_KL_LOSS \
     actor_rollout_ref.rollout.name=vllm \
     actor_rollout_ref.rollout.n=$ROLLOUT_N \
     actor_rollout_ref.rollout.temperature=$TEMPERATURE \
     actor_rollout_ref.rollout.top_p=$TOP_P \
     actor_rollout_ref.rollout.prompt_length=$ROLLOUT_PROMPT_LENGTH \
-    actor_rollout_ref.rollout.response_length=$MAX_RESPONSE_LENGTH \
+    actor_rollout_ref.rollout.response_length=$ROLLOUT_RESPONSE_LENGTH \
+    actor_rollout_ref.rollout.max_tokens=$ROLLOUT_MAX_TOKENS \
     actor_rollout_ref.rollout.max_model_len=$MAX_MODEL_LEN \
     actor_rollout_ref.rollout.max_num_batched_tokens=$MAX_NUM_BATCHED_TOKENS \
     actor_rollout_ref.rollout.max_num_seqs=$MAX_NUM_SEQS \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
     actor_rollout_ref.rollout.gpu_memory_utilization=$GPU_MEMORY_UTIL \
     actor_rollout_ref.rollout.enforce_eager=$ENFORCE_EAGER \
     actor_rollout_ref.rollout.free_cache_engine=$FREE_CACHE_ENGINE \
-    actor_rollout_ref.rollout.calculate_log_probs=$CALCULATE_LOG_PROBS \
     actor_rollout_ref.rollout.val_kwargs.temperature=$VAL_TEMPERATURE \
     actor_rollout_ref.rollout.val_kwargs.top_p=$VAL_TOP_P \
     actor_rollout_ref.rollout.val_kwargs.do_sample=$VAL_DO_SAMPLE \
     actor_rollout_ref.rollout.val_kwargs.n=$VAL_N \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
+    actor_rollout_ref.rollout.multi_turn.max_assistant_turns=$MAX_ASSISTANT_TURNS \
+    actor_rollout_ref.rollout.multi_turn.max_user_turns=$MAX_USER_TURNS \
+    actor_rollout_ref.rollout.multi_turn.interaction_config_path="/Data/wyh/verl/examples/sglang_multiturn/config/interaction_config/textcraft_interaction.yaml" \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
     trainer.n_gpus_per_node=$NUM_GPUS \
     trainer.nnodes=1 \
+    ray_kwargs.ray_init.num_cpus=$RAY_NUM_CPUS \
     trainer.total_epochs=$NUM_EPOCHS \
     trainer.save_freq=$SAVE_FREQ \
     trainer.test_freq=$TEST_FREQ \
+    trainer.val_before_train=false \
     trainer.default_local_dir=$OUTPUT_DIR \
+    +trainer.metrics_csv_freq=$METRICS_CSV_FREQ \
+    +trainer.metrics_csv_filename="$METRICS_CSV_FILENAME" \
     trainer.project_name=textcraft_grpo_validated \
     trainer.experiment_name=$EXPERIMENT_NAME \
     trainer.resume_mode=disable \
     algorithm.optimize_prefix_tokens=$OPTIMIZE_PREFIX_TOKENS \
     algorithm.prefix_loss_weight=$PREFIX_LOSS_WEIGHT \
-    actor_rollout_ref.actor.use_kl_loss=$USE_KL_LOSS \
     2>&1 | tee -a "$LOG_FILE"
 
 EXIT_CODE=${PIPESTATUS[0]}
