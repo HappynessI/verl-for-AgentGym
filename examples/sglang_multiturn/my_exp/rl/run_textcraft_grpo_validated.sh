@@ -24,7 +24,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "${SCRIPT_DIR}/../../../.." && pwd)
 MODEL_PATH=${MODEL_PATH:-"/Data/public/Qwen3-1.7B"}
 ENABLE_GRADIENT_CHECKPOINTING=${ENABLE_GRADIENT_CHECKPOINTING:-true}
-ENABLE_ACTIVATION_OFFLOAD=${ENABLE_ACTIVATION_OFFLOAD:-true}
+ENABLE_ACTIVATION_OFFLOAD=${ENABLE_ACTIVATION_OFFLOAD:-false}
 # 使用 repo 内重建并审计通过的主实验数据
 DATA_PATH=${DATA_PATH:-"${REPO_ROOT}/data/textcraft/new_prefix_rl/stage7_audit_release/textcraft_prefix_main_train_step200.audited.parquet"}
 

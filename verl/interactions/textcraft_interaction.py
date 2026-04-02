@@ -27,6 +27,39 @@ class TextCraftInteraction(AgentGymBaseInteraction):
         super().__init__(config)
         self.env_name = "textcraft"
         self.max_rounds = 100  # 制作任务可能需要很多步骤
+
+    @staticmethod
+    def _normalize_prompt_messages(prompt) -> list[dict]:
+        if prompt is None:
+            return []
+        if hasattr(prompt, "tolist"):
+            prompt = prompt.tolist()
+        if isinstance(prompt, list):
+            return prompt
+        return []
+
+    @staticmethod
+    def _extract_goal_and_commands_from_prompt(prompt) -> tuple[Optional[str], Optional[str]]:
+        prompt_list = TextCraftInteraction._normalize_prompt_messages(prompt)
+        for msg in prompt_list:
+            if not isinstance(msg, dict) or msg.get("role") != "user":
+                continue
+            content = msg.get("content", "")
+            goal_match = re.search(
+                r"Goal:\s*craft\s+(.+?)\.?$",
+                content,
+                re.IGNORECASE | re.MULTILINE,
+            )
+            commands_match = re.search(
+                r"Crafting commands:\n(.+?)\n\nGoal:\s*craft\s+.+?\.?$",
+                content,
+                re.IGNORECASE | re.MULTILINE | re.DOTALL,
+            )
+            if goal_match:
+                goal = goal_match.group(1).strip()
+                commands = commands_match.group(1).strip() if commands_match else None
+                return goal, commands
+        return None, None
     
     async def start_interaction(self, instance_id: str, **kwargs) -> None:
         """
@@ -37,27 +70,22 @@ class TextCraftInteraction(AgentGymBaseInteraction):
         if prefix_actions is not None and not isinstance(prefix_actions, list):
             prefix_actions = list(prefix_actions)
 
-        # 提取 goal：优先从 interaction_kwargs 读（修复后的 parquet），兜底从 prompt 解析
+        # 优先使用显式 goal；若 parquet 未写 goal，则尝试从 prompt 中兜底解析。
         expected_goal = kwargs.pop('goal', None)
         if expected_goal is None:
-            # 兜底：从 prompt（prompt 字段是 messages 列表）里解析 Goal: 字段
             prompt = kwargs.get('prompt')
-            if prompt is not None:
-                prompt_list = prompt.tolist() if hasattr(prompt, 'tolist') else (prompt if isinstance(prompt, list) else [])
-                for msg in prompt_list:
-                    if isinstance(msg, dict) and msg.get('role') == 'user':
-                        content = msg.get('content', '')
-                        m = re.search(r'Goal:\s*craft\s+(.+?)\.?$', content, re.IGNORECASE | re.MULTILINE)
-                        if m:
-                            expected_goal = m.group(1).strip()
-                            logger.warning(
-                                f"[{instance_id}] goal not in interaction_kwargs — "
-                                f"extracted from prompt: {expected_goal!r}"
-                            )
-                            break
+            parsed_goal, _ = self._extract_goal_and_commands_from_prompt(prompt)
+            if parsed_goal is not None:
+                expected_goal = parsed_goal
+                logger.warning(
+                    f"[{instance_id}] goal not in interaction_kwargs - "
+                    f"extracted from prompt: {expected_goal!r}"
+                )
 
-        # 提取 data_idx（数据集索引，用于确定性任务分配）
-        # 兼容 h200 侧旧数据链路：若未显式传 data_idx，则回退到 session_id。
+        parsed_commands = kwargs.pop('commands', None)
+        if parsed_commands is None:
+            _, parsed_commands = self._extract_goal_and_commands_from_prompt(kwargs.get('prompt'))
+
         session_id = kwargs.get('session_id')
         data_idx = kwargs.pop('data_idx', None)
         if data_idx is None and session_id is not None:
@@ -66,13 +94,15 @@ class TextCraftInteraction(AgentGymBaseInteraction):
             except (TypeError, ValueError):
                 data_idx = None
 
-        # 创建环境实例：显式传入 goal 和 data_idx
         create_body = {}
         if expected_goal is not None:
             create_body['goal'] = expected_goal
+        if parsed_commands:
+            create_body['commands'] = parsed_commands
         if data_idx is not None:
             create_body['data_idx'] = data_idx
 
+        # 创建环境实例
         create_url = f"{self.env_server_base}/create"
         try:
             response = await self._async_post(create_url, json=create_body)
@@ -90,47 +120,29 @@ class TextCraftInteraction(AgentGymBaseInteraction):
             logger.error(f"Failed to create TextCraft environment: {e}")
             raise
 
-        # === 提取实际 goal（用于后续校验和记录） ===
         actual_obs = data.get('observation', '')
         actual_goal_in_obs = None
-        m = re.search(r'Goal:\s*craft\s+(.+?)\.?$', actual_obs, re.IGNORECASE | re.MULTILINE)
-        if m:
-            actual_goal_in_obs = m.group(1).strip()
+        match = re.search(r'Goal:\s*craft\s+(.+?)\.?$', actual_obs, re.IGNORECASE | re.MULTILINE)
+        if match:
+            actual_goal_in_obs = match.group(1).strip()
 
-        # === FAIL-FAST: 当提供了 expected_goal 时校验一致性 ===
-        if expected_goal is not None:
-            if actual_goal_in_obs is None:
-                raise ValueError(
-                    f"[{instance_id}] FAIL-FAST: Could not extract goal from server observation. "
-                    f"expected_goal={expected_goal!r}, obs={actual_obs[:200]!r}"
-                )
-
-            def _norm(g):
-                return g.lower().replace('_', ' ').replace("'", '').strip()
+        if expected_goal is not None and actual_goal_in_obs is not None:
+            def _norm(goal: str) -> str:
+                return goal.lower().replace('_', ' ').replace("'", '').strip()
 
             if _norm(actual_goal_in_obs) != _norm(expected_goal):
                 raise ValueError(
                     f"[{instance_id}] FAIL-FAST: Goal mismatch! "
-                    f"expected_goal={expected_goal!r}, "
-                    f"actual_goal_in_env={actual_goal_in_obs!r}. "
-                    f"This means the task binding is broken — stop the run immediately."
+                    f"expected_goal={expected_goal!r}, actual_goal_in_env={actual_goal_in_obs!r}"
                 )
-            logger.info(f"[{instance_id}] Goal validation passed: expected={expected_goal!r}, actual={actual_goal_in_obs!r}")
-        else:
-            # 没有 expected_goal 时，记录实际分配到的 goal（便于调试和理解随机分配情况）
-            if actual_goal_in_obs is not None:
-                logger.warning(
-                    f"[{instance_id}] No expected_goal provided — server assigned goal={actual_goal_in_obs!r}. "
-                    f"This run will use server-side random goal assignment (data_idx={data_idx}). "
-                    f"Consider adding goal to test.parquet for deterministic evaluation."
-                )
-            else:
-                logger.warning(
-                    f"[{instance_id}] No expected_goal provided and could not extract goal from observation. "
-                    f"data_idx={data_idx}, obs={actual_obs[:200]!r}"
-                )
+        elif expected_goal is None and actual_goal_in_obs is not None:
+            logger.warning(
+                f"[{instance_id}] No expected_goal provided - "
+                f"server assigned goal={actual_goal_in_obs!r}, data_idx={data_idx}"
+            )
 
         # TextCraft的create接口已经返回了initial observation，不需要再调用reset
+        # 保存session信息
         self.instance_sessions[instance_id] = {
             'env_id': env_id,
             'done': data.get('done', False),
@@ -141,7 +153,7 @@ class TextCraftInteraction(AgentGymBaseInteraction):
             'actual_goal_in_obs': actual_goal_in_obs,
             'data_idx': data_idx,
         }
-
+        
         logger.info(f"Started TextCraft interaction {instance_id} with env_id {env_id}")
 
         # ==================== DEBUG: Replay 开始 ====================
@@ -149,9 +161,6 @@ class TextCraftInteraction(AgentGymBaseInteraction):
             print(f"\n{'='*60}")
             print(f"DEBUG: TextCraft start_interaction for {instance_id}")
             print(f"  - env_id: {env_id}")
-            print(f"  - expected_goal: {expected_goal}")
-            print(f"  - actual_goal_in_obs: {actual_goal_in_obs}")
-            print(f"  - data_idx: {data_idx}")
             print(f"  - prefix_actions 数量: {len(prefix_actions) if prefix_actions else 0}")
             if prefix_actions:
                 print(f"  - prefix_actions 前3项: {prefix_actions[:3]}")
@@ -178,8 +187,14 @@ class TextCraftInteraction(AgentGymBaseInteraction):
             print(f"{'='*60}\n")
 
         for i, action in enumerate(actions):
+            # ==================== DEBUG: 每个 replay step ====================
+            if DEBUG_MODE:
+                print(f"  [Replay Step {i+1}/{len(actions)}] action: {action}")
+
             if session['done']:
-                print(f"[REPLAY_STEP] instance={instance_id}, action={action!r} — SKIPPED (env already done)", flush=True)
+                if DEBUG_MODE:
+                    print(f"    ⚠️  Environment done during replay at step {i+1}")
+                logger.warning(f"[{instance_id}] Env terminated during prefix replay at action {i}/{len(actions)}")
                 break
             try:
                 response = await self._async_post(
@@ -188,24 +203,46 @@ class TextCraftInteraction(AgentGymBaseInteraction):
                 )
                 response.raise_for_status()
                 data = response.json()
-
-                obs = data.get('observation', '')
-                raw_reward = data.get('reward', 0.0)
+                
+                obs = data.get('observation', '')[:200] if data.get('observation') else ''
+                reward = data.get('reward')
                 done = data.get('done', False)
+                
+                # 保存最新的 observation，用于 replay 结束后打印
+                session['latest_observation'] = data.get('observation', '')
+                
+                if DEBUG_MODE:
+                    print(f"    ✓ 执行成功")
+                    print(f"    - observation (前100字符): {obs[:100]}...")
+                    print(f"    - reward: {reward}")
+                    print(f"    - done: {done}")
 
-                session['latest_observation'] = obs
                 session['step_count'] += 1
                 session['done'] = done
-
-                # Unconditional: print every replay step response
-                print(f"[REPLAY_STEP] instance={instance_id}, action={action!r}, reward={raw_reward}, done={done}, obs={obs[:100] if obs else 'None'!r}", flush=True)
             except Exception as e:
-                print(f"[REPLAY_STEP] instance={instance_id}, action={action!r} — ERROR: {e}", flush=True)
+                if DEBUG_MODE:
+                    print(f"    ❌ 执行失败: {e}")
+                    print(f"❌ FAIL-FAST: Replay action failed!")
+                logger.error(f"[{instance_id}] Prefix replay failed at action {i}: {action!r} - {e}")
                 raise
 
-        # Unconditional: print final replay state
-        final_obs = session.get('latest_observation', session.get('initial_observation', ''))
-        print(f"[REPLAY_DONE] instance={instance_id}, steps={session['step_count']}, done={session['done']}, final_obs={final_obs[:200] if final_obs else 'None'!r}", flush=True)
+        # ==================== DEBUG: Replay 结束 ====================
+        if DEBUG_MODE:
+            # 使用最新保存的 observation，而不是初始的
+            final_obs = session.get('latest_observation', session.get('initial_observation', ''))
+            final_obs_preview = final_obs[:300] if final_obs else ''
+            print(f"\n{'='*60}")
+            print(f"DEBUG: Replay 结束 for {instance_id}")
+            print(f"  - replay 后的 step_count: {session['step_count']}")
+            print(f"  - replay 后 environment done: {session['done']}")
+            print(f"  - replay 后的真实 observation (前300字符):")
+            print(f"    {final_obs_preview}...")
+            print(f"{'='*60}\n")
+            
+            # Fail-fast: 检查 replay 是否成功
+            if session['step_count'] == 0 and len(actions) > 0:
+                print(f"❌ FAIL-FAST: Replay was called but no actions were executed!")
+                raise ValueError(f"Sample {instance_id}: Replay executed but no actions ran!")
 
         logger.info(
             f"[{instance_id}] Replayed {len(actions)} prefix actions, "
