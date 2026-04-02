@@ -42,7 +42,11 @@ class TextCraft_Wrapper:
             new_env = TextCraftEnv(
                 crafting_tree=self.crafting_tree, commands=commands, goal=normalized_goal
             )
-            ob, _ = new_env.reset(data_idx=effective_data_idx)
+            reset_kwargs = {"data_idx": effective_data_idx}
+            if commands is not None and normalized_goal is not None:
+                reset_kwargs["commands"] = commands
+                reset_kwargs["goal"] = normalized_goal
+            ob, _ = new_env.reset(**reset_kwargs)
             if self._should_log("create"):
                 print(
                     f"-------Env create [{self._log_count('create')}] "
