@@ -1,4 +1,5 @@
-set -e
+#!/bin/bash
+set -eo pipefail
 
 # ==================== TextCraft Prefix RL (Validated) 训练脚本 ====================
 # 
@@ -23,7 +24,7 @@ set -e
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "${SCRIPT_DIR}/../../../.." && pwd)
 MODEL_PATH=${MODEL_PATH:-"/Data/public/Qwen3-1.7B"}
-ENABLE_GRADIENT_CHECKPOINTING=${ENABLE_GRADIENT_CHECKPOINTING:-true}
+ENABLE_GRADIENT_CHECKPOINTING=${ENABLE_GRADIENT_CHECKPOINTING:-false}
 ENABLE_ACTIVATION_OFFLOAD=${ENABLE_ACTIVATION_OFFLOAD:-false}
 # 使用 repo 内重建并审计通过的主实验数据
 DATA_PATH=${DATA_PATH:-"${REPO_ROOT}/data/textcraft/new_prefix_rl/stage7_audit_release/textcraft_prefix_main_train_step200.audited.parquet"}
@@ -54,6 +55,8 @@ done
 # -------------------- GPU配置 --------------------
 GPU_IDS=${GPU_IDS:-"0,2"}  # 使用的GPU编号
 NUM_GPUS=${NUM_GPUS:-2}      # GPU数量
+SAVE_FREQ_IS_SET=${SAVE_FREQ+x}
+TEST_FREQ_IS_SET=${TEST_FREQ+x}
 
 # -------------------- 训练超参数（与 grpo_train 保持一致）--------------------
 NUM_EPOCHS=${NUM_EPOCHS:-30}
@@ -72,6 +75,13 @@ TEST_FREQ=${TEST_FREQ:--1}
 OPTIMIZE_PREFIX_TOKENS=${OPTIMIZE_PREFIX_TOKENS:-true}
 # Prefix loss 权重
 PREFIX_LOSS_WEIGHT=${PREFIX_LOSS_WEIGHT:-1.0}
+PREFIX_LOSS_MODE=${PREFIX_LOSS_MODE:-split}
+PREFIX_ADVANTAGE_MODE=${PREFIX_ADVANTAGE_MODE:-constant}
+PREFIX_ADVANTAGE_CONSTANT=${PREFIX_ADVANTAGE_CONSTANT:-1.0}
+PREFIX_CLIP_RATIO=${PREFIX_CLIP_RATIO:-null}
+PREFIX_CLIP_RATIO_LOW=${PREFIX_CLIP_RATIO_LOW:-null}
+PREFIX_CLIP_RATIO_HIGH=${PREFIX_CLIP_RATIO_HIGH:-null}
+PREFIX_CLIP_RATIO_C=${PREFIX_CLIP_RATIO_C:-null}
 
 # -------------------- KL 配置（主实验不使用 KL）--------------------
 # 明确设置为 false，确保不使用 KL / reference
@@ -128,8 +138,12 @@ if [ "$DEBUG_MODE" = "1" ]; then
     PPO_MINI_BATCH_SIZE=4
     MICRO_BATCH_SIZE=2
     ROLLOUT_N=2
-    SAVE_FREQ=1
-    TEST_FREQ=1
+    if [ -z "$SAVE_FREQ_IS_SET" ]; then
+        SAVE_FREQ=1
+    fi
+    if [ -z "$TEST_FREQ_IS_SET" ]; then
+        TEST_FREQ=1
+    fi
     GPU_MEMORY_UTIL=0.5
     MAX_NUM_SEQS=16
     MAX_RESPONSE_LENGTH=512
@@ -153,7 +167,7 @@ if [ "$DEBUG_MODE" = "1" ]; then
     DEBUG_DATA_PATH="${DEBUG_DATA_DIR}/debug_subset_${DEBUG_MAX_SAMPLES}.parquet"
     
     echo "生成 Debug 数据子集 (max_samples=$DEBUG_MAX_SAMPLES)..."
-    cd /Data/wyh/verl
+    cd "$REPO_ROOT"
     source ~/miniconda3/bin/activate verl
     
     python3 -c "
@@ -223,6 +237,13 @@ echo "  - prefix_actions 通过 extra_info 传递" | tee -a "$LOG_FILE"
 echo "  - continuation_messages 仅作为 debug/reference" | tee -a "$LOG_FILE"
 echo "  - optimize_prefix_tokens: $OPTIMIZE_PREFIX_TOKENS" | tee -a "$LOG_FILE"
 echo "  - prefix_loss_weight: $PREFIX_LOSS_WEIGHT" | tee -a "$LOG_FILE"
+echo "  - prefix_loss_mode: $PREFIX_LOSS_MODE" | tee -a "$LOG_FILE"
+echo "  - prefix_advantage_mode: $PREFIX_ADVANTAGE_MODE" | tee -a "$LOG_FILE"
+echo "  - prefix_advantage_constant: $PREFIX_ADVANTAGE_CONSTANT" | tee -a "$LOG_FILE"
+echo "  - prefix_clip_ratio: $PREFIX_CLIP_RATIO" | tee -a "$LOG_FILE"
+echo "  - prefix_clip_ratio_low: $PREFIX_CLIP_RATIO_LOW" | tee -a "$LOG_FILE"
+echo "  - prefix_clip_ratio_high: $PREFIX_CLIP_RATIO_HIGH" | tee -a "$LOG_FILE"
+echo "  - prefix_clip_ratio_c: $PREFIX_CLIP_RATIO_C" | tee -a "$LOG_FILE"
 echo "  - use_kl_loss: $USE_KL_LOSS (主实验关闭)" | tee -a "$LOG_FILE"
 echo "================================================================================" | tee -a "$LOG_FILE"
 echo "" | tee -a "$LOG_FILE"
@@ -270,7 +291,7 @@ print(f"  列名: {columns}")
 
 # 这个主实验脚本默认要求和 smoke test 一致的数据结构。
 required_columns = ["data_source", "prompt", "reward_model", "extra_info"]
-required_prefix_columns = ["assistant_prefix_old_log_probs", "prefix_token_count", "prefix_mask"]
+required_prefix_columns = ["assistant_prefix_old_log_probs", "prefix_token_count", "prefix_mask", "assistant_prefix_span"]
 missing = [col for col in required_columns + required_prefix_columns if col not in columns]
 if missing:
     raise ValueError(
@@ -318,7 +339,7 @@ if [ "$DEBUG_PREFLIGHT_ONLY" = "1" ]; then
     echo "" | tee -a "$LOG_FILE"
     
     # 运行 preflight 脚本
-    python3 /Data/wyh/verl/examples/sglang_multiturn/my_exp/rl/debug/preflight_test.py \
+    python3 "$REPO_ROOT/examples/sglang_multiturn/my_exp/rl/debug/preflight_test.py" \
         --data_path "$DATA_PATH" \
         --model_path "$MODEL_PATH" \
         --textcraft_server "$TEXTCRAFT_SERVER" \
@@ -355,8 +376,9 @@ export PYTHONWARNINGS=ignore
 export RAY_DEDUP_LOGS=1
 
 python3 -m verl.trainer.main_ppo \
-    --config-path='/Data/wyh/verl/examples/sglang_multiturn/config' \
+    --config-path="$REPO_ROOT/examples/sglang_multiturn/config" \
     --config-name='textcraft_grpo_train' \
+    hydra.searchpath=[file://${REPO_ROOT}/verl/trainer/config,file://${REPO_ROOT}/examples/sglang_multiturn/config] \
     algorithm.adv_estimator=grpo \
     data.train_files=$DATA_PATH \
     data.val_files=$DATA_PATH \
@@ -397,7 +419,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
     actor_rollout_ref.rollout.multi_turn.max_assistant_turns=$MAX_ASSISTANT_TURNS \
     actor_rollout_ref.rollout.multi_turn.max_user_turns=$MAX_USER_TURNS \
-    actor_rollout_ref.rollout.multi_turn.interaction_config_path="/Data/wyh/verl/examples/sglang_multiturn/config/interaction_config/textcraft_interaction.yaml" \
+    actor_rollout_ref.rollout.multi_turn.interaction_config_path="$REPO_ROOT/examples/sglang_multiturn/config/interaction_config/textcraft_interaction.yaml" \
     actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=$MICRO_BATCH_SIZE \
     trainer.n_gpus_per_node=$NUM_GPUS \
     trainer.nnodes=1 \
@@ -414,6 +436,13 @@ python3 -m verl.trainer.main_ppo \
     trainer.resume_mode=disable \
     algorithm.optimize_prefix_tokens=$OPTIMIZE_PREFIX_TOKENS \
     algorithm.prefix_loss_weight=$PREFIX_LOSS_WEIGHT \
+    algorithm.prefix_loss_mode=$PREFIX_LOSS_MODE \
+    algorithm.prefix_advantage_mode=$PREFIX_ADVANTAGE_MODE \
+    algorithm.prefix_advantage_constant=$PREFIX_ADVANTAGE_CONSTANT \
+    actor_rollout_ref.actor.prefix_clip_ratio=$PREFIX_CLIP_RATIO \
+    actor_rollout_ref.actor.prefix_clip_ratio_low=$PREFIX_CLIP_RATIO_LOW \
+    actor_rollout_ref.actor.prefix_clip_ratio_high=$PREFIX_CLIP_RATIO_HIGH \
+    actor_rollout_ref.actor.prefix_clip_ratio_c=$PREFIX_CLIP_RATIO_C \
     2>&1 | tee -a "$LOG_FILE"
 
 EXIT_CODE=${PIPESTATUS[0]}
