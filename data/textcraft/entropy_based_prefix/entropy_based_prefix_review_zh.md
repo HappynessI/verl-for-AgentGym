@@ -396,6 +396,13 @@ stage1 会保存字段：
 
 1. `selection_score = change_score`
 
+这里还需要特别强调一点：
+
+1. 当前实现只看变化幅度，不看变化方向
+2. 如果平滑熵从高到低下降，例如 `hat_e_t - hat_e_{t-1} < 0`，代码会先得到负的一阶差分
+3. 但由于后面取了绝对值 `abs(...)`，这类“熵降低”的变化同样会被记为高分候选
+4. 因此当前方法不会区分“熵突然升高”和“熵突然降低”，只关心“跳变是否足够大”
+
 所以第二种方案更准确的描述应该是：
 
 1. 先做窗口为 11 的平滑
@@ -759,7 +766,7 @@ stage3 replay 验证会把每个候选分别判成：
 
 1. 两类 entropy 切分方案使用的是同一个离线 teacher 模型：`Qwen3-1.7B SFT global_step_200`。
 2. `raw_topk` 直接按 token 原始 entropy 选点。
-3. `change_topk` 先做 `window=11` 平滑，再记录累计 entropy，但真正用于排序的是 `|Delta smoothed_entropy|`。
+3. `change_topk` 先做 `window=11` 平滑，再记录累计 entropy，但真正用于排序的是 `|Delta smoothed_entropy|`，因此熵升高和熵降低都会被当作有效变化。
 4. token 不直接成为切点，必须先映射到 assistant turn，映射规则是 `current_or_previous_assistant`。
 5. `cut_turn_idx` 一旦确定，就统一按 assistant turn 切成 `prefix_messages` 和 `continuation_messages`。
 6. 第二种方案当前最重要的基表是 `textcraft_prefix_entropy_change_topk_w11_interaction_assistant_k3_step200.audited.parquet`。
