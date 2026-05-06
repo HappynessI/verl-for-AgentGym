@@ -15,7 +15,7 @@ The repair has two goals:
 2. Add stable task category annotations for auditing and split analysis.
 
 By default the script rewrites both:
-- repo-local copies under `h200_grpo_from_oss/data`
+- repo-local copies under `data`
 - runtime copies under `/Data/wyh/datasets/Verl-Data`
 """
 

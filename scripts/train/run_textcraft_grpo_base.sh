@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-# Stable TextCraft GRPO base preset for 2x H200 runs.
+# Stable TextCraft GRPO base preset for 2-GPU runs.
 # This wrapper keeps the training setup simple and leaves the main script unchanged.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

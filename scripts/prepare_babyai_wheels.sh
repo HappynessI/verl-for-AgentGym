@@ -3,8 +3,8 @@
 # BabyAI 运行时依赖离线 wheel 打包脚本
 #
 # 用途：在有网络的 Linux 开发机上执行，将 BabyAI 环境服务的运行依赖
-#       下载到 third_party/wheels_babyai/ 目录，随后整个 h200_grpo 目录上传 OSS，
-#       Pod 内训练脚本从本地 wheel 离线安装，不再依赖 Pod 内联网。
+#       下载到 third_party/wheels_babyai/ 目录，随后训练环境可从本地 wheel
+#       离线安装，不再依赖运行时联网。
 #
 # 关键保证：使用 pip download 下载完整依赖树（不含 --no-deps），
 #           确保 wheel 目录中包含所有传递依赖，足以支持 Pod 内 --no-index 安装。
@@ -83,9 +83,8 @@ echo "wheel 打包完成，下一步："
 echo "  1. 确认 third_party/wheels_babyai/ 中已存在实际 .whl 文件："
 echo "     ls third_party/wheels_babyai/*.whl | head"
 echo ""
-echo "  2. 将整个 h200_grpo 目录上传 OSS："
-echo "     ossutil cp -r ./ oss://jiaotongdamoxing/\${USER_PINYIN}/h200_grpo/"
+echo "  2. 将本仓库和 third_party/wheels_babyai/ 同步到训练环境。"
 echo ""
-echo "  3. 提交训练任务："
-echo "     GPU_COUNT=2 ./oss-submit.sh --train babyai_grpo"
+echo "  3. 启动训练脚本，例如："
+echo "     NUM_GPUS=2 bash scripts/train/run_babyai_grpo_train.sh"
 echo "============================================"

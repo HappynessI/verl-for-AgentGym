@@ -6,8 +6,8 @@
 #       运行时依赖的 wheel 文件到 third_party/wheels_py312/ 目录。
 #
 # 为什么需要 Python 3.12 版本：
-#   H200 集群推荐镜像使用 Python 3.12。如果开发机默认 Python 版本更高（如 3.13），
-#   则 wheels/py3.12 与镜像 Python 版本更对齐，建议优先使用本脚本准备 wheels。
+#   目标训练镜像使用 Python 3.12。如果开发机默认 Python 版本更高（如 3.13），
+#   则 wheels/py3.12 与目标 Python 版本更对齐，建议优先使用本脚本准备 wheels。
 #
 # 使用方式：
 #   bash scripts/prepare_textcraft_wheels_py312.sh
@@ -89,9 +89,8 @@ echo "wheel 打包完成（Python 3.12），下一步："
 echo "  1. 确认 third_party/wheels_py312/ 中已存在实际 .whl 文件："
 echo "     ls third_party/wheels_py312/*.whl | head"
 echo ""
-echo "  2. 将整个 h200_grpo 目录上传 OSS（请确认上传了 wheels_py312/）："
-echo "     ossutil cp -r ./ oss://jiaotongdamoxing/\${USER_PINYIN}/h200_grpo/"
+echo "  2. 将本仓库和 third_party/wheels_py312/ 同步到训练环境。"
 echo ""
-echo "  3. 提交训练任务："
-echo "     GPU_COUNT=2 ./oss-submit.sh --train textcraft_grpo"
+echo "  3. 启动训练脚本，例如："
+echo "     NUM_GPUS=2 bash scripts/train/run_textcraft_grpo_train.sh"
 echo "============================================"

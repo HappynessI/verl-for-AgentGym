@@ -1,7 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-PROJECT_ROOT=${PROJECT_ROOT:-"/Data/wyh/h200_grpo_from_oss"}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+PROJECT_ROOT=${PROJECT_ROOT:-"${DEFAULT_PROJECT_ROOT}"}
 PYTHON_BIN=${PYTHON_BIN:-"/Data/wyh/conda_envs/verl/bin/python"}
 BABYAI_BIN=${BABYAI_BIN:-"/Data/wyh/conda_envs/agentenv-babyai/bin/babyai"}
 SCRIPT_PATH=${SCRIPT_PATH:-"${PROJECT_ROOT}/scripts/build_data/build_babyai_prefix_rl_change_top3.py"}

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-# Recommended TextCraft GRPO+MIS preset for the current H200 pipeline.
+# Recommended TextCraft GRPO+MIS preset for the current pipeline.
 # Note: in this training stack, trainer.test_freq is the validation cadence.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -48,7 +48,7 @@ export TEST_FREQ="${TEST_FREQ:-200}"
 export VAL_DO_SAMPLE="${VAL_DO_SAMPLE:-false}"
 export VAL_N="${VAL_N:-1}"
 
-# Use the same sequence-level MIS defaults as the current formal H200 script.
+# Use the same sequence-level MIS defaults as the current formal script.
 export ROLLOUT_IS="${ROLLOUT_IS:-sequence}"
 export ROLLOUT_IS_THRESHOLD="${ROLLOUT_IS_THRESHOLD:-2.0}"
 export ROLLOUT_RS="${ROLLOUT_RS:-sequence}"

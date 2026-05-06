@@ -292,10 +292,9 @@ echo "============================================" | tee -a "$LOG_FILE"
 # 确保 ALFWORLD_DATA 目录存在
 if [ ! -d "$ALFWORLD_DATA_DIR" ]; then
     echo "错误: AlfWorld 数据目录不存在: $ALFWORLD_DATA_DIR" | tee -a "$LOG_FILE"
-    echo "请预先下载 AlfWorld 游戏数据并挂载到 OSS：" | tee -a "$LOG_FILE"
+    echo "请预先下载 AlfWorld 游戏数据并挂载到训练环境：" | tee -a "$LOG_FILE"
     echo "  1. 在开发机: pip install alfworld==0.3.3 && alfworld-download" | tee -a "$LOG_FILE"
-    echo "  2. 将 ~/.cache/alfworld 同步到 OSS：" | tee -a "$LOG_FILE"
-    echo "     ossutil cp -r ~/.cache/alfworld oss://jiaotongdamoxing/\${USER_PINYIN}/alfworld_data/" | tee -a "$LOG_FILE"
+    echo "  2. 将 ~/.cache/alfworld 同步到 ALFWORLD_DATA_DIR。" | tee -a "$LOG_FILE"
     exit 1
 fi
 for required_path in \

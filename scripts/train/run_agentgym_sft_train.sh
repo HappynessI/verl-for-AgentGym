@@ -6,13 +6,13 @@ if [ "${SFT_DEBUG:-false}" = "true" ]; then
 fi
 
 # ============================================================================
-# AgentGym SFT training launcher for H200 codebase.
+# AgentGym SFT training launcher for this repository.
 #
 # Defaults intentionally follow env-specific main datasets.  SciWorld uses the
 # max4096 filtered success subset to drop the single 11898-token outlier;
 # BabyAI/ALFWorld still default to the full success_only datasets.  The synced
-# H200 upload copy reads datasets from ${PROJECT_ROOT}/datasets/SFT-Data by
-# default; override SFT_DATA_ROOT if needed.
+# This script reads datasets from ${PROJECT_ROOT}/datasets/SFT-Data by default;
+# override SFT_DATA_ROOT if needed.
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

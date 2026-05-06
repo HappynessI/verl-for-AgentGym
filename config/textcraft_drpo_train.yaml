@@ -68,7 +68,7 @@ actor_rollout_ref:
     response_length: 2048  # 单轮 assistant 生成上限
 
     # vLLM 特定参数
-    gpu_memory_utilization: 0.85  # 2 卡 H200 显存充足
+    gpu_memory_utilization: 0.85  # tuned for 2-GPU runs
     tensor_model_parallel_size: 1
     max_model_len: 8192  # vLLM 最大序列长度
     max_num_batched_tokens: 16384  # vLLM 批处理最大 token 数

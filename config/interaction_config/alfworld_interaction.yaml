@@ -6,7 +6,7 @@ interaction:
     class_name: verl.interactions.alfworld_interaction.ALFWorldInteraction
     config:
       # AlfWorld 环境服务器地址
-      # 必须与 config_h200.sh 中 ALFWORLD_PORT=36004 保持一致
+      # Must match the ALFWorld server port used by the launch script.
       env_server_base: "http://127.0.0.1:36004"
 
       # 请求超时（秒）

@@ -6,7 +6,7 @@ interaction:
     class_name: verl.interactions.sciworld_interaction.SciWorldInteraction
     config:
       # SciWorld 环境服务器地址
-      # 必须与 config_h200.sh 中 SCIWORLD_PORT=36003 保持一致
+      # Must match the SciWorld server port used by the launch script.
       env_server_base: "http://127.0.0.1:36003"
 
       # 请求超时（秒）

@@ -4,10 +4,11 @@
 #
 # Run this on a network-enabled Linux development machine. It downloads the
 # SciWorld environment service dependencies and their full transitive dependency
-# tree into third_party/wheels_sciworld/ for H200-side --no-index installs.
+# tree into third_party/wheels_sciworld/ for runtime --no-index installs.
 #
-# H200 training images use Python 3.12, so this script intentionally downloads
-# wheels with a Python 3.12 interpreter instead of reusing Python 3.8 wheels.
+# The target training runtime uses Python 3.12, so this script intentionally
+# downloads wheels with a Python 3.12 interpreter instead of reusing Python 3.8
+# wheels.
 #
 # Usage:
 #   bash scripts/prepare_sciworld_wheels_py312.sh
@@ -98,7 +99,7 @@ echo "First 20 wheel files:"
 ls -lh "${WHEEL_DIR}"/*.whl 2>/dev/null | head -20
 echo ""
 echo "Next steps:"
-echo "  1. Upload the whole h200_grpo directory, including third_party/wheels_sciworld/."
+echo "  1. Sync this repository, including third_party/wheels_sciworld/, to the training environment."
 echo "  2. Also upload third_party/jre_sciworld/; SciWorld requires java at runtime."
-echo "  3. On H200, run the SciWorld train script and confirm service ready plus first /reset."
+echo "  3. Run the SciWorld train script and confirm service ready plus first /reset."
 echo "============================================"

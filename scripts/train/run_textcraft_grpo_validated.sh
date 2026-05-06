@@ -2,7 +2,7 @@
 set -eo pipefail
 
 # TextCraft Prefix-GRPO 主实验脚本（Validated 数据）
-# H200 版本沿用 scripts/train 的 Pod 内自举方式，并补齐开发机主实验入口的
+# This release keeps the self-contained scripts/train bootstrap path and adds
 # debug / preflight / shared-clip / prefix 参数覆盖。
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

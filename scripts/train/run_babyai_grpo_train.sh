@@ -184,7 +184,7 @@ if [ "$RESUME_MODE" = "resume_path" ]; then
     RESUME_FROM_PATH="${RESUME_FROM_PATH%/}"
     if [[ "$RESUME_FROM_PATH" == oss://* ]]; then
         echo "错误: verl PPO resume 需要本地/PVC路径，不能直接使用 oss:// 路径。" | tee -a "$LOG_FILE"
-        echo "请改用 /oss-pvc/zhk_wyh/.../global_step_xxx 形式。" | tee -a "$LOG_FILE"
+        echo "请改用本地可访问路径，例如 /path/to/checkpoints/global_step_xxx。" | tee -a "$LOG_FILE"
         exit 1
     fi
     if [[ "$RESUME_FROM_PATH" != *global_step_* ]]; then

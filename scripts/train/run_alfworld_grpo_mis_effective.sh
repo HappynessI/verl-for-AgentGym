@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-# Recommended ALFWorld GRPO+MIS preset for the current H200 pipeline.
+# Recommended ALFWorld GRPO+MIS preset for the current pipeline.
 # Note: in this training stack, trainer.test_freq is the validation cadence.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
