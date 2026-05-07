@@ -53,3 +53,14 @@
   not included.
 - Regenerated `results/training_metrics_index.csv` and
   `results/paper_metrics.csv`.
+
+## 2026-05-07 ALFWorld Recovered Prefix-GRPO Metrics
+
+- Recovered the complete ALFWorld Prefix-GRPO training metrics from structured
+  training metric lines.
+- Replaced the partial merged file with
+  `results/training/alfworld/prefix_grpo/training_metrics_prefix_grpo.csv`.
+- The recovered CSV covers steps 1-1120 and keeps only sanitized metric columns;
+  raw local logs remain excluded from the public artifact.
+- Regenerated `results/training_metrics_index.csv` and
+  `results/paper_metrics.csv`.
