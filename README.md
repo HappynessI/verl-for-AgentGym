@@ -173,7 +173,7 @@ results/training_metrics_index.csv
 results/paper_metrics.csv
 ```
 
-Main experiment reward curves:
+Main experiment reward curves, shown as separate subplots:
 
 ![Main experiment training reward curves](results/figures/main_reward_curves.png)
 

@@ -16,7 +16,7 @@ diagnostics used to verify that Prefix-GRPO is active.
 | Environment | Dataset | Metrics | Status |
 | --- | --- | --- | --- |
 | TextCraft | `data/textcraft/main/main_change_top3_w11_fullflow.parquet` | `results/training/textcraft/training_metrics_main-change-top3.csv` | available |
-| BabyAI | `data/babyai/main/main_change_top3_w11_fullflow.parquet` | `results/training/babyai/prefix_grpo/training_metrics_prefix_grpo.csv` | available |
+| BabyAI | `data/babyai/main/main_change_top3_w11_fullflow.parquet` | `results/training/babyai/prefix_grpo/training_metrics_prefix_grpo_new.csv` | available |
 | ALFWorld | `data/alfworld/main/main_change_top3_w11_fullflow.parquet` | `results/training/alfworld/prefix_grpo/training_metrics_prefix_grpo.csv` | available |
 
 ## Ablations

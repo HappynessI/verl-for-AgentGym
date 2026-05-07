@@ -21,6 +21,12 @@ COLORS = {
     "ALFWorld": "#d55e00",
 }
 
+ENV_ORDER = {
+    "TextCraft": 0,
+    "BabyAI": 1,
+    "ALFWorld": 2,
+}
+
 
 def load_main_runs() -> list[dict[str, str]]:
     with PAPER_METRICS.open(newline="") as f:
@@ -37,10 +43,14 @@ def main() -> None:
     if not runs:
         raise RuntimeError("No available paper-main runs found in results/paper_metrics.csv")
 
-    plt.style.use("seaborn-v0_8-whitegrid")
-    fig, ax = plt.subplots(figsize=(8.8, 5.0), dpi=180)
+    runs = sorted(runs, key=lambda row: ENV_ORDER.get(row["environment"], 99))
 
-    for run in runs:
+    plt.style.use("seaborn-v0_8-whitegrid")
+    fig, axes = plt.subplots(1, len(runs), figsize=(13.2, 3.9), dpi=180, sharey=True)
+    if len(runs) == 1:
+        axes = [axes]
+
+    for ax, run in zip(axes, runs):
         env = run["environment"]
         metrics_path = REPO_ROOT / run["metrics_path"]
         df = pd.read_csv(metrics_path)
@@ -63,18 +73,28 @@ def main() -> None:
         ax.plot(
             df["step"],
             smoothed,
-            label=f"{env} ({ROLLING_WINDOW}-step mean)",
             color=color,
             linewidth=2.1,
         )
+        ax.set_title(env)
+        ax.set_xlabel("Training step")
+        ax.set_ylim(-0.02, 1.02)
+        ax.text(
+            0.98,
+            0.06,
+            f"final={df['critic_rewards_mean'].iloc[-1]:.3f}",
+            transform=ax.transAxes,
+            ha="right",
+            va="bottom",
+            fontsize=8,
+            color="#334155",
+            bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.78, "pad": 2.0},
+        )
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
-    ax.set_title("Main Experiment Training Reward")
-    ax.set_xlabel("Training step")
-    ax.set_ylabel("Mean reward")
-    ax.set_ylim(-0.02, 1.02)
-    ax.legend(frameon=True, loc="lower right")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    axes[0].set_ylabel("Mean reward")
+    fig.suptitle(f"Main Experiment Training Reward ({ROLLING_WINDOW}-step rolling mean)", y=1.02)
     fig.tight_layout()
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)

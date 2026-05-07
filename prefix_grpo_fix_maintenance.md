@@ -73,3 +73,14 @@
   `README.md`.
 - Added the matplotlib version used for reproducing the figure to the README
   dependency list.
+
+## 2026-05-07 BabyAI Main Metrics Correction
+
+- Corrected the BabyAI paper-main metrics mapping from
+  `results/training/babyai/prefix_grpo/training_metrics_prefix_grpo.csv` to
+  `results/training/babyai/prefix_grpo/training_metrics_prefix_grpo_new.csv`.
+- Updated `results/paper_metrics.csv` and `PAPER_RESULTS.md` to use the
+  corrected BabyAI main run metrics.
+- Regenerated `results/figures/main_reward_curves.png` with one horizontal
+  subplot per environment instead of overlaying all three main reward curves
+  in a single axis.
