@@ -36,7 +36,7 @@ esac
 
 nproc_per_node=${NPROC_PER_NODE:-2}
 save_path=${SAVE_PATH:-}
-model_path=${MODEL_PATH:-/Data/public/Qwen3-1.7B}
+model_path=${MODEL_PATH:-checkpoints/Qwen3-1.7B}
 gpu_ids=${CUDA_VISIBLE_DEVICES:-0,1}
 experiment_name_override=${EXPERIMENT_NAME:-}
 

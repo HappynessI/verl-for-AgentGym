@@ -17,24 +17,24 @@ import requests
 import build_textcraft_main_prefix_datasets as main_builder
 
 
-DEFAULT_OUTPUT_ROOT = Path("/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/replay_validated")
+DEFAULT_OUTPUT_ROOT = Path("data/textcraft/replay_validated")
 DEFAULT_SERVER = "http://127.0.0.1:36001"
 
 DEFAULT_EXISTING_FIXED_STAGE4 = {
     "fixed_ratio_0p1": Path(
-        "/Data/wyh/datasets/Verl-Data/train/textcraft/new_prefix_rl/stage4_canonicalized/fixed_ratio_0p1_stage4_trainable_canonicalized.parquet"
+        "data/textcraft/legacy/fixed_ratio_0p1_stage4_trainable_canonicalized.parquet"
     ),
     "fixed_ratio_0p3": Path(
-        "/Data/wyh/datasets/Verl-Data/train/textcraft/new_prefix_rl/stage4_canonicalized/fixed_ratio_0p3_stage4_trainable_canonicalized.parquet"
+        "data/textcraft/legacy/fixed_ratio_0p3_stage4_trainable_canonicalized.parquet"
     ),
 }
 
 DEFAULT_ENTROPY_AUDITED = {
     "main_raw_top3_fullflow": Path(
-        "/Data/wyh/datasets/Verl-Data/train/textcraft/entropy_based_prefix/stage7_audit_release/textcraft_prefix_entropy_raw_topk_interaction_assistant_k3_step200.audited.parquet"
+        "data/textcraft/entropy_based_prefix/stage7_audit_release/textcraft_prefix_entropy_raw_topk_interaction_assistant_k3_step200.audited.parquet"
     ),
     "main_change_top3_w11_fullflow": Path(
-        "/Data/wyh/datasets/Verl-Data/train/textcraft/entropy_based_prefix/stage7_audit_release/textcraft_prefix_entropy_change_topk_w11_interaction_assistant_k3_step200.audited.parquet"
+        "data/textcraft/entropy_based_prefix/stage7_audit_release/textcraft_prefix_entropy_change_topk_w11_interaction_assistant_k3_step200.audited.parquet"
     ),
 }
 

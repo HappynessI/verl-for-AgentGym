@@ -42,6 +42,13 @@ checkpoints/
 *.npy
 *.npz
 
+# Review artifact payloads intentionally tracked for paper review.
+!/data/
+!/data/**
+!/results/
+!/results/**
+!/ARTIFACT.md
+
 # Local browser/test binaries
 chromedriver
 **/chromedriver

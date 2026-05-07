@@ -19,19 +19,19 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 DEFAULT_TEACHER_PATH = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/new_prefix_rl/stage0_teacher/teacher_normalized.parquet"
+    "data/textcraft/teacher_normalized.parquet"
 )
 DEFAULT_ENTROPY_CANDIDATES_PATH = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/entropy_based_prefix/stage2_splits/prefix_candidates_entropy_topk.parquet"
+    "data/textcraft/entropy_based_prefix/stage2_splits/prefix_candidates_entropy_topk.parquet"
 )
 DEFAULT_TRAIN_PARQUET_PATH = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/train.parquet"
+    "data/textcraft/train.parquet"
 )
 DEFAULT_OUTPUT_ROOT = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/complete_split"
+    "data/textcraft/complete_split"
 )
 DEFAULT_MODEL_PATH = (
-    "/Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/qwen3-1.7b-sft/global_step_200/huggingface"
+    "checkpoints/textcraft_sft/huggingface"
 )
 
 GOAL_RE = re.compile(r"Goal:\s*craft\s+(.+?)\.?\s*$", re.IGNORECASE | re.MULTILINE)

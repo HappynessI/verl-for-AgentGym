@@ -25,16 +25,16 @@ from textcraft_entropy_utils import (
 
 
 DEFAULT_INPUT_PATH = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/new_prefix_rl/stage0_teacher/teacher_normalized.jsonl"
+    "data/textcraft/teacher_normalized.jsonl"
 )
 DEFAULT_OUTPUT_PATH = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/entropy_based_prefix/stage1_entropy/"
+    "data/textcraft/entropy_based_prefix/stage1_entropy/"
     "textcraft_teacher_entropy_step200.parquet"
 )
 DEFAULT_MANIFEST_PATH = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/entropy_based_prefix/manifests/stage1_entropy_manifest.json"
+    "data/textcraft/entropy_based_prefix/manifests/stage1_entropy_manifest.json"
 )
-DEFAULT_MODEL_PATH = "/Data/wyh/datasets/Verl-Data/outputs/textcraft_sft/qwen3-1.7b-sft/global_step_200/huggingface"
+DEFAULT_MODEL_PATH = "checkpoints/textcraft_sft/huggingface"
 
 
 def parse_args() -> argparse.Namespace:

@@ -5,8 +5,8 @@ set -e
 VLLM_SERVER_URL="http://localhost:8000"
 MODEL_NAME=${MODEL_NAME:-"qwen3"}          # vLLM中注册的模型名称
 BABYAI_SERVER="http://127.0.0.1:36005"
-DATA_PATH="/Data/wyh/datasets/Verl-Data/eval/babyai/test.parquet"
-OUTPUT_DIR="/Data/wyh/datasets/Verl-Data/outputs/babyai_eval"
+DATA_PATH="data/eval/babyai/test.parquet"
+OUTPUT_DIR="outputs/babyai_eval"
 
 # 环境变量覆盖
 MAX_SAMPLES=${MAX_SAMPLES:--1}          # -1 means all samples
@@ -24,7 +24,7 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/eval_service_${TIMESTAMP}.log"
 
 # 运行评估
-python /Data/wyh/verl/examples/sglang_multiturn/my_exp/eval/eval_babyai_vllm_server.py \
+python legacy_eval/eval/eval_babyai_vllm_server.py \
   --vllm_server_url "$VLLM_SERVER_URL" \
   --model_name "$MODEL_NAME" \
   --babyai_server "$BABYAI_SERVER" \

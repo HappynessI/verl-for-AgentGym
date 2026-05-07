@@ -22,12 +22,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 DEFAULT_SAMPLING_PATH = Path(
-    "/Data/wyh/datasets/Sampling-Data/alfworld_MiniMax-M2.1_20260313_212024/alfworld_trajectories.jsonl"
+    "data/source_rollouts/alfworld_trajectories.jsonl"
 )
-DEFAULT_TRAIN_PARQUET = Path("/Data/wyh/datasets/Verl-Data/train/alfworld/train.parquet")
-DEFAULT_SFT_PARQUET = Path("/Data/wyh/datasets/SFT-Data/alfworld/alfworld_all_valid.parquet")
-DEFAULT_MODEL_PATH = "/Data/wyh/debug-alfworld/global_step_930/huggingface"
-DEFAULT_OUTPUT_ROOT = Path("/Data/wyh/datasets/Verl-Data/train/alfworld/prefix-rl")
+DEFAULT_TRAIN_PARQUET = Path("data/alfworld/train.parquet")
+DEFAULT_SFT_PARQUET = Path("data/alfworld/sft/alfworld_all_valid.parquet")
+DEFAULT_MODEL_PATH = "checkpoints/alfworld_sft/huggingface"
+DEFAULT_OUTPUT_ROOT = Path("data/alfworld/prefix-rl")
 DEFAULT_SERVER = "http://127.0.0.1:36016"
 
 START_TAG_RE = re.compile(r"<\|im_start\|>(user|assistant|tool|system)")

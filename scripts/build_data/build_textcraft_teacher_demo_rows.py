@@ -26,13 +26,13 @@ import build_textcraft_main_prefix_datasets as main_builder  # noqa: E402
 
 
 DEFAULT_BASE_PARQUET = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/new_main_prefix/"
+    "data/textcraft/"
     "replay_validated/main_change_top3_w11_fullflow.parquet"
 )
 DEFAULT_TEACHER_PATH = main_builder.DEFAULT_TEACHER_PATH
 DEFAULT_MODEL_PATH = main_builder.DEFAULT_MODEL_PATH
 DEFAULT_OUTPUT_PATH = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/new_main_prefix/"
+    "data/textcraft/"
     "replay_validated/main_change_top3_w11_fullflow_with_teacher_demo.parquet"
 )
 

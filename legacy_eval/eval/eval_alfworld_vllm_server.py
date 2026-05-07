@@ -33,12 +33,12 @@ def discover_project_root(script_path: Path) -> Path:
 
 def default_data_path(root: Path) -> Path:
     local_data = root / "data" / "alfworld" / "test.parquet"
-    shared_data = Path("/Data/wyh/datasets/Verl-Data/eval/alfworld/test.parquet")
+    shared_data = Path("data/eval/alfworld/test.parquet")
     return local_data if local_data.exists() else shared_data
 
 
 def default_output_dir(root: Path) -> Path:
-    shared_output_root = Path("/Data/wyh/datasets/Verl-Data/outputs")
+    shared_output_root = Path("outputs")
     if shared_output_root.exists():
         return shared_output_root / "alfworld_eval"
     return root / "outputs" / "alfworld_eval"

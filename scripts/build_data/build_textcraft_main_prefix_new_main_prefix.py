@@ -32,12 +32,12 @@ import build_textcraft_main_prefix_datasets as main_builder  # noqa: E402
 import build_textcraft_main_prefix_fullflow_datasets as fullflow_builder  # noqa: E402
 
 
-DEFAULT_OUTPUT_ROOT = Path("/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/new_main_prefix")
+DEFAULT_OUTPUT_ROOT = Path("data/textcraft")
 DEFAULT_LEGACY_COMPLETE_SPLIT_ROOT = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/complete_split"
+    "data/textcraft/complete_split"
 )
 DEFAULT_LEGACY_REPLAY_VALIDATED_ROOT = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/replay_validated"
+    "data/textcraft/replay_validated"
 )
 
 DATASET_NAMES = (

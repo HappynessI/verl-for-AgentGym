@@ -8,7 +8,7 @@ conda activate agentgym  # 或你的环境名
 ================================================================================
 1. TextCraft 环境 (端口 36001)
 ================================================================================
-cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-textcraft
+cd envs/AgentGym/agentenv-textcraft
 textcraft --host 0.0.0.0 --port 36001
 
 # 验证: curl http://127.0.0.1:36001/
@@ -17,7 +17,7 @@ textcraft --host 0.0.0.0 --port 36001
 2. Webshop 环境 (端口 36001) 
 ================================================================================
 # 注意: Webshop 和 TextCraft 默认都用 36001，不能同时启动
-cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-webshop
+cd envs/AgentGym/agentenv-webshop
 webshop --host 0.0.0.0 --port 36002
 
 # 验证: curl http://127.0.0.1:36001/
@@ -25,7 +25,7 @@ webshop --host 0.0.0.0 --port 36002
 ================================================================================
 3. SciWorld 环境 (端口 36002)
 ================================================================================
-cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-sciworld
+cd envs/AgentGym/agentenv-sciworld
 sciworld --host 0.0.0.0 --port 36002
 
 # 验证: curl http://127.0.0.1:36002/
@@ -33,7 +33,7 @@ sciworld --host 0.0.0.0 --port 36002
 ================================================================================
 4. SearchQA 环境 (端口 36003)
 ================================================================================
-cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-searchqa
+cd envs/AgentGym/agentenv-searchqa
 searchqa --host 0.0.0.0 --port 36003
 
 # 验证: curl http://127.0.0.1:36003/
@@ -41,7 +41,7 @@ searchqa --host 0.0.0.0 --port 36003
 ================================================================================
 5. BabyAI 环境 (端口 36005)
 ================================================================================
-cd /Data/wyh/AgentGym-RL/AgentGym/agentenv-babyai
+cd envs/AgentGym/agentenv-babyai
 babyai --host 0.0.0.0 --port 36005
 
 # 验证: curl http://127.0.0.1:36005/
@@ -50,7 +50,7 @@ babyai --host 0.0.0.0 --port 36005
 6. vLLM 推理服务 (端口 8000)
 ================================================================================
 # 单 GPU 启动
-CUDA_VISIBLE_DEVICES=3 vllm serve /Data/public/Qwen3-1.7B \
+CUDA_VISIBLE_DEVICES=3 vllm serve checkpoints/Qwen3-1.7B \
     --served-model-name qwen3 \
     --host 0.0.0.0 \
     --port 8000 \
@@ -69,7 +69,7 @@ kill $(ps aux | grep 'vllm serve' | grep -v grep | awk '{print $2}')
 ------做采样------
 ------端口8001------
 # 单 GPU 启动
-CUDA_VISIBLE_DEVICES=2 vllm serve /Data/public/Qwen3-1.7B \
+CUDA_VISIBLE_DEVICES=2 vllm serve checkpoints/Qwen3-1.7B \
     --served-model-name qwen3 \
     --host 0.0.0.0 \
     --port 8001 \
@@ -80,7 +80,7 @@ CUDA_VISIBLE_DEVICES=2 vllm serve /Data/public/Qwen3-1.7B \
                          评估脚本运行指南
 ================================================================================
 
-cd /Data/wyh/verl/examples/sglang_multiturn/my_exp/eval
+cd legacy_eval/eval
 
 # BabyAI 评估
 bash run_babyai_eval_vllm_server.sh
@@ -119,7 +119,7 @@ MAX_SAMPLES=50 CONCURRENCY=16 NUM_SAMPLES_PER_TASK=4 bash run_babyai_eval_vllm_s
 
 # 在 AgentGym-RL 目录下进行 BabyAI 采样（每个 item 采样 2 次），并支持断点恢复：
 
-cd /Data/wyh/AgentGym-RL/AgentGym/sampling
+cd scripts/sampling
 
 python api_eval.py \
     --api_key "sk-9KNF5ptfJalmyr79Xr3rUMS2zehQBhqA83cLjqJwQ3fA2A8F" \
@@ -134,8 +134,8 @@ python api_eval.py \
     --max_tokens 16384 \
     --action_format "adapt" \
     --num_samples 2 \
-    --inference_file "/Data/wyh/datasets/AgentGym-RL-Data/train/babyai_train.json" \
-    --output_dir "/Data/wyh/datasets/Sampling-Data/babyai_次gemini-3-pro-preview_20260225_211539" \
+    --inference_file "data/source_rollouts/babyai_train.json" \
+    --output_dir "data/source_rollouts/babyai_example" \
     --seed 42
 
 ================================================================================

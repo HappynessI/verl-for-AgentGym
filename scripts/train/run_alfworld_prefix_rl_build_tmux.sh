@@ -4,10 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PROJECT_ROOT=${PROJECT_ROOT:-"${DEFAULT_PROJECT_ROOT}"}
-PYTHON_BIN=${PYTHON_BIN:-"/Data/wyh/conda_envs/verl/bin/python"}
-ALFWORLD_BIN=${ALFWORLD_BIN:-"/Data/wyh/conda_envs/agentenv-alfworld/bin/alfworld"}
+PYTHON_BIN=${PYTHON_BIN:-"python"}
+ALFWORLD_BIN=${ALFWORLD_BIN:-"alfworld"}
 SCRIPT_PATH=${SCRIPT_PATH:-"${PROJECT_ROOT}/scripts/build_data/build_alfworld_prefix_rl_change_top3.py"}
-OUTPUT_ROOT=${OUTPUT_ROOT:-"/Data/wyh/datasets/Verl-Data/train/alfworld/prefix-rl"}
+OUTPUT_ROOT=${OUTPUT_ROOT:-"data/alfworld/prefix-rl"}
 SERVER_PORT=${SERVER_PORT:-36016}
 ALFWORLD_SERVER_COUNT=${ALFWORLD_SERVER_COUNT:-1}
 SERVER_URL=${SERVER_URL:-}

@@ -31,7 +31,7 @@ from verl.interactions.webshop_interaction import WebshopInteraction
 from agentgym_eval_utils import resolve_eval_row
 
 # 日志配置
-log_dir = Path("/Data/wyh/datasets/Verl-Data/outputs/webshop_eval/logs")
+log_dir = Path("outputs/webshop_eval/logs")
 log_dir.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
@@ -499,8 +499,8 @@ async def generate_summary(results_file: str, summary_file: str, args):
 
 def main():
     parser = argparse.ArgumentParser(description='Webshop Evaluation')
-    parser.add_argument('--data_path', default='/Data/wyh/datasets/Verl-Data/eval/webshop/test.parquet')
-    parser.add_argument('--output_dir', default='/Data/wyh/datasets/Verl-Data/outputs/webshop_eval')
+    parser.add_argument('--data_path', default='data/eval/webshop/test.parquet')
+    parser.add_argument('--output_dir', default='outputs/webshop_eval')
     parser.add_argument('--env_server', default='http://127.0.0.1:36001')
     parser.add_argument('--vllm_server_url', default='http://localhost:8000')
     parser.add_argument('--model_name', default='qwen3')

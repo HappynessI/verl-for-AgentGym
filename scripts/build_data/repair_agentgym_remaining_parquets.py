@@ -16,7 +16,7 @@ The repair has two goals:
 
 By default the script rewrites both:
 - repo-local copies under `data`
-- runtime copies under `/Data/wyh/datasets/Verl-Data`
+- runtime copies under `data/` and `outputs/`
 """
 
 from __future__ import annotations

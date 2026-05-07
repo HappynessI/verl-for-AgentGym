@@ -4,10 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PROJECT_ROOT=${PROJECT_ROOT:-"${DEFAULT_PROJECT_ROOT}"}
-PYTHON_BIN=${PYTHON_BIN:-"/Data/wyh/conda_envs/verl/bin/python"}
-BABYAI_BIN=${BABYAI_BIN:-"/Data/wyh/conda_envs/agentenv-babyai/bin/babyai"}
+PYTHON_BIN=${PYTHON_BIN:-"python"}
+BABYAI_BIN=${BABYAI_BIN:-"babyai"}
 SCRIPT_PATH=${SCRIPT_PATH:-"${PROJECT_ROOT}/scripts/build_data/build_babyai_prefix_rl_change_top3.py"}
-OUTPUT_ROOT=${OUTPUT_ROOT:-"/Data/wyh/datasets/Verl-Data/train/babyai/prefix-rl"}
+OUTPUT_ROOT=${OUTPUT_ROOT:-"data/babyai/prefix-rl"}
 DATASETS=${DATASETS:-"main_change_top3_w11_fullflow"}
 SERVER_PORT=${SERVER_PORT:-36015}
 SERVER_URL=${SERVER_URL:-"http://127.0.0.1:${SERVER_PORT}"}

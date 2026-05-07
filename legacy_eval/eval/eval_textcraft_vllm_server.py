@@ -27,8 +27,8 @@ import aiohttp
 import fcntl
 
 # Add verl to path
-# 文件路径: /Data/wyh/verl/examples/sglang_multiturn/my_exp/eval/eval_textcraft_vllm_server.py
-# 需要向上5级到达项目根目录: /Data/wyh/verl
+# 文件路径: legacy_eval/eval/eval_textcraft_vllm_server.py
+# 需要向上5级到达项目根目录: verl
 project_root = Path(__file__).resolve().parent.parent.parent
 if not (project_root / "verl").exists():
     raise RuntimeError(f"verl not found in {project_root}")
@@ -39,7 +39,7 @@ sys.path.insert(0, str(project_root))
 from verl.interactions.textcraft_interaction import TextCraftInteraction
 
 # 确保日志目录存在
-log_dir = Path("/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval/logs")
+log_dir = Path("outputs/textcraft_eval/logs")
 log_dir.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
@@ -1009,10 +1009,10 @@ def main():
     
     # Paths
     parser.add_argument('--data_path', type=str, 
-                        default='/Data/wyh/datasets/Verl-Data/eval/textcraft/test.parquet',
+                        default='data/eval/textcraft/test.parquet',
                         help='Path to test dataset (parquet format)')
     parser.add_argument('--output_dir', type=str,
-                        default='/Data/wyh/datasets/Verl-Data/outputs/textcraft_eval',
+                        default='outputs/textcraft_eval',
                         help='Directory to save evaluation results')
     
     # Environment

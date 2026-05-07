@@ -17,7 +17,7 @@ WHEEL_DIR="${PROJECT_ROOT}/third_party/wheels_verl_py312"
 REQS_FILE="${PROJECT_ROOT}/third_party/requirements_verl_runtime.txt"
 
 # Python 3.12 解释器（由 conda 环境 py312_wheels 提供）
-PYTHON312="/home/wyh/miniconda3/envs/py312_wheels/bin/python3.12"
+PYTHON312="python3.12"
 
 echo "============================================"
 echo "verl 离线 wheel 打包（Python 3.12）"

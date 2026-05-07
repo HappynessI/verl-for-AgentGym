@@ -22,12 +22,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 DEFAULT_SAMPLING_PATH = Path(
-    "/Data/wyh/datasets/Sampling-Data/babyai_MiniMax-M2.1_20260307_150356/babyai_trajectories.jsonl"
+    "data/source_rollouts/babyai_trajectories.jsonl"
 )
-DEFAULT_TRAIN_PARQUET = Path("/Data/wyh/datasets/Verl-Data/train/babyai/train.parquet")
-DEFAULT_SFT_PARQUET = Path("/Data/wyh/datasets/SFT-Data/babyai/babyai_all_valid.parquet")
-DEFAULT_MODEL_PATH = "/Data/wyh/datasets/Verl-Data/outputs/babyai_sft/global_step_300/huggingface"
-DEFAULT_OUTPUT_ROOT = Path("/Data/wyh/datasets/Verl-Data/train/babyai/prefix-rl")
+DEFAULT_TRAIN_PARQUET = Path("data/babyai/train.parquet")
+DEFAULT_SFT_PARQUET = Path("data/babyai/sft/babyai_all_valid.parquet")
+DEFAULT_MODEL_PATH = "checkpoints/babyai_sft/huggingface"
+DEFAULT_OUTPUT_ROOT = Path("data/babyai/prefix-rl")
 DEFAULT_SERVER = "http://127.0.0.1:36005"
 DATASET_COMPLETE_NAMES = {
     "main_fixed_gp1_fullflow": "main_fixed_gp1",

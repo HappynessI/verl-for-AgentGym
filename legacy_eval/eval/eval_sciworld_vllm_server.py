@@ -34,12 +34,12 @@ def discover_project_root(script_path: Path) -> Path:
 
 def default_data_path(root: Path) -> Path:
     local_data = root / "data" / "sciworld" / "test.parquet"
-    shared_data = Path("/Data/wyh/datasets/Verl-Data/eval/sciworld/test.parquet")
+    shared_data = Path("data/eval/sciworld/test.parquet")
     return local_data if local_data.exists() else shared_data
 
 
 def default_output_dir(root: Path) -> Path:
-    shared_output_root = Path("/Data/wyh/datasets/Verl-Data/outputs")
+    shared_output_root = Path("outputs")
     if shared_output_root.exists():
         return shared_output_root / "sciworld_eval"
     return root / "outputs" / "sciworld_eval"

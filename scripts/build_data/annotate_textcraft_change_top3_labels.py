@@ -18,7 +18,7 @@ import pandas as pd
 
 
 DEFAULT_INPUT_PATH = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/new_main_prefix/replay_validated/"
+    "data/textcraft/"
     "main_change_top3_w11_fullflow.parquet"
 )
 DEFAULT_OUTPUT_PATH = DEFAULT_INPUT_PATH.with_name("main_change_top3_w11_fullflow_labeled.parquet")

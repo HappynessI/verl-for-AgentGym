@@ -24,7 +24,7 @@ WHEEL_DIR="${PROJECT_ROOT}/third_party/wheels_sciworld"
 REQS_FILE="${PROJECT_ROOT}/third_party/requirements_sciworld_runtime.txt"
 
 # Python 3.12 interpreter provided by the local py312_wheels conda env.
-PYTHON312="${PYTHON312:-/home/wyh/miniconda3/envs/py312_wheels/bin/python3.12}"
+PYTHON312="${PYTHON312:-python3.12}"
 
 echo "============================================"
 echo "SciWorld offline wheel packaging (Python 3.12)"

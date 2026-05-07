@@ -35,12 +35,12 @@ def discover_project_root(script_path: Path) -> Path:
 
 def default_data_path(root: Path) -> Path:
     local_data = root / "data" / "babyai" / "test.parquet"
-    shared_data = Path("/Data/wyh/datasets/Verl-Data/eval/babyai/test.parquet")
+    shared_data = Path("data/eval/babyai/test.parquet")
     return local_data if local_data.exists() else shared_data
 
 
 def default_output_dir(root: Path) -> Path:
-    shared_output_root = Path("/Data/wyh/datasets/Verl-Data/outputs")
+    shared_output_root = Path("outputs")
     if shared_output_root.exists():
         return shared_output_root / "babyai_eval"
     return root / "outputs" / "babyai_eval"

@@ -15,12 +15,12 @@ import build_textcraft_main_prefix_datasets as main_builder
 import build_textcraft_main_prefix_fullflow_datasets as fullflow_builder
 
 
-DEFAULT_OUTPUT_ROOT = Path("/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/runtime_parser_aligned")
+DEFAULT_OUTPUT_ROOT = Path("data/textcraft/runtime_parser_aligned")
 DEFAULT_LEGACY_COMPLETE_SPLIT_ROOT = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/complete_split"
+    "data/textcraft/complete_split"
 )
 DEFAULT_LEGACY_REPLAY_VALIDATED_ROOT = Path(
-    "/Data/wyh/datasets/Verl-Data/train/textcraft/main_prefix/replay_validated"
+    "data/textcraft/replay_validated"
 )
 
 DATASET_NAMES = (
