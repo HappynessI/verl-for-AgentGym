@@ -1,0 +1,391 @@
+dataset_path,column,type
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,record_uid,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,main_dataset,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,variant_label,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,is_raw_variant,bool
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sample_uid,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,item_id,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sample_idx,int64
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,task_id,int64
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,goal,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,strategy,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,data_source,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,ability,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<data_idx: int64, eval_mode: bool, goal: string, name: string, prefix_actions: list<element: string>, session_id: int64, task_id: int64>, main_dataset: string, sample_uid: string, variant_label: string>"
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,prefix_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,continuation_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,prefix_actions,list<element: string>
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,replay_category,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,prefix_mask,list<element: int64>
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,prefix_token_count,int64
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,source_oldlogprob_model_path,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,prefix_coordinate_system,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,candidate_uid,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,candidate_rank,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,cut_turn_idx,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,cut_relative_position_q,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,num_assistant_messages_total,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,selection_score,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,source_role,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,source_token_position,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,source_dataset,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sampling_parser,string
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sampling_prefix_diagnostics,"list<element: struct<assistant_message_index: int64, assistant_turn_index: int64, is_warmup: bool, sampling_action_tag_count: int64, sampling_extracted_action: string, sampling_extraction_mode: string, sampling_has_multiple_action_tags: bool>>"
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sampling_prefix_action_count,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sampling_assistant_turn_count,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sampling_non_warmup_assistant_turn_count,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sampling_missing_action_turn_count,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sampling_multi_action_tag_turn_count,double
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sampling_extraction_mode_counts,"struct<inline_first: int64, newline_first: int64>"
+data/textcraft/main/main_change_top3_w11_fullflow.parquet,sampling_has_empty_prefix_actions,bool
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,record_uid,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,main_dataset,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,variant_label,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,is_raw_variant,bool
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,sample_uid,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,item_id,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,sample_idx,int64
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,task_id,int64
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,goal,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,strategy,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,data_source,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,ability,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<data_idx: int64, eval_mode: bool, goal: string, name: string, prefix_actions: list<element: string>, session_id: int64, task_id: int64>, main_dataset: string, sample_uid: string, variant_label: string>"
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,prefix_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,continuation_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,prefix_actions,list<element: string>
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,replay_category,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,prefix_mask,list<element: int64>
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,prefix_token_count,int64
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,source_oldlogprob_model_path,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,prefix_coordinate_system,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,cut_turn_idx,double
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,cut_relative_position_q,double
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,num_assistant_messages_total,double
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,source_dataset,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,unverifiable_bucket,string
+data/textcraft/ablations/main_fixed_gp1_fullflow.parquet,unverifiable_subreason,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,record_uid,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,main_dataset,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,variant_label,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,is_raw_variant,bool
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,sample_uid,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,item_id,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,sample_idx,int64
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,task_id,int64
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,goal,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,strategy,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,data_source,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,ability,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<data_idx: int64, eval_mode: bool, goal: string, name: string, prefix_actions: list<element: string>, session_id: int64, task_id: int64>, main_dataset: string, sample_uid: string, variant_label: string>"
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,prefix_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,continuation_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,prefix_actions,list<element: string>
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,replay_category,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,prefix_mask,list<element: int64>
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,prefix_token_count,int64
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,source_oldlogprob_model_path,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,prefix_coordinate_system,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,cut_turn_idx,double
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,cut_relative_position_q,double
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,num_assistant_messages_total,double
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,source_dataset,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,unverifiable_bucket,string
+data/textcraft/ablations/main_fixed_gp2_fullflow.parquet,unverifiable_subreason,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,record_uid,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,main_dataset,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,variant_label,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,is_raw_variant,bool
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sample_uid,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,item_id,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sample_idx,int64
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,task_id,int64
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,goal,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,strategy,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,data_source,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,ability,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<data_idx: int64, eval_mode: bool, goal: string, name: string, prefix_actions: list<element: string>, session_id: int64, task_id: int64>, main_dataset: string, sample_uid: string, variant_label: string>"
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,prefix_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,continuation_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,prefix_actions,list<element: string>
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,replay_category,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,prefix_mask,list<element: int64>
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,prefix_token_count,int64
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,source_oldlogprob_model_path,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,prefix_coordinate_system,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,candidate_uid,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,candidate_rank,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,cut_turn_idx,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,cut_relative_position_q,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,num_assistant_messages_total,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,selection_score,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,source_role,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,source_token_position,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,source_dataset,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sampling_parser,string
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sampling_prefix_diagnostics,"list<element: struct<assistant_message_index: int64, assistant_turn_index: int64, is_warmup: bool, sampling_action_tag_count: int64, sampling_extracted_action: string, sampling_extraction_mode: string, sampling_has_multiple_action_tags: bool>>"
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sampling_prefix_action_count,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sampling_assistant_turn_count,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sampling_non_warmup_assistant_turn_count,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sampling_missing_action_turn_count,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sampling_multi_action_tag_turn_count,double
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sampling_extraction_mode_counts,"struct<inline_first: int64, newline_first: int64>"
+data/textcraft/ablations/main_raw_top3_fullflow.parquet,sampling_has_empty_prefix_actions,bool
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,record_uid,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,main_dataset,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,variant_label,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,is_raw_variant,bool
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sample_uid,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,item_id,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sample_idx,int64
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,task_id,int64
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,goal,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,strategy,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,data_source,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,ability,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<data_idx: int64, eval_mode: bool, goal: string, name: string, prefix_actions: list<element: string>, session_id: int64, task_id: int64>, main_dataset: string, sample_uid: string, variant_label: string>"
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,prefix_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,continuation_messages,"list<element: struct<content: string, reasoning_content: null, role: string>>"
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,prefix_actions,list<element: string>
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,replay_category,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,prefix_mask,list<element: int64>
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,prefix_token_count,int64
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,source_oldlogprob_model_path,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,prefix_coordinate_system,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,candidate_uid,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,candidate_rank,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,cut_turn_idx,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,cut_relative_position_q,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,num_assistant_messages_total,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,selection_score,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,source_role,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,source_token_position,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,source_dataset,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sampling_parser,string
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sampling_prefix_diagnostics,"list<element: struct<assistant_message_index: int64, assistant_turn_index: int64, is_warmup: bool, sampling_action_tag_count: int64, sampling_extracted_action: string, sampling_extraction_mode: string, sampling_has_multiple_action_tags: bool>>"
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sampling_prefix_action_count,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sampling_assistant_turn_count,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sampling_non_warmup_assistant_turn_count,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sampling_missing_action_turn_count,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sampling_multi_action_tag_turn_count,double
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sampling_extraction_mode_counts,"struct<inline_first: int64, newline_first: int64>"
+data/textcraft/ablations/main_change_top3_w5_fullflow.parquet,sampling_has_empty_prefix_actions,bool
+data/babyai/main/main_change_top3_w11_fullflow.parquet,record_uid,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,main_dataset,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,variant_label,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,is_raw_variant,bool
+data/babyai/main/main_change_top3_w11_fullflow.parquet,sample_uid,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,item_id,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,sample_idx,int64
+data/babyai/main/main_change_top3_w11_fullflow.parquet,task_id,int64
+data/babyai/main/main_change_top3_w11_fullflow.parquet,goal,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,strategy,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,data_source,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,ability,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/babyai/main/main_change_top3_w11_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/babyai/main/main_change_top3_w11_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<data_idx: int64, level: int64, name: string, official_data_idx: int64, official_item_id: string, official_session_id: int64, prefix_actions: list<element: string>, session_id: int64, task_category: string, task_subcategory: string>, main_dataset: string, official_item_id: string, sample_uid: string, sampling_env_reset_key: int64, variant_label: string>"
+data/babyai/main/main_change_top3_w11_fullflow.parquet,prefix_messages,"list<element: struct<content: string, role: string>>"
+data/babyai/main/main_change_top3_w11_fullflow.parquet,continuation_messages,"list<element: struct<content: string, role: string>>"
+data/babyai/main/main_change_top3_w11_fullflow.parquet,prefix_actions,list<element: string>
+data/babyai/main/main_change_top3_w11_fullflow.parquet,replay_category,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/babyai/main/main_change_top3_w11_fullflow.parquet,prefix_mask,list<element: int64>
+data/babyai/main/main_change_top3_w11_fullflow.parquet,prefix_token_count,int64
+data/babyai/main/main_change_top3_w11_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/babyai/main/main_change_top3_w11_fullflow.parquet,source_oldlogprob_model_path,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,prefix_coordinate_system,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,canonicalization,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,candidate_uid,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,candidate_rank,double
+data/babyai/main/main_change_top3_w11_fullflow.parquet,cut_turn_idx,double
+data/babyai/main/main_change_top3_w11_fullflow.parquet,cut_relative_position_q,double
+data/babyai/main/main_change_top3_w11_fullflow.parquet,num_assistant_messages_total,double
+data/babyai/main/main_change_top3_w11_fullflow.parquet,selection_score,double
+data/babyai/main/main_change_top3_w11_fullflow.parquet,source_role,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,source_token_position,double
+data/babyai/main/main_change_top3_w11_fullflow.parquet,source_dataset,string
+data/babyai/main/main_change_top3_w11_fullflow.parquet,source_token_entropy,double
+data/babyai/main/main_change_top3_w11_fullflow.parquet,smoothed_entropy,double
+data/babyai/main/main_change_top3_w11_fullflow.parquet,change_score,double
+data/babyai/main/main_change_top3_w11_fullflow.parquet,prefix_last_assistant_replay_action_taken,bool
+data/babyai/main/main_change_top3_w11_fullflow.parquet,prefix_sidecar_source,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,record_uid,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,main_dataset,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,variant_label,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,is_raw_variant,bool
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,sample_uid,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,item_id,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,sample_idx,int64
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,task_id,int64
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,goal,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,strategy,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,data_source,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,ability,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<data_idx: int64, level: int64, name: string, official_data_idx: int64, official_item_id: string, official_session_id: int64, prefix_actions: list<element: string>, session_id: int64, task_category: string, task_subcategory: string>, main_dataset: string, official_item_id: string, sample_uid: string, sampling_env_reset_key: int64, variant_label: string>"
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,prefix_messages,"list<element: struct<content: string, role: string>>"
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,continuation_messages,"list<element: struct<content: string, role: string>>"
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,prefix_actions,list<element: string>
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,replay_category,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,prefix_mask,list<element: int64>
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,prefix_token_count,int64
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,source_oldlogprob_model_path,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,prefix_coordinate_system,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,canonicalization,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,candidate_uid,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,candidate_rank,double
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,cut_turn_idx,double
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,cut_relative_position_q,double
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,num_assistant_messages_total,double
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,selection_score,double
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,source_role,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,source_token_position,double
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,source_dataset,string
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,source_token_entropy,double
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,smoothed_entropy,double
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,change_score,double
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,prefix_last_assistant_replay_action_taken,bool
+data/babyai/ablations/main_fixed_gp1_fullflow.parquet,prefix_sidecar_source,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,record_uid,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,main_dataset,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,variant_label,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,is_raw_variant,bool
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,sample_uid,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,item_id,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,sample_idx,int64
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,task_id,int64
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,goal,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,strategy,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,data_source,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,ability,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<data_idx: int64, level: int64, name: string, official_data_idx: int64, official_item_id: string, official_session_id: int64, prefix_actions: list<element: string>, session_id: int64, task_category: string, task_subcategory: string>, main_dataset: string, official_item_id: string, sample_uid: string, sampling_env_reset_key: int64, variant_label: string>"
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,prefix_messages,"list<element: struct<content: string, role: string>>"
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,continuation_messages,"list<element: struct<content: string, role: string>>"
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,prefix_actions,list<element: string>
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,replay_category,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,prefix_mask,list<element: int64>
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,prefix_token_count,int64
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,source_oldlogprob_model_path,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,prefix_coordinate_system,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,canonicalization,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,candidate_uid,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,candidate_rank,double
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,cut_turn_idx,double
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,cut_relative_position_q,double
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,num_assistant_messages_total,double
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,selection_score,double
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,source_role,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,source_token_position,double
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,source_dataset,string
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,source_token_entropy,double
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,smoothed_entropy,double
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,change_score,double
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,prefix_last_assistant_replay_action_taken,bool
+data/babyai/ablations/main_fixed_gp2_fullflow.parquet,prefix_sidecar_source,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,record_uid,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,main_dataset,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,variant_label,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,is_raw_variant,bool
+data/babyai/ablations/main_raw_top3_fullflow.parquet,sample_uid,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,item_id,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,sample_idx,int64
+data/babyai/ablations/main_raw_top3_fullflow.parquet,task_id,int64
+data/babyai/ablations/main_raw_top3_fullflow.parquet,goal,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,strategy,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,data_source,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,ability,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/babyai/ablations/main_raw_top3_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/babyai/ablations/main_raw_top3_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<data_idx: int64, level: int64, name: string, official_data_idx: int64, official_item_id: string, official_session_id: int64, prefix_actions: list<element: string>, session_id: int64, task_category: string, task_subcategory: string>, main_dataset: string, official_item_id: string, sample_uid: string, sampling_env_reset_key: int64, variant_label: string>"
+data/babyai/ablations/main_raw_top3_fullflow.parquet,prefix_messages,"list<element: struct<content: string, role: string>>"
+data/babyai/ablations/main_raw_top3_fullflow.parquet,continuation_messages,"list<element: struct<content: string, role: string>>"
+data/babyai/ablations/main_raw_top3_fullflow.parquet,prefix_actions,list<element: string>
+data/babyai/ablations/main_raw_top3_fullflow.parquet,replay_category,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/babyai/ablations/main_raw_top3_fullflow.parquet,prefix_mask,list<element: int64>
+data/babyai/ablations/main_raw_top3_fullflow.parquet,prefix_token_count,int64
+data/babyai/ablations/main_raw_top3_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/babyai/ablations/main_raw_top3_fullflow.parquet,source_oldlogprob_model_path,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,prefix_coordinate_system,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,canonicalization,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,candidate_uid,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,candidate_rank,double
+data/babyai/ablations/main_raw_top3_fullflow.parquet,cut_turn_idx,double
+data/babyai/ablations/main_raw_top3_fullflow.parquet,cut_relative_position_q,double
+data/babyai/ablations/main_raw_top3_fullflow.parquet,num_assistant_messages_total,double
+data/babyai/ablations/main_raw_top3_fullflow.parquet,selection_score,double
+data/babyai/ablations/main_raw_top3_fullflow.parquet,source_role,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,source_token_position,double
+data/babyai/ablations/main_raw_top3_fullflow.parquet,source_dataset,string
+data/babyai/ablations/main_raw_top3_fullflow.parquet,source_token_entropy,double
+data/babyai/ablations/main_raw_top3_fullflow.parquet,smoothed_entropy,double
+data/babyai/ablations/main_raw_top3_fullflow.parquet,change_score,double
+data/babyai/ablations/main_raw_top3_fullflow.parquet,prefix_last_assistant_replay_action_taken,bool
+data/babyai/ablations/main_raw_top3_fullflow.parquet,prefix_sidecar_source,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,record_uid,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,main_dataset,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,variant_label,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,is_raw_variant,bool
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,sample_uid,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,item_id,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,sample_idx,int64
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,task_id,int64
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,goal,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,strategy,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,data_source,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,ability,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,prompt,"list<element: struct<content: string, role: string>>"
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,reward_model,"struct<ground_truth: string, style: string>"
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,extra_info,"struct<index: int64, interaction_kwargs: struct<game: int64, game_id: string, name: string, official_game: int64, official_item_id: string, official_session_id: int64, prefix_actions: list<element: string>, session_id: int64, task_category: string, task_subcategory: string, task_type: string, world_type: string>, main_dataset: string, official_item_id: string, sample_uid: string, sampling_env_reset_key: int64, variant_label: string>"
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,prefix_messages,"list<element: struct<content: string, role: string>>"
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,continuation_messages,"list<element: struct<content: string, role: string>>"
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,prefix_actions,list<element: string>
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,replay_category,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,assistant_prefix_old_log_probs,list<element: double>
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,prefix_mask,list<element: int64>
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,prefix_token_count,int64
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,assistant_prefix_span,"struct<end: int64, start: int64>"
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,source_oldlogprob_model_path,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,prefix_coordinate_system,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,candidate_uid,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,candidate_rank,double
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,cut_turn_idx,double
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,cut_relative_position_q,double
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,num_assistant_messages_total,double
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,selection_score,double
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,source_role,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,source_token_position,double
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,source_dataset,string
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,source_token_entropy,double
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,smoothed_entropy,double
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,change_score,double
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,prefix_last_assistant_replay_action_taken,bool
+data/alfworld/main/main_change_top3_w11_fullflow.parquet,prefix_sidecar_source,string

@@ -36,3 +36,11 @@
 - Regenerated `results/training_metrics_index.csv` with 34 training metric CSVs.
 - Marked ALFWorld main Prefix-GRPO training metrics as pending in the artifact
   guide.
+
+## 2026-05-07 Review Mapping And Schema Docs
+
+- Added `PAPER_RESULTS.md` and `results/paper_metrics.csv` to map paper-facing
+  experiment groups to dataset and metrics files.
+- Added `data/SCHEMA.md` and `data/SCHEMA_COLUMNS.csv` to document the parquet
+  schema and Prefix-GRPO sidecar fields.
+- Added README setup guidance for Git LFS and tested dependency versions.

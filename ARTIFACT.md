@@ -10,7 +10,7 @@ experiment artifacts. Paths are relative to the repository root.
 | Code | Modified `verl` trainer, AgentGym-style environments, data builders, launch scripts |
 | Data | Replay-validated Prefix-GRPO training parquet files under `data/` |
 | Metrics | Training CSVs under `results/` |
-| Inventory | `data/DATASETS.csv`, `results/training_metrics_index.csv` |
+| Inventory | `data/DATASETS.csv`, `data/SCHEMA.md`, `results/training_metrics_index.csv`, `results/paper_metrics.csv` |
 
 Checkpoints and raw local experiment logs are not included.
 
@@ -54,13 +54,16 @@ Training metrics:
 
 ```text
 results/training_metrics_index.csv
+results/paper_metrics.csv
+PAPER_RESULTS.md
 results/training/textcraft/
 results/training/babyai/
 results/training/alfworld/
 ```
 
 The index file provides a compact table of the included training metrics and
-SHA256 hashes for the raw CSV files.
+SHA256 hashes for the raw CSV files. `results/paper_metrics.csv` is a curated
+mapping from paper-facing experiment groups to final metric rows.
 
 ## Main TextCraft Run
 

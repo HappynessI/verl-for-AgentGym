@@ -7,6 +7,13 @@ Use `DATASETS.csv` as the authoritative inventory. It includes environment,
 split, artifact id, relative path, row count, file size, SHA256 hash, and the
 presence of the prompt-space prefix sidecar fields.
 
+Schema documentation:
+
+```text
+SCHEMA.md
+SCHEMA_COLUMNS.csv
+```
+
 The main datasets are:
 
 ```text

@@ -20,6 +20,10 @@ For paper review, start with [`ARTIFACT.md`](ARTIFACT.md). It maps the
 included datasets and metrics to the TextCraft, BabyAI, and ALFWorld
 experiments.
 
+Paper-facing result mappings and curated final metrics are in
+[`PAPER_RESULTS.md`](PAPER_RESULTS.md) and
+`results/paper_metrics.csv`.
+
 This repository includes:
 
 - Replay-validated training datasets for TextCraft main and ablation runs.
@@ -31,6 +35,46 @@ This repository includes:
 
 Generated checkpoints, raw local logs, and experiment tracker state are not
 included.
+
+## Setup
+
+The artifact stores parquet datasets with Git LFS. After cloning, fetch the
+dataset payloads with:
+
+```bash
+git lfs install
+git lfs pull
+```
+
+Recommended runtime:
+
+```text
+Python: 3.12
+CUDA/PyTorch: CUDA 12.x with torch 2.8.0+cu128
+Transformers: 4.56.x
+SGLang: 0.5.2
+vLLM: 0.11.x
+Ray: 2.52.x
+Pandas: 2.3.x
+PyArrow: 22.x
+Hydra: 1.3.x
+```
+
+Install the core Python dependencies from the repository manifests:
+
+```bash
+pip install -r verl/requirements.txt
+pip install -r verl/requirements_sglang.txt
+pip install -e verl/
+```
+
+Environment wrappers can be installed as needed, for example:
+
+```bash
+pip install -e envs/AgentGym/agentenv-textcraft
+pip install -e envs/AgentGym/agentenv-babyai
+pip install -e envs/AgentGym/agentenv-alfworld
+```
 
 ## Overview
 
@@ -107,6 +151,8 @@ Dataset inventory:
 
 ```text
 data/DATASETS.csv
+data/SCHEMA.md
+data/SCHEMA_COLUMNS.csv
 ```
 
 Included datasets:
@@ -123,6 +169,7 @@ Training metric inventory:
 
 ```text
 results/training_metrics_index.csv
+results/paper_metrics.csv
 ```
 
 Raw training CSVs are stored under `results/training/`.
@@ -161,11 +208,12 @@ part of the test.
 ```text
 Prefix_GRPO/
 ├── ARTIFACT.md              # Review-oriented artifact guide
+├── PAPER_RESULTS.md         # Paper result to artifact mapping
 ├── config/                  # GRPO and environment interaction configs
 ├── data/                    # Included replay-validated datasets and inventory
 ├── envs/AgentGym/           # Environment wrappers and local servers
 ├── legacy_eval/             # Legacy vLLM-server evaluation utilities
-├── results/                 # Included training/evaluation metrics
+├── results/                 # Included training metrics and curated paper metrics
 ├── scripts/
 │   ├── build_data/          # Prefix data construction and validation
 │   ├── train/               # Training and SFT launch scripts
