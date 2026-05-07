@@ -84,3 +84,11 @@
 - Regenerated `results/figures/main_reward_curves.png` with one horizontal
   subplot per environment instead of overlaying all three main reward curves
   in a single axis.
+
+## 2026-05-07 Main Reward Curve Axis Update
+
+- Updated `scripts/utils/plot_main_reward_curves.py` so the three environment
+  subplots use independent y-axes instead of a shared y-axis.
+- The figure keeps every recorded step, including the final BabyAI step, and
+  annotates both the last-100-step mean and final-step reward to avoid
+  overinterpreting a single noisy terminal point.

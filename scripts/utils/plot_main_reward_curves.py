@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PAPER_METRICS = REPO_ROOT / "results/paper_metrics.csv"
 OUTPUT_PATH = REPO_ROOT / "results/figures/main_reward_curves.png"
 ROLLING_WINDOW = 25
+SUMMARY_WINDOW = 100
 
 COLORS = {
     "TextCraft": "#2f6fed",
@@ -46,7 +47,7 @@ def main() -> None:
     runs = sorted(runs, key=lambda row: ENV_ORDER.get(row["environment"], 99))
 
     plt.style.use("seaborn-v0_8-whitegrid")
-    fig, axes = plt.subplots(1, len(runs), figsize=(13.2, 3.9), dpi=180, sharey=True)
+    fig, axes = plt.subplots(1, len(runs), figsize=(13.2, 3.9), dpi=180, sharey=False)
     if len(runs) == 1:
         axes = [axes]
 
@@ -62,6 +63,8 @@ def main() -> None:
         smoothed = df["critic_rewards_mean"].rolling(
             ROLLING_WINDOW, min_periods=1
         ).mean()
+        last_window = min(SUMMARY_WINDOW, len(df))
+        last_window_mean = df["critic_rewards_mean"].tail(last_window).mean()
         color = COLORS.get(env)
         ax.plot(
             df["step"],
@@ -78,11 +81,14 @@ def main() -> None:
         )
         ax.set_title(env)
         ax.set_xlabel("Training step")
-        ax.set_ylim(-0.02, 1.02)
+        y_min = df["critic_rewards_mean"].min()
+        y_max = df["critic_rewards_mean"].max()
+        y_margin = max((y_max - y_min) * 0.08, 0.02)
+        ax.set_ylim(max(-0.05, y_min - y_margin), min(1.05, y_max + y_margin))
         ax.text(
             0.98,
             0.06,
-            f"final={df['critic_rewards_mean'].iloc[-1]:.3f}",
+            f"last{last_window}={last_window_mean:.3f}\nfinal={df['critic_rewards_mean'].iloc[-1]:.3f}",
             transform=ax.transAxes,
             ha="right",
             va="bottom",
@@ -92,9 +98,12 @@ def main() -> None:
         )
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
+        ax.set_ylabel("Mean reward")
 
-    axes[0].set_ylabel("Mean reward")
-    fig.suptitle(f"Main Experiment Training Reward ({ROLLING_WINDOW}-step rolling mean)", y=1.02)
+    fig.suptitle(
+        f"Main Experiment Training Reward ({ROLLING_WINDOW}-step rolling mean; independent y-axes)",
+        y=1.02,
+    )
     fig.tight_layout()
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
